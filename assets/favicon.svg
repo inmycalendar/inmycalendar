@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <rect width="128" height="128" rx="26" fill="#18181b"/>
+  <rect x="24" y="32" width="80" height="66" rx="10" fill="#ffffff"/>
+  <rect x="24" y="32" width="80" height="18" rx="10" fill="#d4d4d8"/>
+  <rect x="40" y="24" width="7" height="15" rx="3.5" fill="#71717a"/>
+  <rect x="81" y="24" width="7" height="15" rx="3.5" fill="#71717a"/>
+  <text x="64" y="90" text-anchor="middle" font-family="Oswald, Arial Narrow, sans-serif" font-weight="600" font-size="40" fill="#18181b">imc</text>
+</svg>

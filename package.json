@@ -1,0 +1,13 @@
+{
+  "name": "inmycalendar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A daily sticky-note kanban board joined to a multi-year week calendar. No build step, no framework, no server.",
+  "scripts": {
+    "test": "node tests/app.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.0"
+  },
+  "license": "MIT"
+}

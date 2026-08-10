@@ -1,0 +1,285 @@
+/* ==========================================================================
+   inmycalendar — app.css
+   The app itself: date controls, controls strip, board, calendar, rail, modal.
+   Loads AFTER site.css, so rules here win where the two overlap.
+
+   Everything is fluid: the layout reflows from a wide desktop down to a narrow
+   side-panel window without clipping. No fixed pixel widths on anything that
+   has to survive a resize.
+   ========================================================================== */
+
+/* A <button> carries a browser default border. Every button-as-cell below must
+   zero it explicitly, or a heavy outline appears on the three sides you did not
+   set. That is what put black boxes around every date. */
+.wg .dc,.wg .wk,.rr{border:0}
+
+/* ---------------- date controls in the ribbon ---------------- */
+.nub{background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:7px;
+  height:29px;min-width:29px;padding:0 8px;font-size:12px;line-height:1;flex:none}
+.nub:hover{background:var(--card2)}
+.iso{width:var(--wIso);text-align:center;flex:none;font-family:var(--mono);font-size:13px;
+  font-weight:700;letter-spacing:.01em;color:var(--ink);background:transparent;border:0;
+  border-bottom:1px dashed transparent;padding:2px 0}
+.iso:hover{border-bottom-color:var(--faint)}
+.meta{font-size:11px;color:var(--soft);white-space:nowrap;flex:none}
+.dpick{position:absolute;opacity:0;width:29px;height:29px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden;flex:none;
+  background:var(--card)}
+.seg button{background:transparent;border:0;color:var(--soft);height:27px;padding:0 12px;
+  font-family:var(--disp);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button.on{background:var(--accent);color:var(--onAccent)}
+.seg button:hover:not(.on){background:var(--card2);color:var(--ink)}
+
+/* ---------------- controls strip: no hidden settings menu ----------------
+   Week start and the data actions used to live behind a gear. They are the
+   two things people actually need, so they sit in the open on one thin row. */
+/* week start moved into the ribbon; data actions moved to the foot of the rail.
+   The old full-width controls strip cost ~44px of vertical space on every screen. */
+.wkpick{display:inline-flex;align-items:center;gap:6px;flex:none}
+.wkpick .lbl{font-family:var(--disp);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
+.wkpick .sel{height:27px;font-size:11.5px;padding:2px 6px}
+.databox{display:flex;flex-wrap:wrap;gap:6px}
+.databox .btn{flex:1 1 calc(50% - 3px);padding:4px 6px;font-size:10.5px}
+.ctl{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--soft);
+  text-transform:uppercase;letter-spacing:.06em;font-family:var(--disp);white-space:nowrap}
+.ctlsep{width:1px;height:18px;background:var(--rule);flex:none}
+.grow{flex:1 1 auto}
+
+/* ---------------- shell ---------------- */
+main{padding:16px 0 0}
+.shell{display:grid;grid-template-columns:minmax(0,1fr) var(--rail);gap:16px;align-items:start}
+.pane{min-width:0}
+.rail{min-width:0;display:flex;flex-direction:column;gap:12px;
+  /* the rail must not dictate page height — it stays within the main column's
+     span and scrolls internally if a user adds a long list of countdowns */
+  position:sticky;top:calc(var(--hBar) + 12px);max-height:calc(100vh - var(--hBar) - 24px);
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+.rail::-webkit-scrollbar{width:6px}
+.rail::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
+.rbox{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.rbox>h3{font-family:var(--disp);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--soft);padding:10px 12px 2px;margin:0;font-weight:500}
+.rhint{font-size:10px;color:var(--faint);padding:0 12px 8px;font-style:italic;line-height:1.4}
+.rbody{padding:2px 12px 10px}
+.cat{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.cat i{width:11px;height:11px;border-radius:3px;flex:none}
+.cat input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px solid transparent;
+  font-size:12px;padding:2px 0;color:var(--ink)}
+.cat input:hover{border-bottom-color:var(--rule)}
+.cat input:focus{border-bottom-color:var(--accent);outline:none}
+.cat .pen{color:var(--faint);font-size:10px;flex:none;opacity:0;transition:opacity .12s}
+.cat:hover .pen{opacity:1}
+
+/* tracked dates */
+.tk{border-top:1px solid var(--rule2);padding:7px 0;font-size:11.5px}
+.tk:first-child{border-top:0}
+.tk.next{border-left:2px solid var(--accent);padding-left:8px;margin-left:-12px;padding-right:0}
+.tkl{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.tkr{display:flex;align-items:center;gap:4px;margin-top:2px}
+.tkc{flex:1;min-width:0;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.tkc.fut{color:var(--doing)}
+.tk select{background:transparent;border:0;font-size:10px;color:var(--faint);max-width:58px}
+.tk .x{background:transparent;border:0;color:var(--faint);padding:0 2px;font-size:13px;line-height:1}
+.tk .x:hover{color:var(--danger)}
+.tform{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--rule2);
+  margin-top:8px;padding-top:9px}
+.tform input[type=text],.tform select{width:100%;background:var(--card);border:1px solid var(--rule);
+  padding:5px 8px;font-size:11.5px;height:30px;border-radius:7px}
+.dfield{position:relative;display:flex;align-items:center}
+.dfield input[type=text]{flex:1;min-width:0;padding-right:30px}
+.dbtn{position:absolute;right:5px;background:transparent;border:0;padding:2px;font-size:12px;
+  line-height:1;color:var(--soft)}
+.dbtn:hover{color:var(--ink)}
+.dfield .dpick{right:5px;width:24px;height:24px}
+.tform label{font-size:11px;color:var(--soft);display:flex;align-items:center;gap:6px}
+.go{background:var(--accent);border:1px solid var(--accent);color:var(--onAccent);height:30px;
+  padding:0 12px;border-radius:7px;font-size:11.5px}
+.go:hover{background:var(--accent2);border-color:var(--accent2)}
+.err{color:var(--danger);font-size:11px}
+.none{font-size:11px;color:var(--faint);font-style:italic;padding:3px 0}
+
+/* ---------------- kanban ----------------
+   Status colour is carried by a top rule and a dot, not a heavy filled bar —
+   keeps the colour budget for categories and holidays. */
+.kb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.col{min-width:0;display:flex;flex-direction:column;background:var(--card);
+  border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.col{border-top:2px solid var(--rule)}
+.col[data-s=todo]{border-top-color:var(--todo)}
+.col[data-s=doing]{border-top-color:var(--doing)}
+.col[data-s=done]{border-top-color:var(--done)}
+.ch{display:flex;align-items:center;gap:7px;height:36px;padding:0 12px;
+  font-family:var(--disp);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.ch::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;background:var(--rule)}
+.c-todo::before{background:var(--todo)} .c-doing::before{background:var(--doing)} .c-done::before{background:var(--done)}
+.ch .n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.cadd{width:calc(100% - 20px);margin:0 10px 8px;background:var(--card);border:1px solid var(--rule);
+  border-radius:7px;padding:5px 9px;font-size:12px;height:30px;min-width:0}
+.cadd::placeholder{color:var(--faint)}
+.cadd:focus{outline:none;border-color:var(--accent)}
+.lane{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:24px;padding:0 10px 10px}
+.lane.over{outline:2px dashed var(--accent);outline-offset:-4px}
+.t{display:flex;align-items:center;gap:7px;min-width:0;min-height:32px;padding:6px 8px;
+  border:1px solid var(--rule);border-radius:8px;background:var(--card)}
+.t.s-todo{background:var(--todoBg);border-color:var(--todoE)}
+.t.s-doing{background:var(--doingBg);border-color:var(--doingE)}
+.t.s-done{background:var(--doneBg);border-color:var(--doneE)}
+.t .grip{flex:none;color:var(--faint);font-size:11px;cursor:grab;letter-spacing:-1px}
+.t .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+.t.s-done .txt{text-decoration:line-through;color:var(--soft)}
+.t .ops{display:flex;gap:3px;flex:none;visibility:hidden}
+.t:hover .ops,.t:focus-within .ops{visibility:visible}
+.t.dragging{opacity:.4}
+.op{background:var(--card);border:1px solid var(--rule);width:21px;height:20px;border-radius:5px;
+  font-size:10.5px;line-height:1;padding:0;color:var(--soft)}
+.op:hover:not(:disabled){background:var(--card2);color:var(--ink)}
+.op:disabled{opacity:.3;cursor:not-allowed}
+.op.x:hover{background:#fdf3f3;color:var(--danger);border-color:#f0d5d5}
+.t .edit{flex:1;min-width:0;font-size:12.5px;border:1px solid var(--accent);border-radius:6px;
+  padding:3px 6px;background:var(--card)}
+
+/* read-only week / month */
+.ro{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rc{min-width:0;border:1px solid var(--rule);background:var(--card);border-radius:var(--r);overflow:hidden;
+  border-top:2px solid var(--rule)}
+.rc[data-s=todo]{border-top-color:var(--todo)}
+.rc[data-s=doing]{border-top-color:var(--doing)}
+.rc[data-s=done]{border-top-color:var(--done)}
+.rc>.rh{height:36px;display:flex;align-items:center;gap:7px;padding:0 12px;
+  font-family:var(--disp);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.rc>.rh::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;background:var(--rule)}
+.rc>.rh.c-todo::before{background:var(--todo)}
+.rc>.rh.c-doing::before{background:var(--doing)}
+.rc>.rh.c-done::before{background:var(--done)}
+.rc>.rh .n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.rr{display:flex;gap:8px;align-items:center;padding:5px 12px;border:0;border-top:1px solid var(--rule2);
+  min-width:0;width:100%;background:transparent;text-align:left;font-size:12px;color:var(--ink)}
+.rr:hover{background:var(--card2)}
+.rr .d{color:var(--faint);font-size:10.5px;white-space:nowrap;flex:none;font-family:var(--mono)}
+.rr .t2{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rr.now .d{color:var(--accent);font-weight:700}
+.rc .none{padding:8px 12px}
+
+/* ---------------- calendar / glance ---------------- */
+.gridbox{border:1px solid var(--rule);background:var(--card);border-radius:var(--r);
+  overflow:hidden;margin-top:16px}
+.gridbox:first-child{margin-top:0}
+.gtitle{display:flex;align-items:center;gap:8px;min-height:38px;padding:6px 12px;
+  border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.gtitle h2{font-family:var(--disp);font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink);margin:0;font-weight:500}
+.gtitle .yrs{width:var(--wYrs);text-align:center;flex:none;font-size:11.5px;font-weight:700;
+  color:var(--ink);font-family:var(--mono)}
+.gtitle .sp{flex:1 1 auto}
+.fold,.yarr{background:var(--card);border:1px solid var(--rule);color:var(--soft);border-radius:6px;
+  height:24px;min-width:24px;font-size:10px;line-height:1;padding:0 5px;flex:none}
+.fold:hover,.yarr:hover:not(:disabled){background:var(--card2);color:var(--ink)}
+.yarr:disabled{opacity:.3;cursor:not-allowed}
+.gridbox.folded .glance{display:none}
+.calbox{overflow:auto;max-height:70vh}
+/* years wrap onto new rows instead of forcing a horizontal scrollbar */
+.calrail{display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;padding:12px}
+.glance{display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;padding:12px}
+.calrail>.wg,.glance>.wg{flex:1 1 300px;min-width:260px}
+
+.wg{display:grid;grid-template-columns:26px repeat(7,minmax(0,1fr));
+  border:1px solid var(--rule2);border-radius:8px;overflow:hidden;background:var(--card)}
+.wg .yh{grid-column:1/-1;min-height:var(--hYear);position:sticky;top:0;z-index:6;background:var(--card);
+  color:var(--ink);font-family:var(--disp);font-weight:600;font-size:12.5px;letter-spacing:.02em;
+  display:flex;align-items:baseline;gap:7px;padding:7px 11px 5px;border-bottom:1px solid var(--rule2)}
+.wg .yh .mo{color:var(--faint);font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:0}
+.wg .yh .sub{color:var(--faint);font-family:var(--mono);font-weight:400;font-size:9.5px;
+  margin-left:auto;padding-left:8px}
+.wg.c .yh{position:static}
+.wg .dh{min-height:var(--hDow);position:sticky;top:var(--hYear);z-index:5;background:var(--card);
+  color:var(--faint);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.02em;
+  display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--rule2)}
+.wg .dh.wknd{color:var(--soft)}
+.wg.c .dh{position:static}
+.wg .wk{font-size:9px;color:#c3c7ce;background:transparent;border:0;border-top:1px solid var(--rule2);
+  display:flex;align-items:center;justify-content:center;padding:0;font-family:var(--mono)}
+.wg .wk:hover{color:var(--accent);background:var(--card2)}
+
+.wg .dc{min-height:23px;border:0;border-top:1px solid var(--rule2);display:flex;align-items:center;
+  justify-content:center;font-size:10px;background:transparent;padding:0;position:relative;
+  font-family:var(--mono);color:#374151;border-radius:0}
+.wg.c .dc{min-height:21px;font-size:9.5px}
+.wg .dc.wknd{background:#fafbfc}
+.wg .dc:hover{background:var(--accentBg);color:var(--ink)}
+.wg .dc.out{color:#c9ced6}
+/* four independent visual channels so nothing ever collides:
+   fill = category · stripe = holiday · ring = today · dot = has tasks */
+.wg .dc.k0{background:#fde8e6;color:#9b2c20}
+.wg .dc.k1{background:#fdf0d9;color:#8a5a10}
+.wg .dc.k2{background:#e2f4e9;color:#1f6640}
+.wg .dc.k3{background:#e4edfd;color:#1e4694}
+.wg .dc.hol-nat::after,.wg .dc.hol-reg::after{content:"";position:absolute;left:4px;right:4px;
+  bottom:2px;height:2px;border-radius:2px}
+.wg .dc.hol-nat::after{background:var(--holNat)}
+.wg .dc.hol-reg::after{background:var(--holReg)}
+/* TODAY: a ring, never a fill — stays visible on white, on a category fill
+   and on a holiday stripe alike. The old white-on-white pill was invisible. */
+.wg .dc.now{font-weight:700;color:var(--accent);
+  box-shadow:inset 0 0 0 2px var(--accent);border-radius:6px}
+.wg .dc .task{position:absolute;right:3px;top:3px;width:3px;height:3px;border-radius:50%;background:var(--soft)}
+.wg .dc .pen{position:absolute;left:2px;top:1px;font-size:7px;color:var(--faint)}
+
+/* ---------------- ad slots (reserved, off by default) ---------------- */
+.ad{border:1px dashed var(--rule);background:var(--card);color:var(--faint);border-radius:var(--r);
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.ad-rail{min-height:600px}
+.ad-foot{min-height:90px;margin-top:16px}
+.ad-anchor{display:none;position:sticky;bottom:0;z-index:50;min-height:50px}
+
+/* ---------------- modal ---------------- */
+.ov{position:fixed;inset:0;background:rgba(17,19,24,.4);z-index:100;display:flex;
+  align-items:flex-start;justify-content:center;padding:32px 14px;overflow:auto}
+.md{width:min(900px,100%);background:var(--page);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.mh{display:flex;align-items:center;gap:10px;background:var(--card);color:var(--ink);padding:12px 14px;
+  border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.mh .d{font-family:var(--disp);font-size:16px;letter-spacing:.06em}
+.mh .w{font-size:11.5px;color:var(--soft)}
+.mh button{margin-left:auto;background:var(--card);border:1px solid var(--rule);color:var(--soft);
+  width:27px;height:25px;border-radius:6px;line-height:1}
+.mh button:hover{background:var(--card2);color:var(--ink)}
+.mb{padding:14px}
+.mrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mnote{width:100%;min-height:56px;background:var(--card);border:1px solid var(--rule);border-radius:8px;
+  padding:8px;font-size:12.5px;resize:vertical;margin:10px 0 12px}
+.dab{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.1);padding:0}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;
+  border-top:1px solid var(--rule)}
+.mfoot .btn{padding:7px 22px;font-size:12.5px}
+.mfoot .primary{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.mfoot .primary:hover{background:var(--accent2);border-color:var(--accent2)}
+.dab.on{box-shadow:0 0 0 2px var(--accent)}
+
+/* ==========================================================================
+   RESPONSIVE — the app reflows all the way down to a narrow side panel.
+   ========================================================================== */
+@media (max-width:1100px){ :root{--rail:180px} }
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{flex-direction:row;flex-wrap:wrap}
+  .rbox{flex:1 1 260px}
+  .ad-rail{display:none}
+}
+@media (max-width:760px){
+  .kb,.ro{grid-template-columns:1fr}
+  .calrail>.wg,.glance>.wg{flex:1 1 100%}
+}
+@media (max-width:640px){
+  :root{--wIso:88px}
+  main{padding-top:10px}
+  .appzone{width:100%;order:4}
+  .meta{display:none}
+  #dPick{display:none}
+  .ctrls .wrap{gap:6px}
+  .ad-foot{display:none}
+  .ad-anchor{display:flex}
+  .t .grip{display:none}
+  .t .ops{visibility:visible}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}

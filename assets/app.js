@@ -1,0 +1,865 @@
+"use strict";
+/* -----------------------------------------------------------------
+   ORDERING RULE: every binding is declared here, above every function.
+   init() is the only top-level call and it is the last line of the file.
+   ----------------------------------------------------------------- */
+var LS = { tasks:"imc.tasks", notes:"imc.notes", track:"imc.track", cfg:"imc.cfg" };
+var MS_DAY = 86400000;
+var CAP = 20;
+var ST = [
+  { k:"todo",  label:"To do",       cls:"c-todo"  },
+  { k:"doing", label:"In progress", cls:"c-doing" },
+  { k:"done",  label:"Done",        cls:"c-done"  }
+];
+var DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var CATS = ["#dc2626","#d97706","#059669","#2563eb"];
+var DEF = { weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
+            catLabels:["Milestone","Travel","Leave","WFH"] };
+
+var cfg = null, tasks = null, notes = null, track = null;
+var sel = null, mDate = null, glanceYear = null, dragId = null, carryHidden = {};
+var el = {};
+
+/* ---------- helpers ---------- */
+function $(id){ return document.getElementById(id); }
+function mk(tag, cls, txt){
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (txt !== undefined && txt !== null) n.textContent = txt;
+  return n;
+}
+function uid(){ return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function p2(n){ return n < 10 ? "0" + n : "" + n; }
+function iso(d){ return d.getFullYear() + "-" + p2(d.getMonth()+1) + "-" + p2(d.getDate()); }
+function mmdd(d){ return p2(d.getMonth()+1) + "-" + p2(d.getDate()); }
+function parseISO(s){
+  if (typeof s !== "string") return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  var y = +m[1], mo = +m[2], da = +m[3];
+  var d = new Date(y, mo-1, da); d.setHours(0,0,0,0);
+  if (d.getFullYear() !== y || d.getMonth() !== mo-1 || d.getDate() !== da) return null;
+  return d;
+}
+function today(){ var d = new Date(); d.setHours(0,0,0,0); return d; }
+function addDays(d,n){ var x = new Date(d.getTime()); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x; }
+function comma(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function stamp(){ var d = new Date(); return iso(d) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes()); }
+function load(k,f){
+  try { var r = localStorage.getItem(k); if (!r) return f;
+        var v = JSON.parse(r); return (v === null || v === undefined) ? f : v; }
+  catch (e){ return f; }
+}
+function save(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){} }
+function stIndex(k){ for (var i=0;i<ST.length;i++) if (ST[i].k === k) return i; return 0; }
+function monthSpan(weeks){
+  // the dominant months this block of weeks covers, e.g. "Jan" or "Mar–Apr"
+  if (!weeks || !weeks.length) return "";
+  var counts = {}, order = [];
+  for (var w=0;w<weeks.length;w++){
+    for (var d=0;d<weeks[w].days.length;d++){
+      var dd = weeks[w].days[d];
+      if (dd.getFullYear() !== weeks[w].year) continue;
+      var m = dd.getMonth();
+      if (counts[m] === undefined){ counts[m] = 0; order.push(m); }
+      counts[m]++;
+    }
+  }
+  order.sort(function(a,b){ return a-b; });
+  if (!order.length) return "";
+  var first = order[0], last = order[order.length-1];
+  return first === last ? MON3[first] : MON3[first] + "\u2013" + MON3[last];
+}
+function narrow(){ return (window.innerWidth || 1200) <= 700; }
+
+/* ---------- week maths ---------- */
+function sow(d){
+  var x = new Date(d.getTime());
+  x.setDate(x.getDate() - ((x.getDay() - cfg.weekStart + 7) % 7));
+  x.setHours(0,0,0,0); return x;
+}
+function dowLabels(){ var o=[]; for (var i=0;i<7;i++) o.push(DOW[(cfg.weekStart+i)%7]); return o; }
+/* Wk 1 = the week containing Jan 1. Last = the week containing Dec 31.
+   Every week is emitted; sparse edge weeks are never dropped. */
+function weeksForYear(y){
+  var dec31 = new Date(y,11,31); dec31.setHours(0,0,0,0);
+  var cur = sow(new Date(y,0,1)), out = [], n = 1, guard = 0;
+  while (cur.getTime() <= dec31.getTime() && guard < 60){
+    var days = []; for (var i=0;i<7;i++) days.push(addDays(cur,i));
+    out.push({ num:n, year:y, start:new Date(cur.getTime()), days:days });
+    n++; guard++; cur = addDays(cur,7);
+  }
+  return out;
+}
+function weekOf(ds){
+  var d = parseISO(ds); if (!d) return null;
+  var s = sow(d).getTime(), y = sow(d).getFullYear(), yy = [y-1,y,y+1];
+  for (var c=0;c<yy.length;c++){
+    var ws = weeksForYear(yy[c]);
+    for (var i=0;i<ws.length;i++) if (ws[i].start.getTime() === s) return ws[i];
+  }
+  return null;
+}
+function daysOfMonth(ds){
+  var d = parseISO(ds), out = [];
+  var last = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  for (var i=1;i<=last;i++) out.push(iso(new Date(d.getFullYear(), d.getMonth(), i)));
+  return out;
+}
+
+/* ---------- calendar-accurate diffs ---------- */
+function wholeMonths(a,b){
+  var m = (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth());
+  if (b.getDate() < a.getDate()) m -= 1;
+  return m;
+}
+/* Sign convention: past = positive elapsed, future = negative remaining. */
+function signedDays(s){ var t = parseISO(s); return t ? Math.round((today()-t)/MS_DAY) : 0; }
+function nextOcc(s){
+  var t = parseISO(s); if (!t) return null;
+  var n = today();
+  var c = new Date(n.getFullYear(), t.getMonth(), t.getDate()); c.setHours(0,0,0,0);
+  if (c.getTime() < n.getTime()) c = new Date(n.getFullYear()+1, t.getMonth(), t.getDate());
+  c.setHours(0,0,0,0); return c;
+}
+function entryDays(e){ return e.repeat ? Math.round((today()-nextOcc(e.date))/MS_DAY) : signedDays(e.date); }
+function countText(e){
+  var days = entryDays(e);
+  if (days === 0) return "today";
+  var past = days > 0, tgt = e.repeat ? nextOcc(e.date) : parseISO(e.date);
+  var a = past ? tgt : today(), b = past ? today() : tgt;
+  var u = e.unit || "days", mag;
+  if (u === "weeks") mag = Math.floor(Math.abs(days)/7);
+  else if (u === "months") mag = wholeMonths(a,b);
+  else if (u === "years") mag = Math.floor(wholeMonths(a,b)/12);
+  else mag = Math.abs(days);
+  if (mag === 1) u = u.slice(0,-1);
+  return (past ? "" : "-") + comma(mag) + " " + u + " " + (past ? "elapsed" : "left");
+}
+
+/* ---------- task model ---------- */
+function lane(ds,status){
+  return tasks.filter(function(t){ return t.date === ds && t.status === status; })
+              .sort(function(a,b){ return (a.order-b.order) || (a.id < b.id ? -1 : 1); });
+}
+function renumber(ds,status){
+  var l = lane(ds,status);
+  for (var i=0;i<l.length;i++) l[i].order = i;
+}
+function addTask(ds,text,status){
+  var t = { id:uid(), date:ds, text:text, status:status,
+            order:lane(ds,status).length, ts:{todo:null,doing:null,done:null} };
+  t.ts[status] = stamp();
+  tasks.push(t); save(LS.tasks,tasks);
+  return t;
+}
+function byId(id){ for (var i=0;i<tasks.length;i++) if (tasks[i].id === id) return tasks[i]; return null; }
+/* one primitive: status change and reordering are the same operation */
+function placeTask(id,status,index){
+  var t = byId(id); if (!t) return;
+  var from = t.status, fromDate = t.date;
+  var l = lane(t.date,status).filter(function(x){ return x.id !== id; });
+  if (index === null || index === undefined || index > l.length) index = l.length;
+  if (index < 0) index = 0;
+  l.splice(index,0,t);
+  t.status = status;
+  if (!t.ts[status]) t.ts[status] = stamp();
+  for (var i=0;i<l.length;i++) l[i].order = i;
+  if (from !== status) renumber(fromDate,from);
+  save(LS.tasks,tasks);
+}
+function nudge(id,delta){
+  var t = byId(id); if (!t) return;
+  var l = lane(t.date,t.status), to = l.indexOf(t) + delta;
+  if (to < 0 || to >= l.length) return;
+  placeTask(id,t.status,to);
+}
+function shiftStatus(id,dir){
+  var t = byId(id); if (!t) return;
+  var to = stIndex(t.status) + dir;
+  if (to < 0 || to >= ST.length) return;
+  placeTask(id, ST[to].k, null);
+}
+function delTask(id){
+  var t = byId(id); if (!t) return;
+  var d = t.date, s = t.status;
+  tasks = tasks.filter(function(x){ return x.id !== id; });
+  renumber(d,s); save(LS.tasks,tasks);
+}
+
+/* ---------- KANBAN ---------- */
+function renderKanban(host, ds){
+  host.className = "kb";
+  host.innerHTML = "";
+  for (var s=0;s<ST.length;s++){
+    (function(st){
+      var col = mk("div","col");
+      col.setAttribute("data-s", st.k);
+      var h = mk("div","ch " + st.cls);
+      h.appendChild(mk("span", null, st.label));
+      var l = lane(ds, st.k);
+      h.appendChild(mk("span","n", String(l.length)));
+      col.appendChild(h);
+
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.className = "cadd"; inp.placeholder = "+ add";
+      inp.setAttribute("aria-label","Add a task to " + st.label);
+      inp.setAttribute("data-add", st.k);
+      inp.addEventListener("keydown", function(e){
+        if (e.key !== "Enter") return;
+        var v = inp.value.trim(); if (!v) return;
+        addTask(ds, v, st.k); inp.value = ""; refresh();
+        var again = host.querySelector('.cadd[data-add="' + st.k + '"]');
+        if (again && again.focus) again.focus();
+      });
+      col.appendChild(inp);
+
+      var wrap = mk("div","lane");
+      wrap.setAttribute("data-s", st.k);
+      wrap.addEventListener("dragover", function(e){ e.preventDefault(); wrap.classList.add("over"); });
+      wrap.addEventListener("dragleave", function(){ wrap.classList.remove("over"); });
+      wrap.addEventListener("drop", function(e){
+        e.preventDefault(); wrap.classList.remove("over");
+        var id = dragId || (e.dataTransfer && e.dataTransfer.getData("text/plain"));
+        if (!id) return;
+        placeTask(id, st.k, dropIndex(wrap, e.clientY));
+        dragId = null; refresh();
+      });
+      if (!l.length) wrap.appendChild(mk("div","none","nothing yet"));
+      for (var i=0;i<l.length;i++) wrap.appendChild(taskRow(l[i], st, i, l.length));
+      col.appendChild(wrap);
+      host.appendChild(col);
+    })(ST[s]);
+  }
+}
+function dropIndex(wrap,y){
+  var rows = wrap.querySelectorAll(".t");
+  for (var i=0;i<rows.length;i++){
+    var r = rows[i].getBoundingClientRect ? rows[i].getBoundingClientRect() : null;
+    if (r && y < r.top + r.height/2) return i;
+  }
+  return rows.length;
+}
+function taskRow(task, st, idx, total){
+  var n = mk("div","t s-" + st.k);
+  n.setAttribute("draggable","true");
+  n.setAttribute("data-id", task.id);
+  n.style.transform = "rotate(" + tilt(task.id) + "deg)";
+  n.addEventListener("dragstart", function(e){
+    dragId = task.id; n.classList.add("dragging");
+    if (e.dataTransfer){ e.dataTransfer.setData("text/plain", task.id); e.dataTransfer.effectAllowed = "move"; }
+  });
+  n.addEventListener("dragend", function(){ n.classList.remove("dragging"); dragId = null; });
+  n.appendChild(mk("span","grip","\u2807"));
+
+  var txt = mk("span","txt", task.text);
+  txt.title = task.text + "\nTo do: " + (task.ts.todo || "—") +
+              "  |  In progress: " + (task.ts.doing || "—") + "  |  Done: " + (task.ts.done || "—");
+  txt.addEventListener("click", function(){ n.classList.toggle("open"); });
+  txt.addEventListener("dblclick", function(){ inlineEdit(n, txt, task); });
+  n.appendChild(txt);
+
+  var ops = mk("div","ops");
+  ops.appendChild(opBtn("\u25b2","Move up",   idx === 0,       function(){ nudge(task.id,-1); refresh(); }));
+  ops.appendChild(opBtn("\u25bc","Move down", idx === total-1, function(){ nudge(task.id, 1); refresh(); }));
+  ops.appendChild(opBtn("\u2190","Move left", st.k === "todo", function(){ shiftStatus(task.id,-1); refresh(); }));
+  ops.appendChild(opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); }));
+  var x = opBtn("\u00d7","Delete", false, function(){ delTask(task.id); refresh(); });
+  x.className = "op x";
+  ops.appendChild(x);
+  n.appendChild(ops);
+  return n;
+}
+function opBtn(label,title,disabled,fn){
+  var b = mk("button","op",label);
+  b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
+  b.disabled = !!disabled;
+  b.addEventListener("click", fn);
+  return b;
+}
+function tilt(id){
+  var h = 0;
+  for (var i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i))|0;
+  return ((((h % 1000)+1000)%1000)/1000*2 - 1).toFixed(2);
+}
+function inlineEdit(row, txt, task){
+  var inp = document.createElement("input");
+  inp.type = "text"; inp.className = "edit"; inp.value = task.text;
+  row.replaceChild(inp, txt);
+  if (inp.focus) inp.focus();
+  function done(keep){
+    var v = inp.value.trim();
+    if (keep && v){ task.text = v; save(LS.tasks,tasks); }
+    refresh();
+  }
+  inp.addEventListener("blur", function(){ done(true); });
+  inp.addEventListener("keydown", function(e){
+    if (e.key === "Enter") done(true);
+    if (e.key === "Escape") done(false);
+  });
+}
+
+/* ---------- READ-ONLY week / month ---------- */
+function renderReadOnly(host, dates){
+  host.className = "ro";
+  host.innerHTML = "";
+  var nowISO = iso(today());
+  for (var s=0;s<ST.length;s++){
+    var st = ST[s];
+    var c = mk("div","rc");
+    c.setAttribute("data-s", st.k);
+    var h = mk("div","rh " + st.cls);
+    h.appendChild(mk("span", null, st.label));
+    var cnt = mk("span","n","0");
+    h.appendChild(cnt); c.appendChild(h);
+    var n = 0;
+    for (var i=0;i<dates.length;i++){
+      var l = lane(dates[i], st.k);
+      for (var j=0;j<l.length;j++){
+        (function(task, ds){
+          var r = mk("button","rr" + (ds === nowISO ? " now" : ""));
+          r.type = "button"; r.title = "Open " + ds + " on the day board";
+          r.appendChild(mk("span","d", ds.slice(5)));
+          var t2 = mk("span","t2", task.text); t2.title = task.text;
+          r.appendChild(t2);
+          r.addEventListener("click", function(){ setScope("day"); setDate(ds); });
+          c.appendChild(r);
+        })(l[j], dates[i]);
+        n++;
+      }
+    }
+    cnt.textContent = String(n);
+    if (!n) c.appendChild(mk("div","none","nothing yet"));
+    host.appendChild(c);
+  }
+}
+
+/* ---------- WEEK GRID: one component, two densities, identical cells ---------- */
+function renderWeekGrid(o){
+  var g = mk("div","wg " + (o.compact ? "c" : "full"));
+  var yh = mk("div","yh", o.label || "");
+  if (o.monthHint){ var mo = mk("span","mo", o.monthHint); yh.appendChild(mo); }
+  if (o.sublabel){ var sl = mk("span","sub", o.sublabel); yh.appendChild(sl); }
+  g.appendChild(yh);
+  g.appendChild(mk("div","dh","Wk"));
+  var lab = dowLabels();
+  for (var i=0;i<7;i++){
+    var dow = (cfg.weekStart + i) % 7;               // 0=Sun .. 6=Sat
+    var dh = mk("div","dh" + (dow === 0 || dow === 6 ? " wknd" : ""), lab[i]);
+    g.appendChild(dh);
+  }
+  var nowISO = iso(today());
+  /* count tasks per date once, not once per cell — a 3-year calendar is ~1100 cells */
+  var tally = {};
+  for (var q=0;q<tasks.length;q++) tally[tasks[q].date] = (tally[tasks[q].date] || 0) + 1;
+  for (var w=0;w<o.weeks.length;w++){
+    (function(week){
+      var b = mk("button","wk", String(week.num));
+      b.type = "button";
+      b.title = "Week " + week.num + " of " + week.year + " \u2014 open it on the board";
+      b.addEventListener("click", function(){ openWeek(week); });
+      g.appendChild(b);
+      for (var d=0;d<7;d++){
+        (function(day){
+          var ds = iso(day);
+          var dow = day.getDay();
+          var cell = mk("button","dc" + (dow === 0 || dow === 6 ? " wknd" : ""), mmdd(day));
+          cell.type = "button";
+          var rec = notes[ds];
+          var hasCat = rec && rec.color !== null && rec.color !== undefined;
+          if (hasCat) cell.className += " k" + rec.color;      /* whole cell takes the colour */
+          if (day.getFullYear() !== week.year && !hasCat) cell.className += " out";
+          if (ds === nowISO) cell.className += " now";
+          var tc = tally[ds] || 0;
+          if (tc) cell.appendChild(mk("span","task"));
+          if (rec && rec.note) cell.appendChild(mk("span","pen","\u270e"));
+          var tip = [ds];
+          if (hasCat) tip.push(cfg.catLabels[rec.color]);
+          if (rec && rec.note) tip.push(rec.note);
+          if (tc) tip.push(tc + (tc === 1 ? " task" : " tasks"));
+          cell.title = tip.join(" — ");
+          cell.addEventListener("click", function(){ openDay(ds); });
+          g.appendChild(cell);
+        })(week.days[d]);
+      }
+    })(o.weeks[w]);
+  }
+  return g;
+}
+
+/* ---------- BOARD ---------- */
+function renderBoard(){
+  el.isoOut.textContent = sel;
+  el.dInput.value = sel;
+  renderCarry();
+  var d = parseISO(sel), wk = weekOf(sel);
+  if (cfg.scope === "day"){
+    el.metaOut.textContent = DOW[d.getDay()] + (wk ? " · Week " + wk.num : "");
+    renderKanban(el.scopeHost, sel);
+  } else if (cfg.scope === "week"){
+    var ds = [];
+    for (var i=0;i<7;i++) ds.push(iso(addDays(sow(d), i)));
+    el.metaOut.textContent = (wk ? "Week " + wk.num + " · " : "") + "read-only";
+    renderReadOnly(el.scopeHost, ds);
+  } else {
+    el.metaOut.textContent = MON3[d.getMonth()] + " " + d.getFullYear() + " · read-only";
+    renderReadOnly(el.scopeHost, daysOfMonth(sel));
+  }
+  renderGlance();
+}
+function renderCarry(){
+  el.carryHost.innerHTML = "";
+  var nowISO = iso(today());
+  if (sel !== nowISO || carryHidden[nowISO] || cfg.scope !== "day") return;
+  var prev = iso(addDays(today(),-1));
+  var open = tasks.filter(function(t){ return t.date === prev && t.status !== "done"; });
+  if (!open.length) return;
+  var bar = mk("div");
+  bar.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;" +
+    "padding:5px 9px;background:var(--doingF);border:1px solid var(--doingE);border-left:3px solid var(--doing)";
+  bar.appendChild(mk("span", null, open.length + (open.length === 1 ? " task" : " tasks") +
+                                   " still open from " + prev));
+  var move = mk("button","btn","Move to today"); move.type = "button";
+  move.addEventListener("click", function(){
+    for (var i=0;i<open.length;i++){
+      open[i].date = nowISO;
+      open[i].order = lane(nowISO, open[i].status).length;
+    }
+    renumber(prev,"todo"); renumber(prev,"doing");
+    save(LS.tasks,tasks); refresh();
+  });
+  var no = mk("button","btn","Dismiss"); no.type = "button";
+  no.addEventListener("click", function(){ carryHidden[nowISO] = true; renderCarry(); });
+  bar.appendChild(move); bar.appendChild(no);
+  el.carryHost.appendChild(bar);
+}
+function renderGlance(){
+  el.glanceBox.classList.toggle("folded", !cfg.glanceOpen);
+  el.glFold.textContent = cfg.glanceOpen ? "\u25be" : "\u25b8";
+  el.glFold.setAttribute("aria-expanded", cfg.glanceOpen ? "true" : "false");
+  el.gyLabel.textContent = String(glanceYear);
+  if (!cfg.glanceOpen){ el.glance.innerHTML = ""; return; }
+  var wks = weeksForYear(glanceYear), size = Math.ceil(wks.length/3);
+  el.gyLabel.textContent = String(glanceYear);
+  var cy = today().getFullYear();
+  el.gyPrev.disabled = glanceYear <= cy - CAP;
+  el.gyNext.disabled = glanceYear >= cy + CAP;
+  el.glance.innerHTML = "";
+  for (var c=0;c<3;c++){
+    var slice = wks.slice(c*size, (c+1)*size);
+    if (!slice.length) continue;
+    el.glance.appendChild(renderWeekGrid({
+      label: monthSpan(slice),
+      sublabel: "Wk " + slice[0].num + "\u2013" + slice[slice.length-1].num,
+      weeks: slice, compact:true
+    }));
+  }
+}
+
+/* ---------- CALENDAR ---------- */
+function calYears(){
+  var cy = today().getFullYear();
+  return { from:Math.max(cy-CAP, cy-cfg.back+cfg.shift), to:Math.min(cy+CAP, cy+cfg.fwd+cfg.shift) };
+}
+function stepGlance(d){
+  var cy = today().getFullYear();
+  glanceYear = Math.min(cy+CAP, Math.max(cy-CAP, glanceYear + d));
+  renderGlance();
+}
+function stepCal(d){
+  var r = calYears(), cy = today().getFullYear();
+  if (d < 0 && r.from <= cy-CAP) return;
+  if (d > 0 && r.to   >= cy+CAP) return;
+  cfg.shift = Math.min(CAP, Math.max(-CAP, cfg.shift + d));
+  save(LS.cfg,cfg); renderCalendar();
+}
+function renderCalendar(){
+  var r = calYears(), cy = today().getFullYear();
+  el.cyLabel.textContent = r.from === r.to ? String(r.from) : (r.from + "–" + r.to);
+  el.cyPrev.disabled = r.from <= cy-CAP;
+  el.cyNext.disabled = r.to   >= cy+CAP;
+  el.rail.innerHTML = "";
+  for (var y=r.from;y<=r.to;y++)
+    el.rail.appendChild(renderWeekGrid({ label:String(y), weeks:weeksForYear(y), compact:false,
+                                         monthHint:"Jan\u2013Dec" }));  // full year always Jan–Dec
+}
+
+/* ---------- RIGHT RAIL ---------- */
+function renderRail(){
+  el.cats.innerHTML = "";
+  for (var i=0;i<CATS.length;i++){
+    (function(idx){
+      var row = mk("div","cat");
+      var dot = mk("i"); dot.style.background = CATS[idx];
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.value = cfg.catLabels[idx];
+      inp.setAttribute("aria-label","Rename category " + (idx+1) + " (currently " + cfg.catLabels[idx] + ")");
+      inp.title = "Click to rename";
+      inp.addEventListener("change", function(){
+        cfg.catLabels[idx] = inp.value.trim() || DEF.catLabels[idx];
+        save(LS.cfg,cfg); renderCalendar(); renderGlance();
+      });
+      row.appendChild(dot); row.appendChild(inp);
+      row.appendChild(mk("span","pen","\u270e"));
+      el.cats.appendChild(row);
+    })(i);
+  }
+  renderTracked();
+}
+function renderTracked(){
+  el.tkList.innerHTML = "";
+  if (!track.length){
+    el.tkList.appendChild(mk("div","none","Nothing tracked yet."));
+    return;
+  }
+  var soon = null;
+  for (var j=0;j<track.length;j++){
+    var dd = entryDays(track[j]);
+    if (dd <= 0 && (soon === null || dd > entryDays(soon))) soon = track[j];
+  }
+  var sorted = track.slice().sort(function(a,b){ return entryDays(b) - entryDays(a); });
+  for (var i=0;i<sorted.length;i++){
+    (function(e){
+      var box = mk("div","tk" + (soon && e.id === soon.id ? " next" : ""));
+      var lb = mk("span","tkl", e.label);
+      lb.title = e.date;
+      box.appendChild(lb);
+      var row = mk("div","tkr");
+      row.appendChild(mk("span","tkc" + (entryDays(e) < 0 ? " fut" : ""), countText(e)));
+      var s = document.createElement("select");
+      s.setAttribute("aria-label","Count " + e.label + " in");
+      ["days","weeks","months","years"].forEach(function(u){
+        var o = document.createElement("option");
+        o.value = u; o.textContent = u;
+        if ((e.unit || "days") === u) o.selected = true;
+        s.appendChild(o);
+      });
+      s.addEventListener("change", function(){ e.unit = s.value; save(LS.track,track); renderTracked(); });
+      row.appendChild(s);
+      var x = mk("button","x","\u00d7"); x.type = "button"; x.title = "Remove " + e.label;
+      x.addEventListener("click", function(){
+        track = track.filter(function(t){ return t.id !== e.id; });
+        save(LS.track,track); renderTracked();
+      });
+      row.appendChild(x);
+      box.appendChild(row);
+      el.tkList.appendChild(box);
+    })(sorted[i]);
+  }
+}
+function addTracked(){
+  var lb = el.tLabel.value.trim(), dt = el.tDate.value.trim();
+  el.tErr.classList.add("hidden");
+  if (!lb){ el.tErr.textContent = "Add a label first."; el.tErr.classList.remove("hidden"); return; }
+  if (!parseISO(dt)){ el.tErr.textContent = "Use yyyy-mm-dd.";
+                      el.tErr.classList.remove("hidden"); return; }
+  track.push({ id:uid(), label:lb, date:dt,
+               unit:el.tUnit.value });
+  save(LS.track,track);
+  el.tLabel.value = ""; el.tDate.value = "";
+  renderTracked();
+}
+
+/* ---------- day popup ---------- */
+function openDay(ds){
+  mDate = ds; sel = ds; cfg.lastDate = ds; save(LS.cfg,cfg);
+  var d = parseISO(ds), wk = weekOf(ds);
+  el.mDate.textContent = ds;
+  el.mWk.textContent = DOW[d.getDay()] + (wk ? "  ·  Week " + wk.num + ", " + wk.year : "");
+  renderSw();
+  el.mNote.value = (notes[ds] && notes[ds].note) || "";
+  renderKanban(el.mKb, ds);
+  el.ov.classList.remove("hidden");
+}
+function closeDay(){ el.ov.classList.add("hidden"); mDate = null; refresh(); }
+function renderSw(){
+  el.mSw.innerHTML = "";
+  var rec = notes[mDate] || {};
+  for (var i=0;i<CATS.length;i++){
+    (function(idx){
+      var b = mk("button","dab" + (rec.color === idx ? " on" : ""));
+      b.type = "button"; b.style.background = CATS[idx];
+      b.title = cfg.catLabels[idx];
+      b.setAttribute("aria-label","Mark as " + cfg.catLabels[idx]);
+      b.addEventListener("click", function(){
+        var r = notes[mDate] || { color:null, note:"" };
+        r.color = (r.color === idx) ? null : idx;
+        notes[mDate] = r; save(LS.notes,notes); renderSw();
+      });
+      el.mSw.appendChild(b);
+      el.mSw.appendChild(mk("span","none", cfg.catLabels[idx]));
+    })(i);
+  }
+  var c = mk("button","btn","No colour"); c.type = "button";
+  c.addEventListener("click", function(){
+    var r = notes[mDate] || { color:null, note:"" };
+    r.color = null; notes[mDate] = r; save(LS.notes,notes); renderSw();
+  });
+  el.mSw.appendChild(c);
+}
+
+/* ---------- navigation ---------- */
+function setView(v){
+  cfg.view = v; save(LS.cfg,cfg);
+  var b = (v === "board");
+  el.boardView.classList.toggle("hidden", !b);
+  el.calView.classList.toggle("hidden", b);
+  el.scopeSeg.classList.toggle("hidden", !b);   /* day/week/month means nothing on the calendar */
+  el.metaOut.classList.toggle("hidden", !b);
+  var links = document.querySelectorAll(".sitenav a[data-view]");
+  for (var i=0;i<links.length;i++)
+    links[i].classList.toggle("on", links[i].getAttribute("data-view") === v);
+  try { history.replaceState(null, "", "#" + v); } catch (e){}
+  if (b) renderBoard(); else renderCalendar();
+}
+function setScope(s){ cfg.scope = s; save(LS.cfg,cfg); segOn(el.scopeSeg,"scope",s); renderBoard(); }
+function setDate(ds){
+  if (!parseISO(ds)) return;
+  sel = ds; cfg.lastDate = ds; save(LS.cfg,cfg); renderBoard();
+}
+function setWeekStart(v){
+  v = parseInt(v,10); if (isNaN(v) || v < 0 || v > 6) v = 0;
+  cfg.weekStart = v; save(LS.cfg,cfg);
+  el.wsSel.value = String(cfg.weekStart);
+  renderAll();
+}
+function segOn(host,attr,val){
+  var b = host.children;
+  for (var i=0;i<b.length;i++) b[i].classList.toggle("on", b[i].getAttribute("data-"+attr) === val);
+}
+function openWeek(week){
+  var t = today();
+  var inWeek = t >= week.start && t <= addDays(week.start,6);
+  sel = iso(inWeek ? t : week.start); cfg.lastDate = sel;
+  cfg.scope = "week"; save(LS.cfg,cfg);
+  segOn(el.scopeSeg,"scope","week");
+  setView("board");
+}
+function refresh(){
+  renderBoard();
+  if (mDate) renderKanban(el.mKb, mDate);
+  if (!el.calView.classList.contains("hidden")) renderCalendar();
+  renderRail();
+}
+function renderAll(){ renderBoard(); renderCalendar(); renderRail(); }
+
+/* ---------- data actions ---------- */
+function download(name,text,mime){
+  try {
+    var url = URL.createObjectURL(new Blob([text],{type:mime}));
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  } catch (e){ alert("This browser blocked the download."); }
+}
+function cell(v){ return '"' + String(v === null || v === undefined ? "" : v).replace(/"/g,'""') + '"'; }
+function exportCsv(){
+  var rows = [["date","status","priority","task","entered_todo","entered_in_progress","entered_done"]];
+  var s = tasks.slice().sort(function(a,b){
+    return a.date < b.date ? -1 : a.date > b.date ? 1 :
+           stIndex(a.status)-stIndex(b.status) || a.order-b.order; });
+  for (var i=0;i<s.length;i++)
+    rows.push([s[i].date, s[i].status, s[i].order+1, s[i].text, s[i].ts.todo, s[i].ts.doing, s[i].ts.done]);
+  download("inmycalendar-tasks-" + iso(today()) + ".csv",
+           rows.map(function(r){ return r.map(cell).join(","); }).join("\r\n"), "text/csv");
+}
+function exportJson(){
+  download("inmycalendar-backup-" + iso(today()) + ".json",
+    JSON.stringify({ app:"inmycalendar", version:4, exported:iso(today()),
+                     cfg:cfg, tasks:tasks, notes:notes, track:track }, null, 2), "application/json");
+}
+function importJson(file){
+  var r = new FileReader();
+  r.onload = function(){
+    var data;
+    try { data = JSON.parse(String(r.result)); }
+    catch (e){ alert("That file isn't valid JSON, so nothing was changed."); return; }
+    var nT = Array.isArray(data.tasks) ? data.tasks.length : 0;
+    var nN = data.notes ? Object.keys(data.notes).length : 0;
+    var nK = Array.isArray(data.track) ? data.track.length : 0;
+    if (!confirm("Replace what's here with " + nT + " tasks, " + nN + " day notes and " +
+                 nK + " tracked dates from this file?")) return;
+    if (Array.isArray(data.tasks)){ tasks = data.tasks; migrate(); save(LS.tasks,tasks); }
+    if (data.notes && typeof data.notes === "object"){ notes = data.notes; save(LS.notes,notes); }
+    if (Array.isArray(data.track)){ track = data.track; save(LS.track,track); }
+    if (data.cfg && typeof data.cfg === "object"){
+      cfg = Object.assign({}, DEF, data.cfg); save(LS.cfg,cfg);
+      el.wsSel.value = String(cfg.weekStart);
+    }
+    renderAll(); setView(cfg.view === "calendar" ? "calendar" : "board");
+  };
+  r.readAsText(file);
+}
+function wipe(){
+  if (!confirm("Delete every task, note and tracked date in this browser? This can't be undone.")) return;
+  tasks = []; notes = {}; track = []; carryHidden = {};
+  save(LS.tasks,tasks); save(LS.notes,notes); save(LS.track,track);
+  renderAll(); setView(cfg.view);
+}
+function rangeLabel(){
+  if (el.rgLabel) el.rgLabel.textContent = "Showing " + (cfg.back + cfg.fwd + 1) + " years (limit ±" + CAP + ")";
+  el.rgBack.disabled = cfg.back >= CAP;
+  el.rgFwd.disabled  = cfg.fwd  >= CAP;
+}
+function applyAds(){
+  el.adRail.classList.toggle("hidden", !cfg.ads);
+  el.adFoot.classList.toggle("hidden", !cfg.ads);
+  el.adAnchor.classList.toggle("hidden", !cfg.ads);
+}
+function migrate(){
+  for (var i=0;i<tasks.length;i++){
+    var t = tasks[i];
+    if (!t.ts) t.ts = { todo:null, doing:null, done:null };
+    if (typeof t.order !== "number") t.order = i;
+  }
+}
+
+/* ---------- boot ---------- */
+function cacheEls(){
+  var ids = ["dPrev","dPick","dInput","isoOut","dNext","dToday","metaOut","scopeSeg",
+    "wsSel","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
+    "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
+    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
+    "ov","mDate","mWk","mClose","mDone","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
+  for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
+}
+function typing(e){
+  var n = e.target;
+  return n && (n.tagName === "INPUT" || n.tagName === "TEXTAREA" || n.tagName === "SELECT");
+}
+function wire(){
+  el.dPrev.addEventListener("click", function(){ setDate(iso(addDays(parseISO(sel),-1))); });
+  el.dNext.addEventListener("click", function(){ setDate(iso(addDays(parseISO(sel), 1))); });
+  el.dToday.addEventListener("click", function(){ setDate(iso(today())); });
+  el.dPick.addEventListener("click", function(){
+    if (el.dInput.showPicker){ try { el.dInput.showPicker(); return; } catch (e){} }
+    el.dInput.click();
+  });
+  el.dInput.addEventListener("change", function(){ setDate(el.dInput.value); });
+  el.scopeSeg.addEventListener("click", function(e){
+    var s = e.target.getAttribute && e.target.getAttribute("data-scope");
+    if (s) setScope(s);
+  });
+  /* Board/Calendar now live in the site nav next to About/Contact/Privacy */
+  document.querySelector(".sitenav").addEventListener("click", function(e){
+    var v = e.target.getAttribute && e.target.getAttribute("data-view");
+    if (!v) return;
+    e.preventDefault(); setView(v);
+  });
+
+  el.glFold.addEventListener("click", function(){
+    cfg.glanceOpen = !cfg.glanceOpen; save(LS.cfg,cfg); renderGlance();
+  });
+  el.isoOut.addEventListener("click", function(){
+    if (el.dInput.showPicker){ try { el.dInput.showPicker(); return; } catch (e){} }
+    el.dInput.click();
+  });
+  el.gyPrev.addEventListener("click", function(){ stepGlance(-1); });
+  el.gyNext.addEventListener("click", function(){ stepGlance( 1); });
+  el.cyPrev.addEventListener("click", function(){ stepCal(-1); });
+  el.cyNext.addEventListener("click", function(){ stepCal( 1); });
+
+
+  el.wsSel.addEventListener("change", function(){ setWeekStart(el.wsSel.value); });
+  el.rgBack.addEventListener("click", function(){
+    if (cfg.back < CAP) cfg.back += 1; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
+  });
+  el.rgFwd.addEventListener("click", function(){
+    if (cfg.fwd < CAP) cfg.fwd += 1; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
+  });
+  el.rgReset.addEventListener("click", function(){
+    cfg.back = 1; cfg.fwd = 1; cfg.shift = 0; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
+  });
+
+  el.expCsv.addEventListener("click", exportCsv);
+  el.expJson.addEventListener("click", exportJson);
+  el.impJson.addEventListener("click", function(){ el.impFile.click(); });
+  el.impFile.addEventListener("change", function(){
+    if (el.impFile.files && el.impFile.files[0]) importJson(el.impFile.files[0]);
+    el.impFile.value = "";
+  });
+  el.wipe.addEventListener("click", wipe);
+
+  el.tPick.addEventListener("click", function(){
+    if (el.tNative.showPicker){ try { el.tNative.showPicker(); return; } catch (e){} }
+    el.tNative.click();
+  });
+  el.tNative.addEventListener("change", function(){
+    if (el.tNative.value) el.tDate.value = el.tNative.value;
+  });
+  el.tAdd.addEventListener("click", addTracked);
+  el.tDate.addEventListener("keydown", function(e){ if (e.key === "Enter") addTracked(); });
+
+  el.mClose.addEventListener("click", closeDay);
+  el.mDone.addEventListener("click", closeDay);
+  el.ov.addEventListener("click", function(e){ if (e.target === el.ov) closeDay(); });
+  el.mNote.addEventListener("input", function(){
+    if (!mDate) return;
+    var r = notes[mDate] || { color:null, note:"" };
+    r.note = el.mNote.value; notes[mDate] = r; save(LS.notes,notes);
+  });
+
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && !el.ov.classList.contains("hidden")){ closeDay(); return; }
+    if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+    var k = e.key;
+    if (k === "ArrowLeft"){ setDate(iso(addDays(parseISO(sel),-1))); e.preventDefault(); }
+    else if (k === "ArrowRight"){ setDate(iso(addDays(parseISO(sel),1))); e.preventDefault(); }
+    else if (k === "t" || k === "T") setDate(iso(today()));
+    else if (k === "n" || k === "N"){
+      setScope("day");
+      var f = el.scopeHost.querySelector(".cadd");
+      if (f && f.focus) f.focus();
+      e.preventDefault();
+    }
+    else if (k === "1") setScope("day");
+    else if (k === "2") setScope("week");
+    else if (k === "3") setScope("month");
+    else if (k === "b" || k === "B") setView("board");
+    else if (k === "c" || k === "C") setView("calendar");
+  });
+}
+function init(){
+  cfg = Object.assign({}, DEF, load(LS.cfg, {}));
+  if (!Array.isArray(cfg.catLabels) || cfg.catLabels.length !== 4) cfg.catLabels = DEF.catLabels.slice();
+  // one-time migration: replace the OLD placeholder defaults with the new ones,
+  // but never touch labels the user actually customised.
+  var OLD_SETS = [["Category 1","Category 2","Category 3","Category 4"],
+                  ["Work","Personal","Travel","Important"],
+                  ["Deadline","Travel","Leave","WFH"]];
+  for (var oi=0; oi<OLD_SETS.length; oi++){
+    if (cfg.catLabels.every(function(l,i){ return l === OLD_SETS[oi][i]; })){
+      cfg.catLabels = DEF.catLabels.slice(); save(LS.cfg,cfg); break;
+    }
+  }
+  cfg.back  = Math.min(CAP, Math.max(0, cfg.back|0));
+  cfg.fwd   = Math.min(CAP, Math.max(0, cfg.fwd|0));
+  cfg.shift = 0;   /* the calendar opens on today, exactly as the glance does */
+  if (typeof cfg.glanceOpen !== "boolean") cfg.glanceOpen = !narrow();
+  if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
+
+  tasks = load(LS.tasks, []); if (!Array.isArray(tasks)) tasks = [];
+  notes = load(LS.notes, {}); if (!notes || typeof notes !== "object") notes = {};
+  track = load(LS.track, []); if (!Array.isArray(track)) track = [];
+  migrate();
+  sel = parseISO(cfg.lastDate) ? cfg.lastDate : iso(today());
+  glanceYear = today().getFullYear();
+
+  /* arriving from About/Contact/Privacy via index.html#board or #calendar */
+  var h = (window.location.hash || "").replace("#","");
+  var view = (h === "board" || h === "calendar") ? h
+           : (cfg.view === "calendar" ? "calendar" : "board");
+
+  cacheEls();
+  el.wsSel.value = String(cfg.weekStart);
+  wire();
+  rangeLabel();
+  applyAds();
+  segOn(el.scopeSeg,"scope",cfg.scope);
+  renderAll();
+  setView(view);
+}
+
+init();   /* only top-level call, and the last line — every binding above already exists */

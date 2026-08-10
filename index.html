@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>inmycalendar — board &amp; week planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<meta name="description" content="A daily sticky-note kanban board joined to a multi-year week calendar. Free, no account, your data stays in your browser.">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/app.css">
+
+</head>
+<body>
+
+<header class="bar">
+ <div class="wrap">
+  <a class="brand" href="index.html"><svg width="22" height="22" viewBox="0 0 128 128" aria-hidden="true"><rect width="128" height="128" rx="26" fill="#18181b"/><rect x="24" y="32" width="80" height="66" rx="10" fill="#fff"/><rect x="24" y="32" width="80" height="18" rx="10" fill="#d4d4d8"/><text x="64" y="90" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="600" font-size="40" fill="#18181b">imc</text></svg><span class="wordmark">in<b>my</b>calendar</span></a>
+  <div class="appzone">
+    <button class="nub" id="dPrev" aria-label="Previous day">&larr;</button>
+    <span style="position:relative;display:inline-flex">
+      <button class="nub" id="dPick" aria-label="Pick a date">&#128197;</button>
+      <input type="date" class="dpick" id="dInput" aria-label="Pick a date" tabindex="-1">
+    </span>
+    <button class="iso" id="isoOut" aria-label="Selected date — click to pick another">—</button>
+    <button class="nub" id="dNext" aria-label="Next day">&rarr;</button>
+    <button class="nub" id="dToday">Today</button>
+    <div class="seg" id="scopeSeg">
+      <button data-scope="day">Day</button><button data-scope="week">Week</button><button data-scope="month">Month</button>
+    </div>
+    <span class="meta" id="metaOut"></span>
+    <span class="wkpick">
+      <span class="lbl">Week</span>
+      <select id="wsSel" class="sel" aria-label="Week starts on">
+        <option value="0">Sunday</option><option value="1">Monday</option>
+        <option value="2">Tuesday</option><option value="3">Wednesday</option>
+        <option value="4">Thursday</option><option value="5">Friday</option>
+        <option value="6">Saturday</option>
+      </select>
+    </span>
+  </div>
+  <nav class="sitenav">
+    <a href="#board" data-view="board">Board</a>
+    <a href="#calendar" data-view="calendar">Calendar</a>
+    <span class="gap"></span>
+    <a class="page" href="about.html">About</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
+  </nav>
+ </div>
+</header>
+
+
+
+</div>
+
+<main class="wrap">
+ <div class="shell">
+  <div class="pane">
+    <section id="boardView">
+      <div id="carryHost"></div>
+      <div id="scopeHost"></div>
+      <div class="gridbox" id="glanceBox" style="margin-top:14px">
+        <div class="gtitle">
+          <button class="fold" id="glFold" aria-controls="glance" aria-expanded="true">&#9662;</button>
+          <h2>Year at a glance</h2><span class="sp"></span>
+          <button class="yarr" id="gyPrev" aria-label="Previous year">&#9664;</button>
+          <span class="yrs" id="gyLabel"></span>
+          <button class="yarr" id="gyNext" aria-label="Next year">&#9654;</button>
+        </div>
+        <div class="glance" id="glance"></div>
+      </div>
+    </section>
+
+    <section id="calView" class="hidden">
+      <div class="gridbox">
+        <div class="gtitle">
+          <h2>Week calendar</h2><span class="sp"></span>
+          <button class="yarr" id="cyPrev" aria-label="Earlier years">&#9664;</button>
+          <span class="yrs" id="cyLabel"></span>
+          <button class="yarr" id="cyNext" aria-label="Later years">&#9654;</button>
+          <span class="ctlsep"></span>
+          <button class="yarr" id="rgBack" title="Show one more year back">&minus;</button>
+          <button class="yarr" id="rgFwd" title="Show one more year ahead">+</button>
+          <button class="yarr" id="rgReset" title="Reset span">&#8634;</button>
+          <span class="yrs hidden" id="rgLabel"></span>
+        </div>
+        <div class="calbox"><div class="calrail" id="rail"></div></div>
+      </div>
+    </section>
+
+    <div class="ad ad-foot hidden" id="adFoot">ad slot &mdash; 728&times;90</div>
+  </div>
+
+  <aside class="rail">
+    <div class="rbox">
+      <h3>Day colours</h3>
+      <div class="rhint">Mark a day on the calendar. Click a name to rename it.</div>
+      <div class="rbody" id="cats"></div>
+    </div>
+    <div class="rbox">
+      <h3>Countdowns</h3>
+      <div class="rhint">How long since &mdash; or until &mdash; a date that matters.</div>
+      <div class="rbody">
+        <div id="tkList"></div>
+        <div class="tform">
+          <input type="text" id="tLabel" placeholder="e.g. Joined Amazon" aria-label="Label">
+          <span class="dfield">
+            <input type="text" id="tDate" placeholder="yyyy-mm-dd" aria-label="Date, yyyy-mm-dd">
+            <button class="dbtn" id="tPick" type="button" aria-label="Pick a date">&#128197;</button>
+            <input type="date" id="tNative" class="dpick" tabindex="-1" aria-hidden="true">
+          </span>
+          <select id="tUnit" aria-label="Count in">
+            <option value="days">count in days</option><option value="weeks">count in weeks</option>
+            <option value="months">count in months</option><option value="years">count in years</option>
+          </select>
+          <button class="go" id="tAdd">Add countdown</button>
+          <span class="err hidden" id="tErr"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ad ad-rail hidden" id="adRail">ad slot<br>160&times;600</div>
+  </aside>
+ </div>
+</main>
+
+<div class="ad ad-anchor hidden" id="adAnchor">ad slot &mdash; 320&times;50</div>
+
+<footer>
+  <div class="wrap">
+    <a href="index.html#board">Board</a><a href="index.html#calendar">Calendar</a>
+    <a href="about.html">About</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
+    <div class="fdata">
+      <button class="btn" id="expCsv">Export tasks</button>
+      <button class="btn" id="expJson">Backup</button>
+      <button class="btn" id="impJson">Restore</button>
+      <input type="file" id="impFile" accept="application/json,.json" class="hidden">
+      <button class="btn danger" id="wipe">Clear data</button>
+    </div>
+    <div style="margin-top:8px">Everything is stored only in this browser. Back up before clearing.</div>
+  </div>
+</footer>
+
+<div class="ov hidden" id="ov">
+  <div class="md" role="dialog" aria-modal="true" aria-labelledby="mDate">
+    <div class="mh">
+      <span class="d" id="mDate"></span><span class="w" id="mWk"></span>
+      <button id="mClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="mb">
+      <div class="mrow" id="mSw"></div>
+      <textarea class="mnote" id="mNote" placeholder="Note for this day…"></textarea>
+      <div id="mKb"></div>
+      <div class="mfoot"><button class="btn primary" id="mDone">Done</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+</body>
+</html>

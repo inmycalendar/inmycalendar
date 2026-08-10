@@ -1,0 +1,112 @@
+/* ==========================================================================
+   inmycalendar — site.css
+   Shared shell: design tokens, ribbon, controls strip, footer, content pages.
+   Loaded FIRST on every page. app.css loads second and wins where they overlap.
+
+   THEME: light / near-black. The chrome is deliberately neutral so that every
+   colour left on screen carries meaning — category fills, holiday stripes and
+   kanban status colours. An accent hue here would collide with all three.
+   ========================================================================== */
+:root{
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --disp:Oswald,"Arial Narrow",sans-serif;
+
+  --page:#f6f7f9;      /* app background          */
+  --card:#ffffff;      /* panels, columns, cells  */
+  --card2:#f3f4f6;     /* hover / subtle fill     */
+  --ink:#111318;       /* primary text            */
+  --soft:#6b7280;      /* secondary text          */
+  --faint:#9ca3af;     /* tertiary text           */
+  --rule:#e5e7eb;      /* hairline border         */
+  --rule2:#f0f1f3;     /* faintest border         */
+
+  --accent:#18181b;    /* chrome, today ring, active */
+  --accent2:#52525b;
+  --accentBg:#f4f4f5;
+  --onAccent:#ffffff;
+  --danger:#b91c1c;
+
+  --todo:#2563eb;  --todoBg:#eff5ff;  --todoE:#dbe6fe;
+  --doing:#d97706; --doingBg:#fffaf0; --doingE:#fae2c2;
+  --done:#059669;  --doneBg:#ecfdf4;  --doneE:#c6efdd;
+
+  /* holiday markers — shown as a stripe, never a fill, so they never
+     collide with a user's category colour on the same day */
+  --holNat:#dc2626;
+  --holReg:#2563eb;
+
+  --wrap:1320px; --gut:20px; --rail:200px;
+  --hBar:52px;
+  --wIso:96px; --wMeta:150px; --wYrs:88px;
+  --hYear:30px; --hDow:22px;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--page);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.45}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none !important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.wrap{width:min(100% - (var(--gut) * 2), var(--wrap));margin-left:auto;margin-right:auto}
+
+/* ---------------- ribbon: white, hairline, three fluid zones --------------- */
+.bar{position:sticky;top:0;z-index:60;background:var(--card);border-bottom:1px solid var(--rule)}
+.bar .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  min-height:var(--hBar);padding-top:7px;padding-bottom:7px}
+.brand{display:inline-flex;align-items:center;gap:8px;font-family:var(--disp);font-size:15px;
+  letter-spacing:.07em;white-space:nowrap;color:var(--ink);text-decoration:none;flex:none}
+.brand b{font-weight:500;color:var(--soft)}
+.brand svg{display:block;border-radius:6px}
+.brand .wordmark{white-space:nowrap}
+.appzone{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;flex:1 1 auto}
+.sitenav{display:flex;gap:1px;align-items:center;flex-wrap:wrap;flex:none;margin-left:auto}
+.sitenav a{color:var(--soft);text-decoration:none;font-family:var(--disp);font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;padding:6px 10px;border-radius:7px;white-space:nowrap}
+.sitenav a:hover{background:var(--accentBg);color:var(--ink)}
+.sitenav a.on{background:var(--accentBg);color:var(--ink);font-weight:500}
+.sitenav .gap{width:1px;height:15px;background:var(--rule);margin:0 7px;flex:none}
+
+/* ---------------- shared controls ---------------- */
+.btn{background:var(--card);border:1px solid var(--rule);color:var(--ink);padding:5px 11px;
+  font-size:11.5px;border-radius:7px;white-space:nowrap}
+.btn:hover{background:var(--card2)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.danger{color:var(--danger);border-color:#f0d5d5}
+.btn.danger:hover{background:#fdf3f3}
+.sel{background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:7px;
+  padding:4px 8px;font-size:11.5px;height:29px}
+
+footer{border-top:1px solid var(--rule);margin-top:26px;padding:16px 0 30px;
+  text-align:center;font-size:11.5px;color:var(--soft)}
+footer a{color:var(--soft);margin:0 9px;text-decoration:none}
+.fdata{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:14px}
+.fdata .btn{font-size:11px;padding:5px 12px}
+footer a:hover{color:var(--ink)}
+
+/* ---------------- content pages (about / contact / privacy) ---------------- */
+.pagebody{padding:30px 0 50px}
+.pagebody .body{max-width:660px;font-family:var(--sans);font-size:14.5px;line-height:1.7;color:#2b2f38}
+.pagebody h1{font-family:var(--disp);font-weight:500;font-size:27px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink);margin:0 0 6px}
+.pagebody h2{font-family:var(--disp);font-weight:500;font-size:15px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink);margin:28px 0 7px}
+.pagebody .eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--soft);margin-bottom:22px}
+.pagebody p{margin:0 0 12px}
+.pagebody ul{margin:0 0 12px;padding-left:20px}
+.pagebody li{margin-bottom:5px}
+.pagebody a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+.pagebody .card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
+  padding:14px 16px;margin:18px 0}
+.pagebody .card.warn{border-color:var(--doingE);background:var(--doingBg)}
+
+@media (max-width:640px){
+  :root{--gut:12px}
+  .brand{font-size:13.5px}
+  .sitenav{margin-left:0;width:100%;order:5}
+  .sitenav a{padding:6px 8px;font-size:10.5px}
+  .sitenav .gap{margin:0 4px}
+  .pagebody .body{font-size:14px}
+}
