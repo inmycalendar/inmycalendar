@@ -14,7 +14,15 @@ var ST = [
 var DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 var MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var CATS = ["#dc2626","#d97706","#059669","#2563eb"];
-var DEF = { weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
+/* ISO code + name for every country the holiday data covers. The per-country
+   holiday files live in assets/holidays/<CODE>.js and are loaded on demand —
+   4 MB in total, but only ~16 KB ever reaches the browser. They are .js rather
+   than .json so they also work when index.html is opened straight from disk. */
+var COUNTRIES = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","American Samoa"],["AD","Andorra"],["AO","Angola"],["AI","Anguilla"],["AQ","Antarctica"],["AG","Antigua and Barbuda"],["AR","Argentina"],["AM","Armenia"],["AW","Aruba"],["AU","Australia"],["AT","Austria"],["AZ","Azerbaijan"],["BS","Bahamas"],["BH","Bahrain"],["BD","Bangladesh"],["BB","Barbados"],["BY","Belarus"],["BE","Belgium"],["BZ","Belize"],["BJ","Benin"],["BM","Bermuda"],["BT","Bhutan"],["BO","Bolivia, Plurinational State of"],["BQ","Bonaire, Sint Eustatius and Saba"],["BA","Bosnia and Herzegovina"],["BW","Botswana"],["BR","Brazil"],["BN","Brunei Darussalam"],["BG","Bulgaria"],["BF","Burkina Faso"],["BI","Burundi"],["CV","Cabo Verde"],["KH","Cambodia"],["CM","Cameroon"],["CA","Canada"],["KY","Cayman Islands"],["CF","Central African Republic"],["TD","Chad"],["CL","Chile"],["CN","China"],["CX","Christmas Island"],["CC","Cocos (Keeling) Islands"],["CO","Colombia"],["KM","Comoros"],["CG","Congo"],["CD","Congo, The Democratic Republic of the"],["CK","Cook Islands"],["CR","Costa Rica"],["HR","Croatia"],["CU","Cuba"],["CW","Curaçao"],["CY","Cyprus"],["CZ","Czechia"],["CI","Côte d'Ivoire"],["DK","Denmark"],["DJ","Djibouti"],["DM","Dominica"],["DO","Dominican Republic"],["EC","Ecuador"],["EG","Egypt"],["SV","El Salvador"],["GQ","Equatorial Guinea"],["ER","Eritrea"],["EE","Estonia"],["SZ","Eswatini"],["ET","Ethiopia"],["FK","Falkland Islands (Malvinas)"],["FO","Faroe Islands"],["FJ","Fiji"],["FI","Finland"],["FR","France"],["GF","French Guiana"],["PF","French Polynesia"],["TF","French Southern Territories"],["GA","Gabon"],["GM","Gambia"],["GE","Georgia"],["DE","Germany"],["GH","Ghana"],["GI","Gibraltar"],["GR","Greece"],["GL","Greenland"],["GD","Grenada"],["GP","Guadeloupe"],["GU","Guam"],["GT","Guatemala"],["GG","Guernsey"],["GN","Guinea"],["GW","Guinea-Bissau"],["GY","Guyana"],["HT","Haiti"],["VA","Holy See (Vatican City State)"],["HN","Honduras"],["HK","Hong Kong"],["HU","Hungary"],["IS","Iceland"],["IN","India"],["ID","Indonesia"],["IR","Iran, Islamic Republic of"],["IQ","Iraq"],["IE","Ireland"],["IM","Isle of Man"],["IL","Israel"],["IT","Italy"],["JM","Jamaica"],["JP","Japan"],["JE","Jersey"],["JO","Jordan"],["KZ","Kazakhstan"],["KE","Kenya"],["KI","Kiribati"],["KP","Korea, Democratic People's Republic of"],["KR","Korea, Republic of"],["KW","Kuwait"],["KG","Kyrgyzstan"],["LA","Lao People's Democratic Republic"],["LV","Latvia"],["LB","Lebanon"],["LS","Lesotho"],["LR","Liberia"],["LY","Libya"],["LI","Liechtenstein"],["LT","Lithuania"],["LU","Luxembourg"],["MO","Macao"],["MG","Madagascar"],["MW","Malawi"],["MY","Malaysia"],["MV","Maldives"],["ML","Mali"],["MT","Malta"],["MH","Marshall Islands"],["MQ","Martinique"],["MR","Mauritania"],["MU","Mauritius"],["YT","Mayotte"],["MX","Mexico"],["FM","Micronesia, Federated States of"],["MD","Moldova, Republic of"],["MC","Monaco"],["MN","Mongolia"],["ME","Montenegro"],["MS","Montserrat"],["MA","Morocco"],["MZ","Mozambique"],["MM","Myanmar"],["NA","Namibia"],["NR","Nauru"],["NP","Nepal"],["NL","Netherlands"],["NC","New Caledonia"],["NZ","New Zealand"],["NI","Nicaragua"],["NE","Niger"],["NG","Nigeria"],["NU","Niue"],["NF","Norfolk Island"],["MK","North Macedonia"],["MP","Northern Mariana Islands"],["NO","Norway"],["OM","Oman"],["PK","Pakistan"],["PW","Palau"],["PS","Palestine, State of"],["PA","Panama"],["PG","Papua New Guinea"],["PY","Paraguay"],["PE","Peru"],["PH","Philippines"],["PN","Pitcairn"],["PL","Poland"],["PT","Portugal"],["PR","Puerto Rico"],["QA","Qatar"],["RO","Romania"],["RU","Russian Federation"],["RW","Rwanda"],["RE","Réunion"],["BL","Saint Barthélemy"],["SH","Saint Helena, Ascension and Tristan da Cunha"],["KN","Saint Kitts and Nevis"],["LC","Saint Lucia"],["MF","Saint Martin (French part)"],["PM","Saint Pierre and Miquelon"],["VC","Saint Vincent and the Grenadines"],["WS","Samoa"],["SM","San Marino"],["ST","Sao Tome and Principe"],["SA","Saudi Arabia"],["SN","Senegal"],["RS","Serbia"],["SC","Seychelles"],["SL","Sierra Leone"],["SG","Singapore"],["SX","Sint Maarten (Dutch part)"],["SK","Slovakia"],["SI","Slovenia"],["SB","Solomon Islands"],["SO","Somalia"],["ZA","South Africa"],["GS","South Georgia and the South Sandwich Islands"],["SS","South Sudan"],["ES","Spain"],["LK","Sri Lanka"],["SD","Sudan"],["SR","Suriname"],["SJ","Svalbard and Jan Mayen"],["SE","Sweden"],["CH","Switzerland"],["SY","Syrian Arab Republic"],["TW","Taiwan, Province of China"],["TJ","Tajikistan"],["TZ","Tanzania, United Republic of"],["TH","Thailand"],["TL","Timor-Leste"],["TG","Togo"],["TK","Tokelau"],["TO","Tonga"],["TT","Trinidad and Tobago"],["TN","Tunisia"],["TM","Turkmenistan"],["TC","Turks and Caicos Islands"],["TV","Tuvalu"],["TR","Türkiye"],["UK","UK"],["UG","Uganda"],["UA","Ukraine"],["AE","United Arab Emirates"],["GB","United Kingdom"],["US","United States"],["UM","United States Minor Outlying Islands"],["UY","Uruguay"],["UZ","Uzbekistan"],["VU","Vanuatu"],["VE","Venezuela, Bolivarian Republic of"],["VN","Viet Nam"],["VG","Virgin Islands, British"],["VI","Virgin Islands, U.S."],["WF","Wallis and Futuna"],["EH","Western Sahara"],["XK","XK"],["YE","Yemen"],["ZM","Zambia"],["ZW","Zimbabwe"],["AX","Åland Islands"]];
+var HOL = {};                 /* code -> { "2026": { "0101": [name, 0|1] } } */
+var holWanted = null;
+
+var DEF = { holRegional:false, weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
             catLabels:["Milestone","Travel","Leave","WFH"] };
 
 var cfg = null, tasks = null, notes = null, track = null;
@@ -72,6 +80,33 @@ function monthSpan(weeks){
   return first === last ? MON3[first] : MON3[first] + "\u2013" + MON3[last];
 }
 function narrow(){ return (window.innerWidth || 1200) <= 700; }
+/* the on-demand country files call this when they finish loading */
+window.__imcHol = function(code, data){
+  HOL[code] = data || {};
+  if (code === cfg.country) renderAll();
+};
+function loadHolidays(code){
+  if (!code){ renderAll(); return; }
+  if (HOL[code]){ renderAll(); return; }
+  if (holWanted === code) return;          /* already in flight */
+  holWanted = code;
+  var sc = document.createElement("script");
+  sc.src = "assets/holidays/" + code + ".js";
+  sc.async = true;
+  sc.onerror = function(){ HOL[code] = {}; renderAll(); };   /* fail quietly */
+  document.head.appendChild(sc);
+}
+/* [name, 0] = national · [name, 1] = regional · null = ordinary day */
+function holidayOn(ds){
+  var c = cfg.country;
+  if (!c || !HOL[c]) return null;
+  var yr = HOL[c][ds.slice(0,4)];
+  var h = yr ? (yr[ds.slice(5,7) + ds.slice(8,10)] || null) : null;
+  /* a country like the US has hundreds of regional days — showing them all
+     buries the national ones, so they are opt-in */
+  if (h && h[1] === 1 && !cfg.holRegional) return null;
+  return h;
+}
 
 /* ---------- week maths ---------- */
 function sow(d){
@@ -352,7 +387,10 @@ function renderWeekGrid(o){
   var nowISO = iso(today());
   /* count tasks per date once, not once per cell — a 3-year calendar is ~1100 cells */
   var tally = {};
-  for (var q=0;q<tasks.length;q++) tally[tasks[q].date] = (tally[tasks[q].date] || 0) + 1;
+  for (var q=0;q<tasks.length;q++){
+    var td = tasks[q].date;
+    (tally[td] || (tally[td] = [])).push(tasks[q].text);
+  }
   for (var w=0;w<o.weeks.length;w++){
     (function(week){
       var b = mk("button","wk", String(week.num));
@@ -371,14 +409,21 @@ function renderWeekGrid(o){
           if (hasCat) cell.className += " k" + rec.color;      /* whole cell takes the colour */
           if (day.getFullYear() !== week.year && !hasCat) cell.className += " out";
           if (ds === nowISO) cell.className += " now";
-          var tc = tally[ds] || 0;
+          var tc = tally[ds] ? tally[ds].length : 0;
           if (tc) cell.appendChild(mk("span","task"));
           if (rec && rec.note) cell.appendChild(mk("span","pen","\u270e"));
+          var hol = holidayOn(ds);
+          if (hol) cell.className += (hol[1] === 0 ? " hol-nat" : " hol-reg");
           var tip = [ds];
+          if (hol) tip.push(hol[0] + (hol[1] === 0 ? "" : " (regional)"));
           if (hasCat) tip.push(cfg.catLabels[rec.color]);
           if (rec && rec.note) tip.push(rec.note);
-          if (tc) tip.push(tc + (tc === 1 ? " task" : " tasks"));
-          cell.title = tip.join(" — ");
+          if (tc){
+            var names = tally[ds].slice(0,4);
+            tip.push(names.map(function(n){ return "\u2022 " + n; }).join("\n") +
+                     (tc > 4 ? "\n\u2026 and " + (tc-4) + " more" : ""));
+          }
+          cell.title = tip.join("\n");
           cell.addEventListener("click", function(){ openDay(ds); });
           g.appendChild(cell);
         })(week.days[d]);
@@ -509,10 +554,7 @@ function renderRail(){
 }
 function renderTracked(){
   el.tkList.innerHTML = "";
-  if (!track.length){
-    el.tkList.appendChild(mk("div","none","Nothing tracked yet."));
-    return;
-  }
+  if (!track.length) return;   /* the form below is self-explanatory */
   var soon = null;
   for (var j=0;j<track.length;j++){
     var dd = entryDays(track[j]);
@@ -566,7 +608,9 @@ function openDay(ds){
   mDate = ds; sel = ds; cfg.lastDate = ds; save(LS.cfg,cfg);
   var d = parseISO(ds), wk = weekOf(ds);
   el.mDate.textContent = ds;
-  el.mWk.textContent = DOW[d.getDay()] + (wk ? "  ·  Week " + wk.num + ", " + wk.year : "");
+  var hol = holidayOn(ds);
+  el.mWk.textContent = DOW[d.getDay()] + (wk ? "  ·  Week " + wk.num + ", " + wk.year : "") +
+                       (hol ? "  ·  " + hol[0] + (hol[1] === 1 ? " (regional)" : "") : "");
   renderSw();
   el.mNote.value = (notes[ds] && notes[ds].note) || "";
   renderKanban(el.mKb, ds);
@@ -617,6 +661,10 @@ function setScope(s){ cfg.scope = s; save(LS.cfg,cfg); segOn(el.scopeSeg,"scope"
 function setDate(ds){
   if (!parseISO(ds)) return;
   sel = ds; cfg.lastDate = ds; save(LS.cfg,cfg); renderBoard();
+}
+function setCountry(code){
+  cfg.country = code || ""; save(LS.cfg,cfg);
+  loadHolidays(cfg.country);
 }
 function setWeekStart(v){
   v = parseInt(v,10); if (isNaN(v) || v < 0 || v > 6) v = 0;
@@ -719,7 +767,7 @@ function migrate(){
 /* ---------- boot ---------- */
 function cacheEls(){
   var ids = ["dPrev","dPick","dInput","isoOut","dNext","dToday","metaOut","scopeSeg",
-    "wsSel","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
+    "wsSel","ctrySel","holReg","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
     "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
     "ov","mDate","mWk","mClose","mDone","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
@@ -763,6 +811,10 @@ function wire(){
 
 
   el.wsSel.addEventListener("change", function(){ setWeekStart(el.wsSel.value); });
+  el.ctrySel.addEventListener("change", function(){ setCountry(el.ctrySel.value); });
+  el.holReg.addEventListener("change", function(){
+    cfg.holRegional = el.holReg.checked; save(LS.cfg,cfg); renderAll();
+  });
   el.rgBack.addEventListener("click", function(){
     if (cfg.back < CAP) cfg.back += 1; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
   });
@@ -854,12 +906,23 @@ function init(){
 
   cacheEls();
   el.wsSel.value = String(cfg.weekStart);
+  var opt = document.createElement("option");
+  opt.value = ""; opt.textContent = "None";
+  el.ctrySel.appendChild(opt);
+  for (var ci=0; ci<COUNTRIES.length; ci++){
+    var o = document.createElement("option");
+    o.value = COUNTRIES[ci][0]; o.textContent = COUNTRIES[ci][1];
+    el.ctrySel.appendChild(o);
+  }
+  el.ctrySel.value = cfg.country || "";
+  el.holReg.checked = !!cfg.holRegional;
   wire();
   rangeLabel();
   applyAds();
   segOn(el.scopeSeg,"scope",cfg.scope);
   renderAll();
   setView(view);
+  if (cfg.country) loadHolidays(cfg.country);
 }
 
 init();   /* only top-level call, and the last line — every binding above already exists */

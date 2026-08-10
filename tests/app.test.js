@@ -12,9 +12,9 @@ const readFile = f => fs.readFileSync(path.join(ROOT, f), "utf8");
 
 function assemble(page){
   let h = readFile(page);
-  h = h.replace(/<link rel="stylesheet" href="(assets\/[^"]+)">/g,
+  h = h.replace(/<link rel="stylesheet" href="(assets\/[^"?]+)(?:\?[^"]*)?">/g,
                 (_, href) => "<style>" + readFile(href) + "</style>");
-  h = h.replace(/<script src="(assets\/[^"]+)"><\/script>/g,
+  h = h.replace(/<script src="(assets\/[^"?]+)(?:\?[^"]*)?"><\/script>/g,
                 (_, src) => "<script>" + readFile(src) + "</script>");
   return h;
 }
@@ -252,7 +252,7 @@ check(JSON.parse(w.localStorage.getItem("imc.cfg")).catLabels[0] === "Renamed", 
 console.log("\n=== C3d. Controls visible, and not eating vertical space ===");
 check($("gear") === null && $("pop") === null, "no settings gear, no hidden popup");
 check(d.querySelector(".ctrls") === null, "the full-width controls strip is gone (it cost ~44px on every screen)");
-check(d.querySelector(".bar .wkpick select#wsSel") !== null, "week start sits in the top ribbon instead");
+check($("wsSel").closest(".rbox") !== null, "week start sits in the Calendar setup box");
 const wsOpts = [...$("wsSel").options].map(o => o.value);
 check(wsOpts.join(",") === "0,1,2,3,4,5,6", "and offers all seven days");
 const freshWs = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true });
@@ -262,8 +262,8 @@ check(JSON.parse(w.localStorage.getItem("imc.cfg")).weekStart === 6, "choosing S
 check(qa("#glance .dh")[1].textContent === "Sat", "and the grid starts on Saturday");
 $("wsSel").value = "0"; $("wsSel").dispatchEvent(new w.Event("change",{bubbles:true}));
 const railBoxes = [...qa(".rail .rbox h3")].map(h => h.textContent.trim());
-check(railBoxes.join(" | ") === "Day colours | Countdowns",
-      "the rail is down to two short boxes: " + railBoxes.join(" | "));
+check(railBoxes.join(" | ") === "Calendar setup | Day colours | Countdowns",
+      "rail reads: " + railBoxes.join(" | "));
 const dataBtns = [...qa("footer .fdata .btn")].map(b => b.textContent.trim());
 check(dataBtns.length === 4, "the four data actions moved to the footer: " + dataBtns.join(", "));
 check(d.querySelector(".rail .databox") === null,
@@ -377,6 +377,92 @@ check(/\.wg\{display:grid;grid-template-columns:26px repeat\(7,minmax\(0,1fr\)\)
 check(!/grid-template-columns:\s*\d+px repeat\(7,\s*\d+px\)/.test(appCss),
       "day columns are never fixed-pixel, so the grid always fits the window");
 
+console.log("\n=== C5. Public holidays ===");
+check(fs.existsSync(path.join(ROOT,"assets/holidays")), "per-country holiday files ship with the app");
+const holFiles = fs.readdirSync(path.join(ROOT,"assets/holidays")).filter(f => f.endsWith(".js"));
+check(holFiles.length > 200, holFiles.length + " countries covered");
+check(holFiles.every(f => /^[A-Z]{2}\.js$/.test(f)), "one file per ISO country code, loaded on demand");
+const luSize = fs.statSync(path.join(ROOT,"assets/holidays/LU.js")).size;
+check(luSize < 60000, "a country file is small (" + Math.round(luSize/1024) + " KB) — only one ever loads");
+check(/window\.__imcHol/.test(readFile("assets/holidays/LU.js")),
+      "they are .js not .json, so they also work when index.html is opened from disk");
+check(/var COUNTRIES = \[/.test(js), "the country list is embedded, so the dropdown needs no extra request");
+check($("ctrySel") !== null && $("ctrySel").options.length > 200,
+      "the picker lists every country (" + $("ctrySel").options.length + " incl. None)");
+check($("ctrySel").options[0].textContent === "None", "and defaults to no country selected");
+check($("ctrySel").closest(".rbox").querySelector("h3").textContent === "Calendar setup",
+      "it sits in the Calendar setup box, above Countdowns");
+check(d.querySelector(".hkey .sw.nat") !== null && d.querySelector(".hkey .sw.reg") !== null,
+      "a legend explains the two stripe colours");
+
+// end-to-end: choose a country, load its file, confirm the grid paints
+$("ctrySel").value = "IN"; $("ctrySel").dispatchEvent(new w.Event("change",{bubbles:true}));
+check(JSON.parse(w.localStorage.getItem("imc.cfg")).country === "IN", "the choice is remembered");
+w.eval(readFile("assets/holidays/IN.js"));
+toCal();
+let natCells = qa("#rail .dc.hol-nat");
+check(natCells.length > 0, natCells.length + " national holidays painted");
+check(qa("#rail .dc.hol-reg").length === 0, "regional ones stay hidden until asked for");
+$("holReg").checked = true; $("holReg").dispatchEvent(new w.Event("change",{bubbles:true}));
+natCells = qa("#rail .dc.hol-nat");
+const regCells = qa("#rail .dc.hol-reg");
+check(regCells.length > 0, regCells.length + " regional holidays painted, in a different colour");
+check(/Republic Day|Independence Day|Diwali|Christmas/.test(natCells.map(c=>c.title).join(" ")),
+      "with real holiday names in the tooltip");
+check(regCells[0].title.indexOf("(regional)") > -1, "regional ones say so");
+check(natCells.filter(c => c.classList.contains("hol-reg")).length === 0,
+      "a national holiday is never also marked regional");
+$("holReg").checked = false; $("holReg").dispatchEvent(new w.Event("change",{bubbles:true}));
+$("ctrySel").value = ""; $("ctrySel").dispatchEvent(new w.Event("change",{bubbles:true}));
+check(qa("#rail .dc.hol-nat").length === 0, "choosing None clears them again");
+toBoard();
+
+console.log("\n=== C5a. Regional holidays are opt-in ===");
+check($("holReg") !== null && $("holReg").checked === false,
+      "regional holidays are OFF by default — a country like the US has hundreds and they bury the national ones");
+$("ctrySel").value = "US"; $("ctrySel").dispatchEvent(new w.Event("change",{bubbles:true}));
+w.eval(readFile("assets/holidays/US.js"));
+toCal();
+const usNat = qa("#rail .dc.hol-nat").length, usRegOff = qa("#rail .dc.hol-reg").length;
+check(usNat > 0 && usRegOff === 0, "US shows " + usNat + " national and no regional by default");
+$("holReg").checked = true; $("holReg").dispatchEvent(new w.Event("change",{bubbles:true}));
+const usRegOn = qa("#rail .dc.hol-reg").length;
+check(usRegOn > usNat, "ticking the box adds " + usRegOn + " regional markers");
+check(JSON.parse(w.localStorage.getItem("imc.cfg")).holRegional === true, "and the choice is remembered");
+$("holReg").checked = false; $("holReg").dispatchEvent(new w.Event("change",{bubbles:true}));
+
+console.log("\n=== C5c. Hover and tap both explain a day ===");
+const jul4 = qa("#rail .dc").find(c => c.title.indexOf("2026-07-04") === 0);
+check(/Independence Day/.test(jul4.title), "hovering a holiday names it: " + JSON.stringify(jul4.title));
+toBoard();
+add(0,"Ship the release"); add(1,"Review deck");
+toCal();
+const todayCell = qa("#rail .dc").find(c => c.title.indexOf(TODAY) === 0);
+check(/Ship the release/.test(todayCell.title) && /Review deck/.test(todayCell.title),
+      "hovering a day lists its actual tasks, not just a count");
+click(jul4);
+check(/Independence Day/.test($("mWk").textContent),
+      "and tapping the day names the holiday in the popup, for touch users");
+click($("mDone"));
+toBoard();
+
+console.log("\n=== C5b. Header reads left to right ===");
+const zone = [...qa(".appzone > *")].map(n => n.id || n.className).filter(Boolean);
+check(zone.indexOf("metaOut") < zone.indexOf("scopeSeg"),
+      "the day/week label sits with the date, before the Day/Week/Month switch");
+check(/\.meta\{width:var\(--wMeta\);flex:none/.test(appCss.replace(/\s*\n\s*/g,"")),
+      "the meta slot is a fixed width, so Day/Week/Month never shift under the cursor");
+const metaLens = [];
+["day","week","month"].forEach(sc => {
+  click([...$("scopeSeg").children].find(b => b.getAttribute("data-scope") === sc));
+  metaLens.push($("metaOut").textContent.length);
+});
+check(Math.max(...metaLens) <= 22,
+      "meta stays inside its slot in every scope (" + metaLens.join("/") + " chars)");
+click([...$("scopeSeg").children][0]);
+check(d.querySelector(".bar .wkpick") === null, "week-start no longer clutters the ribbon");
+check($("wsSel").closest(".rbox") !== null, "it moved into Calendar setup with a clear label");
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
@@ -397,7 +483,7 @@ click($("scopeHost").querySelector(".rr"));
 check($("scopeHost").className === "kb", "a read-only row returns to that day's board");
 toCal();
 const mid = $("rail").children[1];
-const titles = [...mid.querySelectorAll(".dc")].map(c => c.title.split(" ")[0]);
+const titles = [...mid.querySelectorAll(".dc")].map(c => c.title.split(/\s/)[0]);
 const leap = (cy%4===0&&cy%100!==0)||cy%400===0;
 check(titles.filter(t => t.startsWith(cy+"-")).length === (leap?366:365), "every day of the year appears once");
 check(titles.includes(cy+"-12-31") && titles.includes(cy+"-01-01"), "Jan 1 and Dec 31 present");
@@ -407,7 +493,7 @@ dom.window.eval('notes["'+cy+'-03-05"]={color:2,note:"x"}; save(LS.notes,notes);
 const painted = qa("#rail .dc").find(c => c.title.startsWith(cy+"-03-05"));
 check(/\bk2\b/.test(painted.className) && !painted.querySelector(".dot"), "a coloured day fills the whole cell");
 const tgt = qa("#rail .dc").find(c => c.title.startsWith(cy+"-03-1"));
-const tds = tgt.title.split(" ")[0];
+const tds = tgt.title.split(/\s/)[0];
 click(tgt);
 check(!$("ov").classList.contains("hidden") && $("mDate").textContent === tds, "day popup opens on the right date");
 check($("mKb").children.length === 3, "with the editable board embedded");

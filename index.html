@@ -11,8 +11,8 @@
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/site.css">
-<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/site.css?v=7">
+<link rel="stylesheet" href="assets/app.css?v=7">
 
 </head>
 <body>
@@ -29,19 +29,10 @@
     <button class="iso" id="isoOut" aria-label="Selected date — click to pick another">—</button>
     <button class="nub" id="dNext" aria-label="Next day">&rarr;</button>
     <button class="nub" id="dToday">Today</button>
+    <span class="meta" id="metaOut"></span>
     <div class="seg" id="scopeSeg">
       <button data-scope="day">Day</button><button data-scope="week">Week</button><button data-scope="month">Month</button>
     </div>
-    <span class="meta" id="metaOut"></span>
-    <span class="wkpick">
-      <span class="lbl">Week</span>
-      <select id="wsSel" class="sel" aria-label="Week starts on">
-        <option value="0">Sunday</option><option value="1">Monday</option>
-        <option value="2">Tuesday</option><option value="3">Wednesday</option>
-        <option value="4">Thursday</option><option value="5">Friday</option>
-        <option value="6">Saturday</option>
-      </select>
-    </span>
   </div>
   <nav class="sitenav">
     <a href="#board" data-view="board">Board</a>
@@ -96,6 +87,28 @@
 
   <aside class="rail">
     <div class="rbox">
+      <h3>Calendar setup</h3>
+      <div class="rbody">
+        <label class="fld"><span>Week starts on</span>
+          <select id="wsSel" class="sel">
+            <option value="0">Sunday</option><option value="1">Monday</option>
+            <option value="2">Tuesday</option><option value="3">Wednesday</option>
+            <option value="4">Thursday</option><option value="5">Friday</option>
+            <option value="6">Saturday</option>
+          </select>
+        </label>
+        <label class="fld"><span>Public holidays</span>
+          <select id="ctrySel" class="sel"></select>
+        </label>
+        <label class="chk"><input type="checkbox" id="holReg"> Include regional holidays</label>
+        <div class="hkey">
+          <span><i class="sw nat"></i>National</span>
+          <span><i class="sw reg"></i>Regional</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rbox">
       <h3>Day colours</h3>
       <div class="rhint">Mark a day on the calendar. Click a name to rename it.</div>
       <div class="rbody" id="cats"></div>
@@ -106,7 +119,7 @@
       <div class="rbody">
         <div id="tkList"></div>
         <div class="tform">
-          <input type="text" id="tLabel" placeholder="e.g. Joined Amazon" aria-label="Label">
+          <input type="text" id="tLabel" placeholder="e.g. Project go-live" aria-label="Label">
           <span class="dfield">
             <input type="text" id="tDate" placeholder="yyyy-mm-dd" aria-label="Date, yyyy-mm-dd">
             <button class="dbtn" id="tPick" type="button" aria-label="Pick a date">&#128197;</button>
@@ -159,6 +172,6 @@
   </div>
 </div>
 
-<script src="assets/app.js"></script>
+<script src="assets/app.js?v=7"></script>
 </body>
 </html>
