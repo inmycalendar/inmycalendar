@@ -216,6 +216,18 @@ function shiftStatus(id,dir){
   if (to < 0 || to >= ST.length) return;
   placeTask(id, ST[to].k, null);
 }
+/* Move a task to a different day, keeping its column. Tasks were previously
+   welded to the date they were created on, which is wrong — work slips. */
+function moveTaskToDate(id, newDate){
+  var t = byId(id);
+  if (!t || !parseISO(newDate) || newDate === t.date) return;
+  var oldDate = t.date, st = t.status;
+  t.date = newDate;
+  t.order = 99999;                 /* drop it at the bottom of the target lane */
+  renumber(oldDate, st);
+  renumber(newDate, st);
+  save(LS.tasks, tasks);
+}
 function delTask(id){
   var t = byId(id); if (!t) return;
   var d = t.date, s = t.status;
@@ -291,15 +303,28 @@ function taskRow(task, st, idx, total){
   var txt = mk("span","txt", task.text);
   txt.title = task.text + "\nTo do: " + (task.ts.todo || "—") +
               "  |  In progress: " + (task.ts.doing || "—") + "  |  Done: " + (task.ts.done || "—");
-  txt.addEventListener("click", function(){ n.classList.toggle("open"); });
-  txt.addEventListener("dblclick", function(){ inlineEdit(n, txt, task); });
+  /* click the text to rename. The old behaviour was double-click only, which
+     is undiscoverable, and on touch it did nothing at all. */
+  txt.addEventListener("click", function(){ inlineEdit(n, txt, task); });
   n.appendChild(txt);
 
   var ops = mk("div","ops");
+  ops.appendChild(opBtn("\u270e","Rename", false, function(){ inlineEdit(n, txt, task); }));
   ops.appendChild(opBtn("\u25b2","Move up",   idx === 0,       function(){ nudge(task.id,-1); refresh(); }));
   ops.appendChild(opBtn("\u25bc","Move down", idx === total-1, function(){ nudge(task.id, 1); refresh(); }));
   ops.appendChild(opBtn("\u2190","Move left", st.k === "todo", function(){ shiftStatus(task.id,-1); refresh(); }));
   ops.appendChild(opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); }));
+  ops.appendChild(opBtn("\u{1F4C5}","Move to another day", false, function(){
+    var inp = document.createElement("input");
+    inp.type = "date"; inp.value = task.date;
+    inp.style.cssText = "position:absolute;opacity:0;width:1px;height:1px;pointer-events:none";
+    n.appendChild(inp);
+    inp.addEventListener("change", function(){
+      if (inp.value){ moveTaskToDate(task.id, inp.value); refresh(); }
+    });
+    if (inp.showPicker){ try { inp.showPicker(); return; } catch (e){} }
+    inp.click();
+  }));
   var x = opBtn("\u00d7","Delete", false, function(){ delTask(task.id); refresh(); });
   x.className = "op x";
   ops.appendChild(x);
@@ -348,6 +373,8 @@ function renderReadOnly(host, dates){
     h.appendChild(mk("span", null, st.label));
     var cnt = mk("span","n","0");
     h.appendChild(cnt); c.appendChild(h);
+    var list = mk("div","rlist");        /* scrolls at the same height as a kanban lane */
+    c.appendChild(list);
     var n = 0;
     for (var i=0;i<dates.length;i++){
       var l = lane(dates[i], st.k);
@@ -359,13 +386,13 @@ function renderReadOnly(host, dates){
           var t2 = mk("span","t2", task.text); t2.title = task.text;
           r.appendChild(t2);
           r.addEventListener("click", function(){ setScope("day"); setDate(ds); });
-          c.appendChild(r);
+          list.appendChild(r);
         })(l[j], dates[i]);
         n++;
       }
     }
     cnt.textContent = String(n);
-    if (!n) c.appendChild(mk("div","none","nothing yet"));
+    if (!n) list.appendChild(mk("div","none","nothing yet"));
     host.appendChild(c);
   }
 }
@@ -467,11 +494,14 @@ function renderCarry(){
                                    " still open from " + prev));
   var move = mk("button","btn","Move to today"); move.type = "button";
   move.addEventListener("click", function(){
+    /* Set the date first, THEN renumber. Reading lane() inside the loop counted
+       the task that had just been moved in, handing two tasks the same order. */
     for (var i=0;i<open.length;i++){
       open[i].date = nowISO;
-      open[i].order = lane(nowISO, open[i].status).length;
+      open[i].order = 99999 + i;      /* keep their relative order, park at the end */
     }
-    renumber(prev,"todo"); renumber(prev,"doing");
+    renumber(prev,"todo");   renumber(prev,"doing");
+    renumber(nowISO,"todo"); renumber(nowISO,"doing");
     save(LS.tasks,tasks); refresh();
   });
   var no = mk("button","btn","Dismiss"); no.type = "button";
@@ -889,7 +919,7 @@ function init(){
   cfg.back  = Math.min(CAP, Math.max(0, cfg.back|0));
   cfg.fwd   = Math.min(CAP, Math.max(0, cfg.fwd|0));
   cfg.shift = 0;   /* the calendar opens on today, exactly as the glance does */
-  if (typeof cfg.glanceOpen !== "boolean") cfg.glanceOpen = !narrow();
+  if (typeof cfg.glanceOpen !== "boolean") cfg.glanceOpen = true;
   if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
 
   tasks = load(LS.tasks, []); if (!Array.isArray(tasks)) tasks = [];

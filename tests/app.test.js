@@ -31,7 +31,7 @@ const appCss  = readFile("assets/app.css");
 const css  = siteCss + appCss;
 const flat = css.replace(/\s*\n\s*/g, "");
 const js   = readFile("assets/app.js");
-const PAGES = ["index.html","about.html","contact.html","privacy.html"];
+const PAGES = ["index.html","guide.html","contact.html","privacy.html"];
 
 const errors = [];
 const vc = new VirtualConsole()
@@ -86,8 +86,8 @@ check($("glanceBox") !== null && $("glFold") !== null, "the year grid can be fol
 check(/\.gridbox\.folded \.glance\{display:none\}/.test(flat), "folding actually hides it");
 const glOpenDom = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
   pretendToBeVisual:true, beforeParse(win){ Object.defineProperty(win,"innerWidth",{value:390}); }});
-check(glOpenDom.window.document.getElementById("glanceBox").classList.contains("folded"),
-      "on a 390px phone it starts folded — the board and footer are reachable immediately");
+check(!glOpenDom.window.document.getElementById("glanceBox").classList.contains("folded"),
+      "the year grid starts expanded on every screen size");
 const glWideDom = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
   pretendToBeVisual:true, beforeParse(win){ Object.defineProperty(win,"innerWidth",{value:1366}); }});
 check(!glWideDom.window.document.getElementById("glanceBox").classList.contains("folded"),
@@ -190,7 +190,7 @@ check(/\.bar \.wrap\{display:flex/.test(siteCss.replace(/\s*\n\s*/g,"")), "the r
 check(S.every(x => !x.hasMenuBtn && !x.hasMenuPanel), "no page hides navigation behind a menu button any more");
 check(/\.wrap\{width:min\(100% - \(var\(--gut\) \* 2\), var\(--wrap\)\)/.test(siteCss.replace(/\s*\n\s*/g,"")),
       "the centring rule is defined once and inherited by all four pages");
-const aboutDom = new JSDOM(assemble("about.html"), { runScripts:"dangerously", url:"https://inmycalendar.com/about.html" });
+const aboutDom = new JSDOM(assemble("guide.html"), { runScripts:"dangerously", url:"https://inmycalendar.com/guide.html" });
 const aD = aboutDom.window.document;
 check(aD.querySelectorAll(".sitenav a").length === 5, "content pages show all five links inline, nothing hidden");
 check(aD.querySelector(".sitenav a.on") !== null, "and mark which page you are on");
@@ -353,8 +353,8 @@ check(/\.rbox>h3\{[^}]*color:var\(--soft\)/.test(flatApp), "rail section headers
 check(/\.rhint\{/.test(flatApp), "a lightweight hint style exists for the rail");
 
 console.log("\n=== C3g. About/Contact copy ===");
-const about = readFile("about.html");
-check(/How to use it/.test(about), "About now has a short how-to-use section");
+const about = readFile("guide.html");
+check(/How to use it/.test(about), "the Guide has a short how-to-use section");
 check(/type into any of the three columns/i.test(about), "with plain-language steps");
 check(/hello@inmycalendar\.com/.test(about) || true, "About email is real where present");
 check(/hello@inmycalendar\.com/.test(readFile("contact.html")), "Contact email is hello@inmycalendar.com");
@@ -394,6 +394,14 @@ check($("ctrySel").closest(".rbox").querySelector("h3").textContent === "Calenda
       "it sits in the Calendar setup box, above Countdowns");
 check(d.querySelector(".hkey .sw.nat") !== null && d.querySelector(".hkey .sw.reg") !== null,
       "a legend explains the two stripe colours");
+check(/select your country/.test(readFile("index.html")),
+      "the holiday control says plainly that you pick a country");
+const ih = readFile("index.html");
+check(/og:title/.test(ih) && /og:description/.test(ih) && /og:image/.test(ih),
+      "Open Graph tags exist, so a shared link shows a real preview");
+check(/see your whole year, plan your day/.test(ih),
+      "the share title says what the app is for, not 'board & week planner'");
+check(/public holidays built in/.test(ih), "and the description names the actual benefits");
 
 // end-to-end: choose a country, load its file, confirm the grid paints
 $("ctrySel").value = "IN"; $("ctrySel").dispatchEvent(new w.Event("change",{bubbles:true}));
@@ -463,6 +471,77 @@ click([...$("scopeSeg").children][0]);
 check(d.querySelector(".bar .wkpick") === null, "week-start no longer clutters the ribbon");
 check($("wsSel").closest(".rbox") !== null, "it moved into Calendar setup with a clear label");
 
+console.log("\n=== C6. Tasks can move to another day ===");
+add(0,"Slips to tomorrow");
+const slipId = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Slips to tomorrow").id;
+check([...[...col(0).querySelectorAll(".t")].pop().querySelectorAll(".op")].some(b => b.title === "Move to another day"),
+      "each task has a move-to-day control alongside the arrows");
+w.eval('moveTaskToDate("' + slipId + '","2026-12-25"); refresh();');
+const slipped = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.id === slipId);
+check(slipped.date === "2026-12-25", "moving it changes the date");
+check(slipped.status === "todo", "and keeps its column");
+const laneOrders = (dt, st) => JSON.parse(w.localStorage.getItem("imc.tasks"))
+  .filter(t => t.date === dt && t.status === st).map(t => t.order).sort((a,b)=>a-b);
+const srcOrders = laneOrders(TODAY,"todo"), dstOrders = laneOrders("2026-12-25","todo");
+check(srcOrders.every((v,i) => v === i),
+      "the day it left is renumbered with no gaps: [" + srcOrders.join(",") + "]");
+check(dstOrders.every((v,i) => v === i),
+      "and it lands at the bottom of the target day: [" + dstOrders.join(",") + "]");
+
+console.log("\n=== C7. The board keeps a predictable footprint ===");
+const flatL = appCss.replace(/\s*\n\s*/g,"");
+check(/\.lane\{[^}]*max-height:var\(--laneMax\);overflow-y:auto/.test(flatL),
+      "a long column scrolls inside itself instead of pushing the calendar down the page");
+check(/\.t\{[^}]*min-height:28px/.test(flatL), "task rows are compact so more fit before scrolling");
+
+console.log("\n=== C8. Kanban naming and explanation ===");
+check(qa(".sitenav a[data-view=board]")[0].textContent === "Kanban Board", "the tab is called Kanban Board");
+PAGES.forEach(pg => check(/>Kanban Board</.test(readFile(pg)), pg + " uses the same label"));
+const ab = readFile("guide.html");
+check(/What a Kanban board is/.test(ab), "the Guide explains what a Kanban board is");
+check(/Toyota/.test(ab) && /Taiichi Ohno/.test(ab), "with its actual origin");
+check(/limit how much sits/i.test(ab), "and the one rule that makes it work");
+check(/Using it with a team/.test(ab), "plus how a team would use it");
+check(/cycle time/.test(ab), "and ties it back to the app's own export");
+
+console.log("\n=== C9. Editing, lane height, page structure ===");
+add(0,"Rename me");
+const rt = [...col(0).querySelectorAll(".t")].pop();
+check([...rt.querySelectorAll(".op")].some(b => b.title === "Rename"),
+      "every task has a visible Rename button");
+rt.querySelector(".txt").dispatchEvent(new w.MouseEvent("click",{bubbles:true}));
+check(rt.querySelector(".edit") !== null, "and clicking the text opens the editor (was double-click only)");
+rt.querySelector(".edit").value = "Renamed inline";
+rt.querySelector(".edit").dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).some(t => t.text === "Renamed inline"),
+      "the rename saves");
+
+const flatH = (siteCss + appCss).replace(/\s*\n\s*/g,"");
+check(/--laneMax:326px/.test(flatH), "one shared lane height is defined for exactly ten rows");
+check(/\.lane\{[^}]*max-height:var\(--laneMax\)/.test(flatH), "the kanban lane uses it");
+check(/\.rlist\{max-height:var\(--laneMax\)/.test(flatH),
+      "and so do the week/month lists, so the calendar sits in the same place in every scope");
+check(/\.lane\{[^}]*gap:4px/.test(flatH) && /\.t\{[^}]*min-height:28px/.test(flatH),
+      "rows are tighter so ten fit before scrolling");
+click([...$("scopeSeg").children][1]);
+check(qa("#scopeHost .rlist").length === 3, "week view renders three scrollable lists");
+click([...$("scopeSeg").children][2]);
+check(qa("#scopeHost .rlist").length === 3, "month view too");
+click([...$("scopeSeg").children][0]);
+
+const freshG = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true,
+  beforeParse(win){ Object.defineProperty(win,"innerWidth",{value:390}); }});
+check(!freshG.window.document.getElementById("glanceBox").classList.contains("folded"),
+      "Year at a glance opens expanded, even on a narrow screen");
+
+const g = readFile("guide.html");
+check(g.indexOf("How to use it") < g.indexOf("What a Kanban board is"),
+      "the Guide leads with how to use the app, theory afterwards");
+check(/<h1>Guide<\/h1>/.test(g), "and is titled Guide, not About");
+check(!/What's coming/.test(g) && /What&rsquo;s coming next/.test(readFile("contact.html")),
+      "the roadmap moved to Contact");
+check(!fs.existsSync(path.join(ROOT,"about.html")), "about.html is gone");
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
@@ -473,9 +552,10 @@ check(col(2).querySelectorAll(".t").length === 1 && col(1).querySelectorAll(".t"
 add(0,"A"); add(0,"B");
 const texts = () => [...col(0).querySelectorAll(".t .txt")].map(n => n.textContent);
 const row = t => [...col(0).querySelectorAll(".t")].find(x => x.querySelector(".txt").textContent === t);
-click(row("B").querySelectorAll(".op")[0]);
+const op = (rowEl, title) => [...rowEl.querySelectorAll(".op")].find(b => b.title === title);
+click(op(row("B"),"Move up"));
 check(texts().indexOf("B") < texts().indexOf("A"), "▲ reorders priority");
-click(row("A").querySelectorAll(".op")[3]);
+click(op(row("A"),"Move right"));
 check(col(1).querySelectorAll(".t").length === 2, "→ moves across columns");
 click([...$("scopeSeg").children][1]);
 check($("scopeHost").className === "ro" && $("scopeHost").querySelectorAll(".t").length === 0, "week is read-only");

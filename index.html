@@ -3,16 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>inmycalendar — board &amp; week planner</title>
+<title>inmycalendar &mdash; see your whole year, plan your day</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<meta name="description" content="A daily sticky-note kanban board joined to a multi-year week calendar. Free, no account, your data stays in your browser.">
+<meta name="description" content="Every week of the year on one screen. Plan today on a simple board, mark leave, travel and WFH, and get your country's public holidays built in. Free, no sign-up.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="inmycalendar">
+<meta property="og:title" content="inmycalendar — see your whole year, plan your day">
+<meta property="og:description" content="Every week of the year on one screen. Plan today on a simple board, mark leave, travel and WFH, and get your country's public holidays built in. Free, no sign-up.">
+<meta property="og:url" content="https://inmycalendar.com/">
+<meta property="og:image" content="https://inmycalendar.com/assets/icon-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="inmycalendar — see your whole year, plan your day">
+<meta name="twitter:description" content="Every week of the year on one screen. Plan today on a simple board, mark leave, travel and WFH, and get your country's public holidays built in. Free, no sign-up.">
+<meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512.png">
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/site.css?v=7">
-<link rel="stylesheet" href="assets/app.css?v=7">
+<link rel="stylesheet" href="assets/site.css?v=10">
+<link rel="stylesheet" href="assets/app.css?v=10">
 
 </head>
 <body>
@@ -35,10 +45,10 @@
     </div>
   </div>
   <nav class="sitenav">
-    <a href="#board" data-view="board">Board</a>
+    <a href="#board" data-view="board">Kanban Board</a>
     <a href="#calendar" data-view="calendar">Calendar</a>
     <span class="gap"></span>
-    <a class="page" href="about.html">About</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
+    <a class="page" href="guide.html">Guide</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
   </nav>
  </div>
 </header>
@@ -97,7 +107,7 @@
             <option value="6">Saturday</option>
           </select>
         </label>
-        <label class="fld"><span>Public holidays</span>
+        <label class="fld"><span>Public holidays <em>select your country</em></span>
           <select id="ctrySel" class="sel"></select>
         </label>
         <label class="chk"><input type="checkbox" id="holReg"> Include regional holidays</label>
@@ -144,8 +154,8 @@
 
 <footer>
   <div class="wrap">
-    <a href="index.html#board">Board</a><a href="index.html#calendar">Calendar</a>
-    <a href="about.html">About</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
+    <a href="index.html#board">Kanban Board</a><a href="index.html#calendar">Calendar</a>
+    <a href="guide.html">Guide</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
     <div class="fdata">
       <button class="btn" id="expCsv">Export tasks</button>
       <button class="btn" id="expJson">Backup</button>
@@ -172,6 +182,6 @@
   </div>
 </div>
 
-<script src="assets/app.js?v=7"></script>
+<script src="assets/app.js?v=10"></script>
 </body>
 </html>

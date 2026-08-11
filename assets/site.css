@@ -39,6 +39,8 @@
   --wrap:1320px; --gut:20px; --rail:200px;
   --hBar:52px;
   --wIso:96px; --wMeta:150px; --wYrs:88px;
+  /* exactly ten task rows before a column starts scrolling: 10*(28+4) - 4 + 10 */
+  --laneMax:326px;
   --hYear:30px; --hDow:22px;
   --r:10px;
 }
