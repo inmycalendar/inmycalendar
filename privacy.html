@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-<link rel="stylesheet" href="assets/site.css?v=11">
+<link rel="stylesheet" href="assets/site.css?v=12">
 </head>
 <body>
 <header class="bar">
@@ -27,29 +27,33 @@
 </header>
 
 <main class="wrap pagebody"><div class="body">
-
 <h1>Privacy</h1>
-<div class="eyebrow">Short version: your data never leaves your browser</div>
+<div class="eyebrow">Short version: nothing leaves your browser unless you sign in</div>
 
-<h2>What is collected</h2>
-<p>Nothing. There are no accounts, no sign-in, no analytics and no server. Nothing you type is transmitted anywhere.</p>
+<h2>If you do not sign in</h2>
+<p>Nothing is collected. No account, no server, no analytics. Your tasks, day notes, day colours, countdowns and settings are saved in this browser's local storage, on this device, and nothing you type is transmitted anywhere.</p>
+<p>Clearing your browser's site data, or using <strong>Clear data</strong> in the footer, deletes everything permanently. If you are not signed in there is no copy elsewhere to restore from, so use <strong>Backup</strong> first if you might want it later.</p>
 
-<h2>Where your data is stored</h2>
-<p>Your tasks, priorities, day notes, colour labels, tracked dates and settings are saved in this browser's local storage, on this device. They stay there until you clear them.</p>
-<p>Clearing your browser's site data - or using <strong>Clear all data</strong> in the settings menu - deletes everything permanently. There is no copy elsewhere to restore from, so export a backup first if you might want it later.</p>
+<h2>If you sign in</h2>
+<p>Signing in is optional. Its only purpose is to sync your board across your devices.</p>
+<p>Sign-in is handled by Supabase, using whichever provider you choose - Google, Microsoft, GitHub, or a one-time link sent to your email. We receive your email address and a user ID from that provider. We never see or store your password.</p>
+<p>Once signed in, your tasks, day notes, day colours, countdowns and settings are stored in a database hosted in the EU (Frankfurt) so they can reach your other devices. That data is yours: it is readable only by your own account, enforced by the database itself, and it is not sold, shared or used for advertising.</p>
+<p>You can sign out at any time, and you can ask for your account and its data to be deleted by emailing <a href="mailto:hello@inmycalendar.com">hello@inmycalendar.com</a>.</p>
 
 <h2>Backups you make yourself</h2>
-<p>Export writes a file to your own device. What happens to it after that is up to you; it is not uploaded anywhere.</p>
+<p><strong>Backup</strong> and <strong>Export tasks</strong> write a file to your own device. What happens to it after that is up to you; it is not uploaded anywhere.</p>
+
+<h2>Public holiday data</h2>
+<p>Holiday dates are files served from this site. Choosing a country loads one small file; it does not tell anyone where you are, and no location data is collected.</p>
 
 <h2>Fonts</h2>
-<p>Two typefaces load from Google Fonts, which means Google receives your IP address as part of that request - the same as on most sites using web fonts. Nothing about your tasks or notes is included.</p>
+<p>Two typefaces load from Google Fonts, which means Google receives your IP address as part of that request, the same as on most sites using web fonts. Nothing about your tasks or notes is included.</p>
 
 <h2>Cookies and tracking</h2>
-<p>None are used. Local storage is not a cookie and is not sent with network requests.</p>
+<p>No tracking or advertising cookies are used. Local storage is not a cookie and is not sent with network requests. If you sign in, a session token is stored in your browser so you stay signed in; it does nothing else.</p>
 
 <h2>If this changes</h2>
-<p>Sign-in, cloud sync and advertising are planned for later versions. Each would change what is collected, and this page will be updated before any of them goes live. Advertising will also require a consent banner for visitors in the EU and UK.</p>
-
+<p>Advertising is planned for a later version. It would change what is collected, and this page will be updated before it goes live. Advertising will also require a consent banner for visitors in the EU and UK.</p>
 </div></main>
 <footer>
   <div class="wrap">
@@ -58,6 +62,6 @@
     <div style="margin-top:5px">Everything is stored only in this browser.</div>
   </div>
 </footer>
-<script src="assets/site.js?v=11"></script>
+<script src="assets/site.js?v=12"></script>
 </body>
 </html>

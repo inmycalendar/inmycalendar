@@ -609,6 +609,60 @@ check(/og:title[^>]*Kanban board and your whole year/.test(ih3),
       "the share title is fuller, since social previews have room");
 check(/holidays built in/.test(ih3), "the description names the real benefits");
 
+console.log("\n########  C14. CONTENT ACCURACY  ########");
+/* Every check above this point tests STRUCTURE - does the button exist, does
+   clicking it work. None of them read the prose. That gap let privacy.html
+   keep claiming "no accounts, no sign-in" for a whole release after auth
+   shipped. These assertions read the words. */
+
+console.log("\n=== C14a. No page claims something the app no longer does ===");
+const PROSE = {};
+PAGES.forEach(pg => { PROSE[pg] = readFile(pg); });
+const CONTENT_PAGES = ["guide.html","contact.html","privacy.html"];
+
+/* the settings gear was deleted; nothing may still point at it */
+CONTENT_PAGES.forEach(pg => check(!/settings menu/i.test(PROSE[pg]),
+  pg + " does not send people to a settings menu that no longer exists"));
+/* controls were renamed when they moved to the footer */
+CONTENT_PAGES.forEach(pg => check(!/Export notes \(JSON\)|Import notes \(JSON\)|Clear all data/.test(PROSE[pg]),
+  pg + " uses the current control names (Backup / Restore / Export tasks / Clear data)"));
+/* sign-in ships, so no page may deny that it exists */
+CONTENT_PAGES.forEach(pg => check(!/no account, no server, no sync/i.test(PROSE[pg]),
+  pg + " does not deny that sync exists"));
+
+console.log("\n=== C14b. The privacy policy describes what the app actually does ===");
+const pv = PROSE["privacy.html"];
+check(!/There are no accounts, no sign-in/.test(pv),
+      "it no longer says there are no accounts");
+check(!/Nothing you type is transmitted anywhere\.<\/p>\s*<h2>Where/.test(pv),
+      "and does not claim nothing is ever transmitted");
+check(/If you do not sign in/.test(pv) && /If you sign in/.test(pv),
+      "it covers BOTH states separately, which is what makes it accurate");
+check(/Supabase/.test(pv), "it names the processor handling sign-in");
+check(/Frankfurt|EU/.test(pv), "and where the data is held");
+check(/readable only by your own account/.test(pv), "it states the access guarantee");
+check(/hello@inmycalendar\.com/.test(pv), "and gives a route to request deletion");
+check(!/Sign-in, cloud sync and advertising are planned/.test(pv),
+      "sign-in is no longer described as a future plan");
+
+console.log("\n=== C14c. The guide documents the features that exist ===");
+const gd = PROSE["guide.html"];
+[["day note","Write a day note"],["public holidays","Add your public holidays"],
+ ["moving a task to another day","move it to another day"],["renaming","click a task to rename"],
+ ["sign-in","Sign in</strong> (top right)"],["the four day markers","coloured line underneath"],
+ ["the ten-task scroll","scrolls once it passes ten tasks"]].forEach(([what, probe]) =>
+  check(gd.indexOf(probe) > -1, "the guide explains " + what));
+check(/<em>Kanban<\/em> means &ldquo;signboard&rdquo;/.test(gd),
+      "the Kanban etymology reads correctly (a blind find/replace once corrupted it to 'Kanban Board means signboard')");
+check(!/birthday/i.test(gd) || !/counts the days for you/.test(gd),
+      "it does not promise recurring birthdays - the yearly-repeat option was removed");
+
+console.log("\n=== C14d. Roadmap does not list what is already built ===");
+const ct = PROSE["contact.html"];
+check(!/Sign in with Google, so a board follows you/.test(ct),
+      "'coming next' no longer lists sign-in, which now ships");
+check(/Syncing your board across devices/.test(ct), "it lists what is genuinely still to come");
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
