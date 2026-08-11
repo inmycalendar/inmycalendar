@@ -16,6 +16,7 @@ function assemble(page){
                 (_, href) => "<style>" + readFile(href) + "</style>");
   h = h.replace(/<script src="(assets\/[^"?]+)(?:\?[^"]*)?"><\/script>/g,
                 (_, src) => "<script>" + readFile(src) + "</script>");
+  h = h.replace(/<script src="https:[^"]*"><\/script>/g, "");   // CDN unavailable in tests
   return h;
 }
 
@@ -156,8 +157,8 @@ toCal(); click($("cyNext")); click($("cyNext"));
 const shifted = $("cyLabel").textContent;
 const reDom = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true,
   beforeParse(win){ win.localStorage.setItem("imc.cfg", w.localStorage.getItem("imc.cfg")); }});
-check(reDom.window.document.getElementById("cyLabel").textContent === (cy-1)+"–"+(cy+1),
-      "after panning to " + shifted + " a reload comes back to " + (cy-1)+"–"+(cy+1));
+check(reDom.window.document.getElementById("cyLabel").textContent === (cy-1)+"-"+(cy+1),
+      "after panning to " + shifted + " a reload comes back to " + (cy-1)+"-"+(cy+1));
 click($("cyPrev")); click($("cyPrev"));
 toBoard();
 
@@ -172,7 +173,10 @@ const shape = f => {
     sheet: [...dd.querySelectorAll('link[rel="stylesheet"][href^="assets/"]')]
              .map(l => l.getAttribute("href")).join(","),
     inlineStyle: dd.querySelector("style") !== null,
-    zones: [...dd.querySelectorAll("header.bar > .wrap > *")].map(n => n.className || n.tagName.toLowerCase()).join("|"),
+    zones: [...dd.querySelectorAll("header.bar > .wrap > *")]
+             .map(n => n.className || n.tagName.toLowerCase())
+             .filter(c => c.indexOf("authslot") === -1)      /* app-only control */
+             .join("|"),
     links: [...dd.querySelectorAll("header.bar .sitenav a")].map(a => a.textContent.trim()).join(","),
     footer: [...dd.querySelectorAll("footer a")].map(a => a.getAttribute("href")).join(","),
     hasMenuBtn: dd.querySelector("#menuBtn, #gear") !== null,
@@ -399,9 +403,9 @@ check(/select your country/.test(readFile("index.html")),
 const ih = readFile("index.html");
 check(/og:title/.test(ih) && /og:description/.test(ih) && /og:image/.test(ih),
       "Open Graph tags exist, so a shared link shows a real preview");
-check(/see your whole year, plan your day/.test(ih),
-      "the share title says what the app is for, not 'board & week planner'");
-check(/public holidays built in/.test(ih), "and the description names the actual benefits");
+check(/Kanban board and your whole year/.test(ih),
+      "the share title says what the app is for, and names Kanban");
+check(/holidays built in/.test(ih), "and the description names the actual benefits");
 
 // end-to-end: choose a country, load its file, confirm the grid paints
 $("ctrySel").value = "IN"; $("ctrySel").dispatchEvent(new w.Event("change",{bubbles:true}));
@@ -541,6 +545,69 @@ check(/<h1>Guide<\/h1>/.test(g), "and is titled Guide, not About");
 check(!/What's coming/.test(g) && /What&rsquo;s coming next/.test(readFile("contact.html")),
       "the roadmap moved to Contact");
 check(!fs.existsSync(path.join(ROOT,"about.html")), "about.html is gone");
+
+console.log("\n=== C10. Sign-in is an upgrade, never a gate ===");
+check(fs.existsSync(path.join(ROOT,"assets/auth.js")), "auth.js ships with the app");
+const au = readFile("assets/auth.js");
+check(/IMC_SUPABASE_URL\s*=\s*"https:\/\/[a-z]+\.supabase\.co"/.test(au), "the project URL is set");
+check(/IMC_SUPABASE_ANON_KEY/.test(au), "and there is a single place to paste the anon key");
+check(!/service_role\s*(key)?\s*=\s*["'][A-Za-z0-9._-]{20,}/.test(au) && !/eyJ[A-Za-z0-9._-]{40,}/.test(au),
+      "no service_role key or JWT is committed — only the anon key placeholder");
+check(/anon key is DESIGNED to be public/.test(au), "with a comment explaining why the anon key is safe here");
+check(d.querySelector("#authSlot") !== null, "the ribbon has a slot for the account control");
+check(d.querySelector(".sitenav").compareDocumentPosition(d.querySelector("#authSlot")) & 4,
+      "placed after the nav, at the far right where people look for accounts");
+check($("authSlot").classList.contains("hidden"),
+      "with no library or key it hides itself rather than erroring");
+check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox").length === 3,
+      "and the whole app still works signed out — sign-in is never required");
+check(/signInWithOAuth/.test(au) && /id:"google"/.test(au), "Google is wired as a provider");
+check(/signOut/.test(au), "and there is a way back out");
+const ih2 = readFile("index.html");
+check(/supabase-js@2/.test(ih2), "the Supabase library is loaded from a CDN");
+check(ih2.indexOf("assets/app.js") < ih2.indexOf("assets/auth.js"),
+      "auth.js loads after app.js, so the app is already up when the button paints");
+check(/Sign in to sync it across your devices/.test(ih2),
+      "the footer now invites sync instead of just warning about the browser");
+
+console.log("\n=== C11. Day notes ===");
+check(/id="mNote"/.test(readFile("index.html")), "the day popup has a note field");
+check(/Day note/.test(readFile("index.html")), "labelled 'Day note', so its purpose is obvious");
+w.eval('openDay("2026-08-20");');
+$("mNote").value = "Shipped v11 and told the team";
+$("mNote").dispatchEvent(new w.Event("input",{bubbles:true}));
+w.eval('closeDay();');
+check(JSON.parse(w.localStorage.getItem("imc.notes"))["2026-08-20"].note === "Shipped v11 and told the team",
+      "the note saves as you type");
+toCal();
+const noteCell = qa("#rail .dc").find(c => c.title.indexOf("2026-08-20") === 0);
+check(/Shipped v11/.test(noteCell.title), "and shows on hover");
+check(noteCell.querySelector(".pen") !== null, "the day is marked so you can see a note exists");
+check((noteCell.title.match(/Shipped v11/g) || []).length === 1, "listed once, not twice");
+toBoard();
+check(/day_note/.test(js) && /day_colour/.test(js), "the CSV export carries the note and the day colour");
+check(/a day can carry a note or a colour with no tasks/.test(js),
+      "including days that have a note but no tasks");
+
+console.log("\n=== C12. Sign-in offers real choice ===");
+const au2 = readFile("assets/auth.js");
+["google","azure","github"].forEach(p =>
+  check(new RegExp('id:"' + p + '"').test(au2), p + " is offered as a provider"));
+check(/signInWithOtp/.test(au2), "plus email sign-in by magic link, so there is no password to store");
+check(!/id:"apple"/.test(au2) && /Apple is deliberately absent/.test(au2),
+      "Apple is left out - it needs a paid developer account");
+check(/Each one must ALSO be enabled in Supabase/.test(au2),
+      "with a note that each provider must be enabled in Supabase too");
+
+console.log("\n=== C13. Copy and titles ===");
+PAGES.forEach(pg => check(!/\u2014|\u2013|&mdash;|&ndash;/.test(readFile(pg)),
+  pg + " uses plain hyphens, no em dashes"));
+const ih3 = readFile("index.html");
+check(/<title>inmycalendar - Kanban board \+ year calendar<\/title>/.test(ih3),
+      "the tab title names Kanban and survives truncation");
+check(/og:title[^>]*Kanban board and your whole year/.test(ih3),
+      "the share title is fuller, since social previews have room");
+check(/holidays built in/.test(ih3), "the description names the real benefits");
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));

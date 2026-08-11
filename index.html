@@ -3,26 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>inmycalendar &mdash; see your whole year, plan your day</title>
+<title>inmycalendar - Kanban board + year calendar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<meta name="description" content="Every week of the year on one screen. Plan today on a simple board, mark leave, travel and WFH, and get your country's public holidays built in. Free, no sign-up.">
+<meta name="description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="inmycalendar">
-<meta property="og:title" content="inmycalendar — see your whole year, plan your day">
-<meta property="og:description" content="Every week of the year on one screen. Plan today on a simple board, mark leave, travel and WFH, and get your country's public holidays built in. Free, no sign-up.">
+<meta property="og:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
+<meta property="og:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta property="og:url" content="https://inmycalendar.com/">
 <meta property="og:image" content="https://inmycalendar.com/assets/icon-512.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="inmycalendar — see your whole year, plan your day">
-<meta name="twitter:description" content="Every week of the year on one screen. Plan today on a simple board, mark leave, travel and WFH, and get your country's public holidays built in. Free, no sign-up.">
+<meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
+<meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512.png">
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/site.css?v=10">
-<link rel="stylesheet" href="assets/app.css?v=10">
+<link rel="stylesheet" href="assets/site.css?v=11">
+<link rel="stylesheet" href="assets/app.css?v=11">
 
 </head>
 <body>
@@ -36,7 +36,7 @@
       <button class="nub" id="dPick" aria-label="Pick a date">&#128197;</button>
       <input type="date" class="dpick" id="dInput" aria-label="Pick a date" tabindex="-1">
     </span>
-    <button class="iso" id="isoOut" aria-label="Selected date — click to pick another">—</button>
+    <button class="iso" id="isoOut" aria-label="Selected date - click to pick another">-</button>
     <button class="nub" id="dNext" aria-label="Next day">&rarr;</button>
     <button class="nub" id="dToday">Today</button>
     <span class="meta" id="metaOut"></span>
@@ -50,6 +50,7 @@
     <span class="gap"></span>
     <a class="page" href="guide.html">Guide</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
   </nav>
+  <span class="authslot hidden" id="authSlot"></span>
  </div>
 </header>
 
@@ -92,7 +93,7 @@
       </div>
     </section>
 
-    <div class="ad ad-foot hidden" id="adFoot">ad slot &mdash; 728&times;90</div>
+    <div class="ad ad-foot hidden" id="adFoot">ad slot - 728&times;90</div>
   </div>
 
   <aside class="rail">
@@ -125,7 +126,7 @@
     </div>
     <div class="rbox">
       <h3>Countdowns</h3>
-      <div class="rhint">How long since &mdash; or until &mdash; a date that matters.</div>
+      <div class="rhint">How long since - or until - a date that matters.</div>
       <div class="rbody">
         <div id="tkList"></div>
         <div class="tform">
@@ -150,7 +151,7 @@
  </div>
 </main>
 
-<div class="ad ad-anchor hidden" id="adAnchor">ad slot &mdash; 320&times;50</div>
+<div class="ad ad-anchor hidden" id="adAnchor">ad slot - 320&times;50</div>
 
 <footer>
   <div class="wrap">
@@ -163,7 +164,7 @@
       <input type="file" id="impFile" accept="application/json,.json" class="hidden">
       <button class="btn danger" id="wipe">Clear data</button>
     </div>
-    <div style="margin-top:8px">Everything is stored only in this browser. Back up before clearing.</div>
+    <div style="margin-top:8px">Your board is saved in this browser. <strong>Sign in to sync it across your devices.</strong></div>
   </div>
 </footer>
 
@@ -175,13 +176,17 @@
     </div>
     <div class="mb">
       <div class="mrow" id="mSw"></div>
-      <textarea class="mnote" id="mNote" placeholder="Note for this day…"></textarea>
+      <label class="mnlabel" for="mNote">Day note<em>what happened, or what to remember</em></label>
+      <textarea class="mnote" id="mNote" rows="4"
+        placeholder="A line about today - what you did, decisions made, anything worth remembering."></textarea>
       <div id="mKb"></div>
       <div class="mfoot"><button class="btn primary" id="mDone">Done</button></div>
     </div>
   </div>
 </div>
 
-<script src="assets/app.js?v=10"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/app.js?v=11"></script>
+<script src="assets/auth.js?v=11"></script>
 </body>
 </html>

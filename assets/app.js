@@ -15,7 +15,7 @@ var DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 var MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var CATS = ["#dc2626","#d97706","#059669","#2563eb"];
 /* ISO code + name for every country the holiday data covers. The per-country
-   holiday files live in assets/holidays/<CODE>.js and are loaded on demand —
+   holiday files live in assets/holidays/<CODE>.js and are loaded on demand -
    4 MB in total, but only ~16 KB ever reaches the browser. They are .js rather
    than .json so they also work when index.html is opened straight from disk. */
 var COUNTRIES = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","American Samoa"],["AD","Andorra"],["AO","Angola"],["AI","Anguilla"],["AQ","Antarctica"],["AG","Antigua and Barbuda"],["AR","Argentina"],["AM","Armenia"],["AW","Aruba"],["AU","Australia"],["AT","Austria"],["AZ","Azerbaijan"],["BS","Bahamas"],["BH","Bahrain"],["BD","Bangladesh"],["BB","Barbados"],["BY","Belarus"],["BE","Belgium"],["BZ","Belize"],["BJ","Benin"],["BM","Bermuda"],["BT","Bhutan"],["BO","Bolivia, Plurinational State of"],["BQ","Bonaire, Sint Eustatius and Saba"],["BA","Bosnia and Herzegovina"],["BW","Botswana"],["BR","Brazil"],["BN","Brunei Darussalam"],["BG","Bulgaria"],["BF","Burkina Faso"],["BI","Burundi"],["CV","Cabo Verde"],["KH","Cambodia"],["CM","Cameroon"],["CA","Canada"],["KY","Cayman Islands"],["CF","Central African Republic"],["TD","Chad"],["CL","Chile"],["CN","China"],["CX","Christmas Island"],["CC","Cocos (Keeling) Islands"],["CO","Colombia"],["KM","Comoros"],["CG","Congo"],["CD","Congo, The Democratic Republic of the"],["CK","Cook Islands"],["CR","Costa Rica"],["HR","Croatia"],["CU","Cuba"],["CW","Curaçao"],["CY","Cyprus"],["CZ","Czechia"],["CI","Côte d'Ivoire"],["DK","Denmark"],["DJ","Djibouti"],["DM","Dominica"],["DO","Dominican Republic"],["EC","Ecuador"],["EG","Egypt"],["SV","El Salvador"],["GQ","Equatorial Guinea"],["ER","Eritrea"],["EE","Estonia"],["SZ","Eswatini"],["ET","Ethiopia"],["FK","Falkland Islands (Malvinas)"],["FO","Faroe Islands"],["FJ","Fiji"],["FI","Finland"],["FR","France"],["GF","French Guiana"],["PF","French Polynesia"],["TF","French Southern Territories"],["GA","Gabon"],["GM","Gambia"],["GE","Georgia"],["DE","Germany"],["GH","Ghana"],["GI","Gibraltar"],["GR","Greece"],["GL","Greenland"],["GD","Grenada"],["GP","Guadeloupe"],["GU","Guam"],["GT","Guatemala"],["GG","Guernsey"],["GN","Guinea"],["GW","Guinea-Bissau"],["GY","Guyana"],["HT","Haiti"],["VA","Holy See (Vatican City State)"],["HN","Honduras"],["HK","Hong Kong"],["HU","Hungary"],["IS","Iceland"],["IN","India"],["ID","Indonesia"],["IR","Iran, Islamic Republic of"],["IQ","Iraq"],["IE","Ireland"],["IM","Isle of Man"],["IL","Israel"],["IT","Italy"],["JM","Jamaica"],["JP","Japan"],["JE","Jersey"],["JO","Jordan"],["KZ","Kazakhstan"],["KE","Kenya"],["KI","Kiribati"],["KP","Korea, Democratic People's Republic of"],["KR","Korea, Republic of"],["KW","Kuwait"],["KG","Kyrgyzstan"],["LA","Lao People's Democratic Republic"],["LV","Latvia"],["LB","Lebanon"],["LS","Lesotho"],["LR","Liberia"],["LY","Libya"],["LI","Liechtenstein"],["LT","Lithuania"],["LU","Luxembourg"],["MO","Macao"],["MG","Madagascar"],["MW","Malawi"],["MY","Malaysia"],["MV","Maldives"],["ML","Mali"],["MT","Malta"],["MH","Marshall Islands"],["MQ","Martinique"],["MR","Mauritania"],["MU","Mauritius"],["YT","Mayotte"],["MX","Mexico"],["FM","Micronesia, Federated States of"],["MD","Moldova, Republic of"],["MC","Monaco"],["MN","Mongolia"],["ME","Montenegro"],["MS","Montserrat"],["MA","Morocco"],["MZ","Mozambique"],["MM","Myanmar"],["NA","Namibia"],["NR","Nauru"],["NP","Nepal"],["NL","Netherlands"],["NC","New Caledonia"],["NZ","New Zealand"],["NI","Nicaragua"],["NE","Niger"],["NG","Nigeria"],["NU","Niue"],["NF","Norfolk Island"],["MK","North Macedonia"],["MP","Northern Mariana Islands"],["NO","Norway"],["OM","Oman"],["PK","Pakistan"],["PW","Palau"],["PS","Palestine, State of"],["PA","Panama"],["PG","Papua New Guinea"],["PY","Paraguay"],["PE","Peru"],["PH","Philippines"],["PN","Pitcairn"],["PL","Poland"],["PT","Portugal"],["PR","Puerto Rico"],["QA","Qatar"],["RO","Romania"],["RU","Russian Federation"],["RW","Rwanda"],["RE","Réunion"],["BL","Saint Barthélemy"],["SH","Saint Helena, Ascension and Tristan da Cunha"],["KN","Saint Kitts and Nevis"],["LC","Saint Lucia"],["MF","Saint Martin (French part)"],["PM","Saint Pierre and Miquelon"],["VC","Saint Vincent and the Grenadines"],["WS","Samoa"],["SM","San Marino"],["ST","Sao Tome and Principe"],["SA","Saudi Arabia"],["SN","Senegal"],["RS","Serbia"],["SC","Seychelles"],["SL","Sierra Leone"],["SG","Singapore"],["SX","Sint Maarten (Dutch part)"],["SK","Slovakia"],["SI","Slovenia"],["SB","Solomon Islands"],["SO","Somalia"],["ZA","South Africa"],["GS","South Georgia and the South Sandwich Islands"],["SS","South Sudan"],["ES","Spain"],["LK","Sri Lanka"],["SD","Sudan"],["SR","Suriname"],["SJ","Svalbard and Jan Mayen"],["SE","Sweden"],["CH","Switzerland"],["SY","Syrian Arab Republic"],["TW","Taiwan, Province of China"],["TJ","Tajikistan"],["TZ","Tanzania, United Republic of"],["TH","Thailand"],["TL","Timor-Leste"],["TG","Togo"],["TK","Tokelau"],["TO","Tonga"],["TT","Trinidad and Tobago"],["TN","Tunisia"],["TM","Turkmenistan"],["TC","Turks and Caicos Islands"],["TV","Tuvalu"],["TR","Türkiye"],["UK","UK"],["UG","Uganda"],["UA","Ukraine"],["AE","United Arab Emirates"],["GB","United Kingdom"],["US","United States"],["UM","United States Minor Outlying Islands"],["UY","Uruguay"],["UZ","Uzbekistan"],["VU","Vanuatu"],["VE","Venezuela, Bolivarian Republic of"],["VN","Viet Nam"],["VG","Virgin Islands, British"],["VI","Virgin Islands, U.S."],["WF","Wallis and Futuna"],["EH","Western Sahara"],["XK","XK"],["YE","Yemen"],["ZM","Zambia"],["ZW","Zimbabwe"],["AX","Åland Islands"]];
@@ -62,7 +62,7 @@ function load(k,f){
 function save(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){} }
 function stIndex(k){ for (var i=0;i<ST.length;i++) if (ST[i].k === k) return i; return 0; }
 function monthSpan(weeks){
-  // the dominant months this block of weeks covers, e.g. "Jan" or "Mar–Apr"
+  // the dominant months this block of weeks covers, e.g. "Jan" or "Mar-Apr"
   if (!weeks || !weeks.length) return "";
   var counts = {}, order = [];
   for (var w=0;w<weeks.length;w++){
@@ -102,7 +102,7 @@ function holidayOn(ds){
   if (!c || !HOL[c]) return null;
   var yr = HOL[c][ds.slice(0,4)];
   var h = yr ? (yr[ds.slice(5,7) + ds.slice(8,10)] || null) : null;
-  /* a country like the US has hundreds of regional days — showing them all
+  /* a country like the US has hundreds of regional days - showing them all
      buries the national ones, so they are opt-in */
   if (h && h[1] === 1 && !cfg.holRegional) return null;
   return h;
@@ -217,7 +217,7 @@ function shiftStatus(id,dir){
   placeTask(id, ST[to].k, null);
 }
 /* Move a task to a different day, keeping its column. Tasks were previously
-   welded to the date they were created on, which is wrong — work slips. */
+   welded to the date they were created on, which is wrong - work slips. */
 function moveTaskToDate(id, newDate){
   var t = byId(id);
   if (!t || !parseISO(newDate) || newDate === t.date) return;
@@ -301,8 +301,8 @@ function taskRow(task, st, idx, total){
   n.appendChild(mk("span","grip","\u2807"));
 
   var txt = mk("span","txt", task.text);
-  txt.title = task.text + "\nTo do: " + (task.ts.todo || "—") +
-              "  |  In progress: " + (task.ts.doing || "—") + "  |  Done: " + (task.ts.done || "—");
+  txt.title = task.text + "\nTo do: " + (task.ts.todo || "-") +
+              "  |  In progress: " + (task.ts.doing || "-") + "  |  Done: " + (task.ts.done || "-");
   /* click the text to rename. The old behaviour was double-click only, which
      is undiscoverable, and on touch it did nothing at all. */
   txt.addEventListener("click", function(){ inlineEdit(n, txt, task); });
@@ -412,7 +412,7 @@ function renderWeekGrid(o){
     g.appendChild(dh);
   }
   var nowISO = iso(today());
-  /* count tasks per date once, not once per cell — a 3-year calendar is ~1100 cells */
+  /* count tasks per date once, not once per cell - a 3-year calendar is ~1100 cells */
   var tally = {};
   for (var q=0;q<tasks.length;q++){
     var td = tasks[q].date;
@@ -422,7 +422,7 @@ function renderWeekGrid(o){
     (function(week){
       var b = mk("button","wk", String(week.num));
       b.type = "button";
-      b.title = "Week " + week.num + " of " + week.year + " \u2014 open it on the board";
+      b.title = "Week " + week.num + " of " + week.year + " - open it on the board";
       b.addEventListener("click", function(){ openWeek(week); });
       g.appendChild(b);
       for (var d=0;d<7;d++){
@@ -444,7 +444,7 @@ function renderWeekGrid(o){
           var tip = [ds];
           if (hol) tip.push(hol[0] + (hol[1] === 0 ? "" : " (regional)"));
           if (hasCat) tip.push(cfg.catLabels[rec.color]);
-          if (rec && rec.note) tip.push(rec.note);
+          if (rec && rec.note) tip.push("\u270e " + rec.note);
           if (tc){
             var names = tally[ds].slice(0,4);
             tip.push(names.map(function(n){ return "\u2022 " + n; }).join("\n") +
@@ -551,13 +551,13 @@ function stepCal(d){
 }
 function renderCalendar(){
   var r = calYears(), cy = today().getFullYear();
-  el.cyLabel.textContent = r.from === r.to ? String(r.from) : (r.from + "–" + r.to);
+  el.cyLabel.textContent = r.from === r.to ? String(r.from) : (r.from + "-" + r.to);
   el.cyPrev.disabled = r.from <= cy-CAP;
   el.cyNext.disabled = r.to   >= cy+CAP;
   el.rail.innerHTML = "";
   for (var y=r.from;y<=r.to;y++)
     el.rail.appendChild(renderWeekGrid({ label:String(y), weeks:weeksForYear(y), compact:false,
-                                         monthHint:"Jan\u2013Dec" }));  // full year always Jan–Dec
+                                         monthHint:"Jan\u2013Dec" }));  // full year always Jan-Dec
 }
 
 /* ---------- RIGHT RAIL ---------- */
@@ -734,12 +734,28 @@ function download(name,text,mime){
 }
 function cell(v){ return '"' + String(v === null || v === undefined ? "" : v).replace(/"/g,'""') + '"'; }
 function exportCsv(){
-  var rows = [["date","status","priority","task","entered_todo","entered_in_progress","entered_done"]];
+  var rows = [["date","status","priority","task","entered_todo","entered_in_progress",
+               "entered_done","day_colour","day_note"]];
   var s = tasks.slice().sort(function(a,b){
     return a.date < b.date ? -1 : a.date > b.date ? 1 :
            stIndex(a.status)-stIndex(b.status) || a.order-b.order; });
-  for (var i=0;i<s.length;i++)
-    rows.push([s[i].date, s[i].status, s[i].order+1, s[i].text, s[i].ts.todo, s[i].ts.doing, s[i].ts.done]);
+  var seen = {};
+  function noteOf(ds){ var r = notes[ds]; return r && r.note ? r.note : ""; }
+  function colourOf(ds){
+    var r = notes[ds];
+    return (r && r.color !== null && r.color !== undefined) ? cfg.catLabels[r.color] : "";
+  }
+  for (var i=0;i<s.length;i++){
+    seen[s[i].date] = 1;
+    rows.push([s[i].date, s[i].status, s[i].order+1, s[i].text, s[i].ts.todo, s[i].ts.doing,
+               s[i].ts.done, colourOf(s[i].date), noteOf(s[i].date)]);
+  }
+  /* a day can carry a note or a colour with no tasks at all - still export it */
+  var extra = Object.keys(notes).filter(function(ds){
+    return !seen[ds] && (noteOf(ds) || colourOf(ds));
+  }).sort();
+  for (var e=0;e<extra.length;e++)
+    rows.push([extra[e],"","","","","","", colourOf(extra[e]), noteOf(extra[e])]);
   download("inmycalendar-tasks-" + iso(today()) + ".csv",
            rows.map(function(r){ return r.map(cell).join(","); }).join("\r\n"), "text/csv");
 }
@@ -955,4 +971,4 @@ function init(){
   if (cfg.country) loadHolidays(cfg.country);
 }
 
-init();   /* only top-level call, and the last line — every binding above already exists */
+init();   /* only top-level call, and the last line - every binding above already exists */

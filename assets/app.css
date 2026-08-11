@@ -40,6 +40,32 @@
    two things people actually need, so they sit in the open on one thin row. */
 /* week start moved into the ribbon; data actions moved to the foot of the rail.
    The old full-width controls strip cost ~44px of vertical space on every screen. */
+.authslot{display:inline-flex;align-items:center;gap:7px;flex:none;margin-left:4px}
+.authslot .btn{padding:5px 12px;font-size:11px;font-family:var(--disp);letter-spacing:.06em;
+  text-transform:uppercase}
+.authslot .signin{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.authslot .signin:hover{background:var(--accent2);border-color:var(--accent2)}
+.authslot .who{width:26px;height:26px;border-radius:50%;background:var(--accentBg);color:var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;
+  border:1px solid var(--rule)}
+
+.authslot{position:relative}
+.authmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;width:250px;background:var(--card);
+  border:1px solid var(--rule);border-radius:var(--r);box-shadow:0 12px 30px rgba(17,19,24,.14);
+  padding:10px;display:flex;flex-direction:column;gap:6px;text-align:left}
+.amrow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:9px 11px;
+  font-size:12.5px;color:var(--ink);text-align:left}
+.amrow:hover{background:var(--card2)}
+.amsep{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+  text-align:center;margin:4px 0 2px}
+.aminput{width:100%;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.aminput:focus{outline:none;border-color:var(--accent)}
+.amsend{background:var(--accent);border:1px solid var(--accent);color:var(--onAccent);
+  border-radius:8px;padding:8px 11px;font-size:12px}
+.amsend:hover{background:var(--accent2)}
+.amsend:disabled{opacity:.5}
+.amnote{font-size:11px;color:var(--soft);line-height:1.4;min-height:1px}
+
 .wkpick{display:inline-flex;align-items:center;gap:6px;flex:none}
 .wkpick .lbl{font-family:var(--disp);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
 .wkpick .sel{height:27px;font-size:11.5px;padding:2px 6px}
@@ -270,7 +296,11 @@ main{padding:16px 0 0}
 .mh button:hover{background:var(--card2);color:var(--ink)}
 .mb{padding:14px}
 .mrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.mnote{width:100%;min-height:56px;background:var(--card);border:1px solid var(--rule);border-radius:8px;
+.mnlabel{display:block;font-family:var(--disp);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--soft);margin:12px 0 5px}
+.mnlabel em{font-style:normal;text-transform:none;letter-spacing:0;font-size:10.5px;color:var(--faint)}
+.mnlabel em::before{content:"\00b7";margin:0 5px}
+.mnote{width:100%;min-height:76px;background:var(--card);border:1px solid var(--rule);border-radius:8px;
   padding:8px;font-size:12.5px;resize:vertical;margin:10px 0 12px}
 .dab{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.1);padding:0}
 .mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;

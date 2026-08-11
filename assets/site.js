@@ -1,6 +1,6 @@
 "use strict";
-/* Content pages only. There is no hidden menu any more — every nav link is
-   visible in the ribbon at all widths — so this just marks the current page. */
+/* Content pages only. There is no hidden menu any more - every nav link is
+   visible in the ribbon at all widths - so this just marks the current page. */
 (function(){
   var here = (location.pathname.split("/").pop() || "index.html").toLowerCase();
   var links = document.querySelectorAll(".sitenav a[href]");
