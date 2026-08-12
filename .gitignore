@@ -4,3 +4,7 @@ package-lock.json
 Thumbs.db
 *.log
 .vscode/
+
+# Private - never commit. Local briefing notes for an AI assistant.
+# This repo is public; this file is not.
+HANDOVER.md

@@ -946,9 +946,11 @@ function init(){
   glanceYear = today().getFullYear();
 
   /* arriving from About/Contact/Privacy via index.html#board or #calendar */
+  /* The Kanban Board is the landing page. A returning visitor whose last view
+     was the Calendar should still arrive on the board - the board is what the
+     app is for. An explicit #calendar link still opens the calendar. */
   var h = (window.location.hash || "").replace("#","");
-  var view = (h === "board" || h === "calendar") ? h
-           : (cfg.view === "calendar" ? "calendar" : "board");
+  var view = (h === "board" || h === "calendar") ? h : "board";
 
   cacheEls();
   el.wsSel.value = String(cfg.weekStart);

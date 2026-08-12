@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 309 passed, 0 failed
+npm test         # expect: 363 passed, 0 failed
 ```
 
 ---
@@ -54,7 +54,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       309 checks: behaviour, layout, and content accuracy
+  app.test.js       363 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -250,6 +250,16 @@ itself and the app carries on.
 - [ ] PWA manifest + service worker
 
 ---
+
+## A note on what is public
+
+This repo is public, so it is a portfolio piece as much as a codebase. It contains
+no personal information beyond the GitHub username.
+
+`HANDOVER.md` holds personal context (employer, goals, working preferences) used to
+brief an AI assistant at the start of a new session. **It is gitignored on purpose
+and must never be committed.** Keep it locally, or anywhere private. Test section
+C15 fails if any personal term appears in a published file.
 
 ## Licence
 

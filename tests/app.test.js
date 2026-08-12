@@ -663,6 +663,65 @@ check(!/Sign in with Google, so a board follows you/.test(ct),
       "'coming next' no longer lists sign-in, which now ships");
 check(/Syncing your board across devices/.test(ct), "it lists what is genuinely still to come");
 
+console.log("\n=== C15. The public repo carries no personal data ===");
+/* The repo is public. Anything committed is visible to colleagues, recruiters
+   and the current employer. HANDOVER.md holds personal context for briefing an
+   assistant and is deliberately gitignored. */
+check(/^HANDOVER\.md$/m.test(readFile(".gitignore")),
+      "HANDOVER.md is gitignored, so personal context is never published");
+
+/* The terms are read from the gitignored file rather than written here.
+   An earlier version of this test listed them literally - which published the
+   very words it was meant to protect, in a public repo. */
+const PUBLISHED = ["index.html","guide.html","contact.html","privacy.html",
+                   "README.md","package.json",".gitignore","tests/app.test.js"];
+const hvPath = path.join(ROOT, "HANDOVER.md");
+if (fs.existsSync(hvPath)){
+  const hv = fs.readFileSync(hvPath, "utf8");
+  /* every capitalised multi-word phrase and every long number in the private
+     file is treated as something that must not appear in a published one */
+  const terms = new Set();
+  (hv.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)+\b/g) || []).forEach(t => terms.add(t));
+  (hv.match(/[\w.+-]+@[\w.-]+\.\w+/g) || []).forEach(t => terms.add(t));
+  (hv.match(/\b\d{3,}k\b|\b\d{7,}\b/g) || []).forEach(t => terms.add(t));
+  /* words that legitimately appear in both, e.g. the repo name or a heading */
+  const ALLOWED = new Set(["Kanban Board","Row Level","Row Level Security","Day Note",
+                           "Public Holidays","Sign In","Export Tasks","Clear Data",
+                           "New Year","File Manager","Google Microsoft","Postgres Row"]);
+  let leaks = [];
+  PUBLISHED.forEach(f => {
+    const body = readFile(f);
+    terms.forEach(t => {
+      if (ALLOWED.has(t)) return;
+      if (t.length < 6) return;
+      if (body.indexOf(t) > -1) leaks.push(f + " contains " + JSON.stringify(t));
+    });
+  });
+  check(leaks.length === 0,
+        leaks.length ? "LEAK: " + leaks.join("; ")
+                     : "no phrase from the private handover appears in any published file");
+} else {
+  ok("HANDOVER.md is absent (fresh clone) - nothing private to leak");
+}
+check(!/@gmail\.com|@outlook\.com|@yahoo\./.test(PUBLISHED.map(readFile).join(" ")),
+      "no personal email address is committed");
+check(!/\b\d{10,}\b/.test(PUBLISHED.filter(f => f !== "package.json").map(readFile).join(" ")),
+      "no phone number is committed");
+
+console.log("\n=== C16. The Kanban Board is the landing page ===");
+check(/var view = \(h === "board" \|\| h === "calendar"\) \? h : "board";/.test(js),
+      "a visitor with no hash always lands on the board, whatever they viewed last");
+const landed = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true,
+  beforeParse(win){ win.localStorage.setItem("imc.cfg", JSON.stringify({ view:"calendar" })); }});
+const LD = landed.window.document;
+check(!LD.getElementById("boardView").classList.contains("hidden"),
+      "even a returning visitor whose last view was the Calendar lands on the board");
+check(LD.getElementById("calView").classList.contains("hidden"), "and the calendar is not shown");
+const deep = new JSDOM(html, { url:"https://inmycalendar.com/index.html#calendar",
+  runScripts:"dangerously", pretendToBeVisual:true });
+check(!deep.window.document.getElementById("calView").classList.contains("hidden"),
+      "an explicit #calendar link still opens the calendar");
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
