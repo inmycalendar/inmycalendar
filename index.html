@@ -21,9 +21,20 @@
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/site.css?v=13">
-<link rel="stylesheet" href="assets/app.css?v=13">
+<link rel="canonical" href="https://inmycalendar.com/">
+<link rel="stylesheet" href="assets/site.css?v=15">
+<link rel="stylesheet" href="assets/app.css?v=15">
 
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+ "name":"inmycalendar",
+ "url":"https://inmycalendar.com/",
+ "applicationCategory":"BusinessApplication",
+ "operatingSystem":"Any modern browser",
+ "description":"A daily Kanban board joined to a week-by-week calendar of the years around it, with public holidays for 248 countries.",
+ "offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},
+ "featureList":["Kanban board","Multi-year week calendar","Public holidays for 248 countries","Day notes","Countdowns","CSV export"]}
+</script>
 </head>
 <body>
 
@@ -64,6 +75,12 @@
     <section id="boardView">
       <div id="carryHost"></div>
       <div id="scopeHost"></div>
+      <div class="bnotewrap hidden" id="bnoteWrap">
+        <label for="bnote">Day note</label>
+        <textarea id="bnote" rows="1"
+          placeholder="A line about today - what you did, decisions made, anything worth remembering."></textarea>
+      </div>
+
       <div class="gridbox" id="glanceBox" style="margin-top:14px">
         <div class="gtitle">
           <button class="fold" id="glFold" aria-controls="glance" aria-expanded="true">&#9662;</button>
@@ -186,7 +203,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=13"></script>
-<script src="assets/auth.js?v=13"></script>
+<script src="assets/app.js?v=15"></script>
+<script src="assets/auth.js?v=15"></script>
 </body>
 </html>

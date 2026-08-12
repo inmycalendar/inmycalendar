@@ -212,6 +212,19 @@ main{padding:16px 0 0}
 .rc .none{padding:8px 12px}
 
 /* ---------------- calendar / glance ---------------- */
+/* Day note under the board. One line tall until it is used or focused, so it
+   costs almost no vertical space - the calendar below must not move down. */
+.bnotewrap{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:7px 12px;
+  background:var(--card);border:1px solid var(--rule);border-radius:var(--r)}
+.bnotewrap label{font-family:var(--disp);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--soft);padding-top:5px;flex:none}
+.bnotewrap textarea{flex:1;min-width:0;border:0;background:transparent;resize:none;font-size:12.5px;
+  color:var(--ink);line-height:1.45;padding:3px 0;height:24px;overflow:hidden}
+.bnotewrap textarea:focus{outline:none;height:64px;overflow:auto}
+.bnotewrap.filled textarea{height:44px;overflow:auto}
+.bnotewrap.filled textarea:focus{height:76px}
+.bnotewrap textarea::placeholder{color:var(--faint)}
+
 .gridbox{border:1px solid var(--rule);background:var(--card);border-radius:var(--r);
   overflow:hidden;margin-top:16px}
 .gridbox:first-child{margin-top:0}
@@ -315,14 +328,28 @@ main{padding:16px 0 0}
    ========================================================================== */
 @media (max-width:1100px){ :root{--rail:180px} }
 @media (max-width:900px){
-  .shell{grid-template-columns:minmax(0,1fr)}
-  .rail{flex-direction:row;flex-wrap:wrap}
+  /* Single column, and the order is deliberate. Left alone, the rail lands
+     AFTER the whole year grid, so a phone user scrolls past a calendar to
+     reach the colours and the country picker. display:contents flattens the
+     wrappers so every block can be ordered individually.
+     .hidden still wins, so switching views keeps working. */
+  .shell{display:flex;flex-direction:column;gap:14px}
+  .pane,#boardView{display:contents}
+  #carryHost{order:1}
+  #scopeHost{order:2}          /* the board itself, first */
+  #bnoteWrap{order:3}
+  #calView{order:3}
+  .rail{order:4;flex-direction:row;flex-wrap:wrap;position:static;max-height:none;overflow:visible}
+  #glanceBox{order:5}          /* the big year grid goes last */
+  .ad-foot{order:6}
   .rbox{flex:1 1 260px}
   .ad-rail{display:none}
 }
 @media (max-width:760px){
   .kb,.ro{grid-template-columns:1fr}
   .calrail>.wg,.glance>.wg{flex:1 1 100%}
+  /* stacked years put the earliest on top; float the current year up instead */
+  .calrail>.wg.thisyear{order:-1}
 }
 @media (max-width:640px){
   :root{--wIso:88px}

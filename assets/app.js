@@ -461,6 +461,15 @@ function renderWeekGrid(o){
 }
 
 /* ---------- BOARD ---------- */
+function renderDayNote(){
+  if (!el.bnote) return;
+  var show = (cfg.scope === "day");
+  el.bnoteWrap.classList.toggle("hidden", !show);
+  if (!show) return;
+  var rec = notes[sel];
+  el.bnote.value = (rec && rec.note) || "";
+  el.bnoteWrap.classList.toggle("filled", !!el.bnote.value);
+}
 function renderBoard(){
   el.isoOut.textContent = sel;
   el.dInput.value = sel;
@@ -478,6 +487,7 @@ function renderBoard(){
     el.metaOut.textContent = MON3[d.getMonth()] + " " + d.getFullYear() + " · read-only";
     renderReadOnly(el.scopeHost, daysOfMonth(sel));
   }
+  renderDayNote();
   renderGlance();
 }
 function renderCarry(){
@@ -555,9 +565,15 @@ function renderCalendar(){
   el.cyPrev.disabled = r.from <= cy-CAP;
   el.cyNext.disabled = r.to   >= cy+CAP;
   el.rail.innerHTML = "";
-  for (var y=r.from;y<=r.to;y++)
-    el.rail.appendChild(renderWeekGrid({ label:String(y), weeks:weeksForYear(y), compact:false,
-                                         monthHint:"Jan\u2013Dec" }));  // full year always Jan-Dec
+  /* On a phone the year blocks stack, so the earliest year lands on top and you
+     scroll past a whole year to reach today. Tagging the current year lets CSS
+     float it to the front when stacked, without changing desktop order. */
+  for (var y=r.from;y<=r.to;y++){
+    var g = renderWeekGrid({ label:String(y), weeks:weeksForYear(y), compact:false,
+                             monthHint:"Jan\u2013Dec" });
+    if (y === cy) g.className += " thisyear";
+    el.rail.appendChild(g);
+  }
 }
 
 /* ---------- RIGHT RAIL ---------- */
@@ -815,7 +831,7 @@ function cacheEls(){
   var ids = ["dPrev","dPick","dInput","isoOut","dNext","dToday","metaOut","scopeSeg",
     "wsSel","ctrySel","holReg","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
-    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
+    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
     "ov","mDate","mWk","mClose","mDone","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
@@ -893,6 +909,12 @@ function wire(){
   el.mClose.addEventListener("click", closeDay);
   el.mDone.addEventListener("click", closeDay);
   el.ov.addEventListener("click", function(e){ if (e.target === el.ov) closeDay(); });
+  el.bnote.addEventListener("input", function(){
+    var r = notes[sel] || { color:null, note:"" };
+    r.note = el.bnote.value; notes[sel] = r; save(LS.notes,notes);
+    el.bnoteWrap.classList.toggle("filled", !!el.bnote.value);
+  });
+  el.bnote.addEventListener("blur", function(){ renderAll(); });
   el.mNote.addEventListener("input", function(){
     if (!mDate) return;
     var r = notes[mDate] || { color:null, note:"" };

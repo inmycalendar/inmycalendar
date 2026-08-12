@@ -9,6 +9,12 @@
    button and the app carries on exactly as before.
    =========================================================================== */
 
+/* ===========================================================================
+   STEP 1 OF 1 TO TURN SIGN-IN ON
+   Supabase dashboard -> Settings -> API Keys -> copy the "anon public" key
+   and paste it as IMC_SUPABASE_ANON_KEY below. Nothing else is needed.
+   Until then the Sign in button stays hidden and the app works normally.
+   =========================================================================== */
 /* --- CONFIG: paste your anon key below. -----------------------------------
    The anon key is DESIGNED to be public and belongs in this file; it is
    restricted by Row Level Security on the database side. The service_role

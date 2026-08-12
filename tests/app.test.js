@@ -539,7 +539,8 @@ check(!freshG.window.document.getElementById("glanceBox").classList.contains("fo
       "Year at a glance opens expanded, even on a narrow screen");
 
 const g = readFile("guide.html");
-check(g.indexOf("How to use it") < g.indexOf("What a Kanban board is"),
+const gBody = g.slice(g.indexOf('<div class="body">'));   // ignore <head>, the title now names Kanban
+check(gBody.indexOf("How to use it") < gBody.indexOf("What a Kanban board is"),
       "the Guide leads with how to use the app, theory afterwards");
 check(/<h1>Guide<\/h1>/.test(g), "and is titled Guide, not About");
 check(!/What's coming/.test(g) && /What&rsquo;s coming next/.test(readFile("contact.html")),
@@ -722,6 +723,63 @@ const deep = new JSDOM(html, { url:"https://inmycalendar.com/index.html#calendar
 check(!deep.window.document.getElementById("calView").classList.contains("hidden"),
       "an explicit #calendar link still opens the calendar");
 
+console.log("\n=== C17. Mobile layout puts things in a usable order ===");
+const mob = (siteCss + appCss).replace(/\s*\n\s*/g,"");
+check(/\.calrail>\.wg\.thisyear\{order:-1\}/.test(mob),
+      "stacked year blocks float the CURRENT year to the top - a phone opened on last year before");
+toCal();
+const tagged = qa("#rail .wg.thisyear");
+check(tagged.length === 1, "exactly one year block is tagged as current");
+check(tagged[0].querySelector(".yh").textContent.indexOf(String(cy)) === 0,
+      "and it is " + cy);
+toBoard();
+check(/\.pane,#boardView\{display:contents\}/.test(mob),
+      "wrappers are flattened on mobile so each block can be ordered");
+[["#scopeHost{order:2}","the board comes first"],
+ ["#bnoteWrap{order:3}","then the day note"],
+ [".rail{order:4","then the rail - before the year grid, not after it"],
+ ["#glanceBox{order:5}","the big year grid goes last"]].forEach(([rule, why]) =>
+  check(mob.indexOf(rule) > -1, why));
+check(/\.hidden\{display:none !important\}/.test(siteCss.replace(/\s*\n\s*/g,"")),
+      ".hidden still wins over display:contents, so view switching keeps working");
+
+console.log("\n=== C18. Day note sits under the board too ===");
+check($("bnote") !== null && $("bnoteWrap") !== null, "there is a day note under the Kanban board");
+check(/height:24px/.test(appCss.replace(/\s*\n\s*/g,"").match(/\.bnotewrap textarea\{[^}]*\}/)[0]),
+      "one line tall by default, so it costs almost no vertical space");
+check(/\.bnotewrap textarea:focus\{[^}]*height:64px/.test(appCss.replace(/\s*\n\s*/g,"")),
+      "and grows when you actually use it");
+const noteDay = $("isoOut").textContent;
+$("bnote").value = "Wrote the sync layer";
+$("bnote").dispatchEvent(new w.Event("input",{bubbles:true}));
+check(JSON.parse(w.localStorage.getItem("imc.notes"))[noteDay].note === "Wrote the sync layer",
+      "typing in it saves");
+w.eval('openDay("' + noteDay + '");');
+check($("mNote").value === "Wrote the sync layer", "and it is the same note the day popup shows");
+w.eval('closeDay();');
+click([...$("scopeSeg").children][1]);
+check($("bnoteWrap").classList.contains("hidden"), "it hides in week scope, where there is no single day");
+click([...$("scopeSeg").children][0]);
+
+console.log("\n=== C19. SEO basics are in place ===");
+check(fs.existsSync(path.join(ROOT,"robots.txt")), "robots.txt exists");
+check(/Sitemap: https:\/\/inmycalendar\.com\/sitemap\.xml/.test(readFile("robots.txt")),
+      "and points at the sitemap");
+check(fs.existsSync(path.join(ROOT,"sitemap.xml")), "sitemap.xml exists");
+const sm = readFile("sitemap.xml");
+["/","guide.html","contact.html","privacy.html"].forEach(u =>
+  check(sm.indexOf(u) > -1, "sitemap lists " + u));
+PAGES.forEach(pg => check(/rel="canonical"/.test(readFile(pg)),
+  pg + " has a canonical URL, so Google does not see duplicates"));
+check(/application\/ld\+json/.test(readFile("index.html")) && /WebApplication/.test(readFile("index.html")),
+      "the app page carries WebApplication structured data");
+const gseo = readFile("guide.html");
+check(/application\/ld\+json/.test(gseo) && /"@type":"Article"/.test(gseo),
+      "the guide is marked up as an Article - it is the page meant to rank");
+check(/<title>What a Kanban board is/.test(gseo),
+      "with a title aimed at what people actually search for");
+check(/og:title/.test(gseo), "and its own social preview tags");
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
@@ -797,7 +855,32 @@ check(dom2.window.document.querySelectorAll("#tkList .tk").length === 4, "tracke
  click($("wipe"));
 check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === 0, "wipe clears tasks");
 
+/* ---------------------------------------------------------------------------
+   The docs claim a test count. Those claims went stale three separate times
+   (README said 363 twice and 281 once while the real number was 317), in the
+   very file whose job is to be the source of truth. This compares every claim
+   to the real total. It runs AFTER the counters are final and deliberately
+   sits outside check(), so it cannot change the number it is verifying.
+   --------------------------------------------------------------------------- */
+let docFail = 0;
+const TOTAL = pass + fail;
+[["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
+ ["HANDOVER.md", /\b(\d{2,4})\s+tests passing\b/g]].forEach(([file, re_]) => {
+  const fp = path.join(ROOT, file);
+  if (!fs.existsSync(fp)) return;          // HANDOVER is gitignored; may be absent
+  const body = fs.readFileSync(fp, "utf8");
+  let m;
+  while ((m = re_.exec(body)) !== null){
+    const claimed = parseInt(m[1], 10);
+    if (claimed !== TOTAL){
+      console.log("  DOC   " + file + " claims " + claimed + " tests, the suite has " + TOTAL);
+      docFail++;
+    }
+  }
+});
+
 console.log("\n" + "=".repeat(58));
 console.log("  " + pass + " passed, " + fail + " failed");
+if (docFail) console.log("  " + docFail + " stale test-count claim(s) in the docs - update them");
 console.log("=".repeat(58));
-process.exit(fail ? 1 : 0);
+process.exit(fail || docFail ? 1 : 0);
