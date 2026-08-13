@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 347 passed, 0 failed
+npm test         # expect: 389 passed, 0 failed
 ```
 
 ---
@@ -54,7 +54,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       347 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       389 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -157,7 +157,7 @@ collide with the semantic colours.
 npm test
 ```
 
-347 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+389 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -189,6 +189,16 @@ bugs that static review missed.
   what the app does. When you ship a feature, update the copy in the same commit - the tests will
   fail if you do not.
 - **Never run a blind find/replace across HTML.**
+- **A media query that changes `display` does not reset the other properties.** `.shell` is a grid
+  with `align-items:start`; the mobile override switched it to `flex-direction:column` but `start`
+  survived, and in a column flex container that stops children stretching - the board rendered at
+  ~70% of the screen width. Reset `align-items:stretch` explicitly.
+- **CSS `order` reorders one item, not the sequence.** Floating the current year with `order:-1`
+  left the others in place and produced 2026, 2025, 2027. On a phone, show one year instead.
+- **A field with no Done/Cancel feels broken even when it autosaves.** People need a way to say
+  "I am finished". Both day notes now have Done and Clear.
+- **Silent failure is undiagnosable.** Sign-in hid itself when the anon key was missing and said
+  nothing, so "why is there no login button" had no answer. It now logs the reason and the fix.
 - **Documentation drifts and no test catches it by default.** The README claimed 363 tests twice
   and 281 once while the real number was 317 - in the file whose entire job is being the source
   of truth. The suite now compares every test-count claim in `README.md` and `HANDOVER.md` to the

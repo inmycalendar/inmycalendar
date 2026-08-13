@@ -32,9 +32,21 @@ window.imcAuth = { user:null, client:null, ready:false };
   function configured(){
     return IMC_SUPABASE_ANON_KEY.indexOf("PASTE_") !== 0 && IMC_SUPABASE_ANON_KEY.length > 20;
   }
-  /* no library (offline / file://) or no key yet → stay quiet, app still works */
-  if (!window.supabase || !window.supabase.createClient || !configured()){
+  /* No library (offline / file://) or no key yet: the app still works, but say
+     WHY in the console. Failing silently is what made "sign-in never appears"
+     impossible to diagnose. */
+  if (!window.supabase || !window.supabase.createClient){
     slot.classList.add("hidden");
+    console.warn("[inmycalendar] Sign-in hidden: the Supabase library did not load. " +
+                 "It comes from a CDN, so this is expected when opening index.html " +
+                 "directly from disk (file://). Test sign-in on the live site.");
+    return;
+  }
+  if (!configured()){
+    slot.classList.add("hidden");
+    console.warn("[inmycalendar] Sign-in hidden: no Supabase anon key set. " +
+                 "Open assets/auth.js and replace PASTE_YOUR_ANON_PUBLIC_KEY_HERE " +
+                 "with the anon public key from Supabase > Settings > API Keys.");
     return;
   }
 

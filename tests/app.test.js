@@ -725,14 +725,10 @@ check(!deep.window.document.getElementById("calView").classList.contains("hidden
 
 console.log("\n=== C17. Mobile layout puts things in a usable order ===");
 const mob = (siteCss + appCss).replace(/\s*\n\s*/g,"");
-check(/\.calrail>\.wg\.thisyear\{order:-1\}/.test(mob),
-      "stacked year blocks float the CURRENT year to the top - a phone opened on last year before");
-toCal();
-const tagged = qa("#rail .wg.thisyear");
-check(tagged.length === 1, "exactly one year block is tagged as current");
-check(tagged[0].querySelector(".yh").textContent.indexOf(String(cy)) === 0,
-      "and it is " + cy);
-toBoard();
+/* superseded: the order:-1 approach produced 2026/2025/2027 and was replaced by
+   showing a single year on mobile. Asserted properly in C20. */
+check(/\.calrail>\.wg:not\(\.focusyear\)\{display:none\}/.test(mob),
+      "a phone shows one calendar year rather than three stacked ones");
 check(/\.pane,#boardView\{display:contents\}/.test(mob),
       "wrappers are flattened on mobile so each block can be ordered");
 [["#scopeHost{order:2}","the board comes first"],
@@ -779,6 +775,101 @@ check(/application\/ld\+json/.test(gseo) && /"@type":"Article"/.test(gseo),
 check(/<title>What a Kanban board is/.test(gseo),
       "with a title aimed at what people actually search for");
 check(/og:title/.test(gseo), "and its own social preview tags");
+
+console.log("\n=== C20. Regressions from the mobile pass, fixed ===");
+const mm = (siteCss + appCss).replace(/\s*\n\s*/g,"");
+check(/\.shell\{display:flex;flex-direction:column;gap:14px;align-items:stretch\}/.test(mm),
+      "mobile shell resets align-items to stretch - inherited 'start' squeezed the board to ~70% width");
+check(/\.calrail>\.wg:not\(\.focusyear\)\{display:none\}/.test(mm),
+      "a phone shows ONE calendar year - reordering three produced a nonsense 2026/2025/2027 sequence");
+check(!/\.thisyear\{order:-1\}/.test(mm), "the order:-1 hack that caused it is gone");
+toCal();
+const focus = qa("#rail .wg.focusyear");
+check(focus.length === 1, "exactly one year is focused");
+check(focus[0].querySelector(".yh").textContent.indexOf(String(cy)) === 0,
+      "and it is the current year (" + cy + ") when in range");
+w.eval("cfg.shift=6; renderCalendar();");
+const far = qa("#rail .wg.focusyear");
+check(far.length === 1, "panning far from today still focuses exactly one year, so mobile never goes blank");
+w.eval("cfg.shift=0; renderCalendar();");
+toBoard();
+
+console.log("\n=== C21. Day notes can be finished and cleared ===");
+check($("bnoteDone") !== null && $("bnoteClear") !== null,
+      "the note under the board has Done and Clear, not just a field you type into");
+check($("mClear") !== null && $("mDone") !== null, "so does the day popup");
+check(/\.bnotewrap\.filled \.bnoteacts,\.bnotewrap:focus-within \.bnoteacts\{display:flex\}/.test(mm),
+      "they appear only when the note is in use, so they cost no space otherwise");
+const nd = $("isoOut").textContent;
+$("bnote").value = "something"; $("bnote").dispatchEvent(new w.Event("input",{bubbles:true}));
+click($("bnoteClear"));
+check($("bnote").value === "" &&
+      JSON.parse(w.localStorage.getItem("imc.notes"))[nd].note === "", "Clear empties the field and the store");
+
+console.log("\n=== C22. Accessibility and SEO structure ===");
+PAGES.forEach(pg => {
+  const dd = new JSDOM(assemble(pg), { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true }).window.document;
+  check(dd.querySelectorAll("h1").length === 1, pg + " has exactly one h1");
+  const dup = {};
+  dd.querySelectorAll("[id]").forEach(n => { dup[n.id] = (dup[n.id]||0)+1; });
+  check(Object.values(dup).every(n => n === 1), pg + " has no duplicate ids");
+  const unnamed = [...dd.querySelectorAll("button")]
+    .filter(b => !((b.textContent||"").trim() || b.getAttribute("aria-label") || b.title));
+  check(unnamed.length === 0, pg + " has no buttons without an accessible name");
+  const unlabelled = [...dd.querySelectorAll("input:not([type=hidden]),select,textarea")]
+    .filter(f => !(f.getAttribute("aria-label") || f.getAttribute("placeholder") ||
+                   dd.querySelector('label[for="' + f.id + '"]') || f.closest("label")));
+  check(unlabelled.length === 0, pg + " has no unlabelled form fields");
+});
+check(/class="sronly">inmycalendar - a Kanban board/.test(readFile("index.html")),
+      "the app page has a visually-hidden h1 - Google needs one, the layout has no room for a visible one");
+check(/\.sronly\{position:absolute/.test(siteCss.replace(/\s*\n\s*/g,"")), "and the sronly helper exists");
+
+console.log("\n=== C23. Sign-in failure explains itself ===");
+const a3 = readFile("assets/auth.js");
+check(/console\.warn/.test(a3), "auth logs why the button is hidden instead of failing silently");
+check(/the Supabase library did not load/.test(a3), "it distinguishes a missing library (file:// / offline)");
+check(/no Supabase anon key set/.test(a3), "from a missing anon key, which is the likely cause");
+check(/Settings > API Keys/.test(a3), "and says exactly where to get the key");
+
+console.log("\n=== C20. The calendar is usable on a phone ===");
+const phone = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+  pretendToBeVisual:true, beforeParse(win){ Object.defineProperty(win,"innerWidth",{value:390}); }});
+const PD = phone.window.document, PW = phone.window;
+PD.querySelector(".sitenav a[data-view=calendar]").dispatchEvent(new PW.MouseEvent("click",{bubbles:true}));
+const phoneYears = () => [...PD.querySelectorAll("#rail .wg")]
+  .map(g => g.querySelector(".yh").textContent.trim().slice(0,4));
+check(phoneYears().length === 1,
+      "a phone renders exactly ONE year (" + phoneYears().join(",") + "), not three stacked");
+check(phoneYears()[0] === String(cy), "and it opens on the current year, not the earliest");
+const y0 = phoneYears()[0];
+PD.getElementById("cyNext").dispatchEvent(new PW.MouseEvent("click",{bubbles:true}));
+const y1 = phoneYears()[0];
+check(y1 !== y0, "the arrows actually move the year on mobile (" + y0 + " -> " + y1 + ")");
+PD.getElementById("cyPrev").dispatchEvent(new PW.MouseEvent("click",{bubbles:true}));
+check(phoneYears()[0] === y0, "and back again");
+check(/if \(narrow\(\)\)/.test(js) && /calFocus/.test(js),
+      "mobile tracks its own focused year rather than shifting a range it cannot show");
+toCal();
+check(qa("#rail .wg").length === 3, "desktop still shows three years side by side");
+toBoard();
+
+console.log("\n=== C21. Resizing does not strand the layout ===");
+check(/window\.addEventListener\("resize"/.test(js),
+      "crossing the mobile threshold re-renders, so a rotate or resize is not left in the wrong mode");
+
+console.log("\n=== C22. The day note can be finished, not just abandoned ===");
+check($("bnoteDone") !== null, "the day note has a Done button");
+check($("bnoteClear") !== null, "and a Clear button");
+check($("mDone") !== null, "the day popup has Done too");
+const dnDay = $("isoOut").textContent;
+$("bnote").value = "something";
+$("bnote").dispatchEvent(new w.Event("input",{bubbles:true}));
+click($("bnoteClear"));
+check($("bnote").value === "", "Clear empties it");
+check(!JSON.parse(w.localStorage.getItem("imc.notes"))[dnDay] ||
+      !JSON.parse(w.localStorage.getItem("imc.notes"))[dnDay].note,
+      "and clears the stored note, not just the field");
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));

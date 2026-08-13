@@ -22,8 +22,8 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=15">
-<link rel="stylesheet" href="assets/app.css?v=15">
+<link rel="stylesheet" href="assets/site.css?v=17">
+<link rel="stylesheet" href="assets/app.css?v=17">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -70,6 +70,7 @@
 </div>
 
 <main class="wrap">
+ <h1 class="sronly">inmycalendar - a Kanban board joined to a multi-year week calendar</h1>
  <div class="shell">
   <div class="pane">
     <section id="boardView">
@@ -79,6 +80,10 @@
         <label for="bnote">Day note</label>
         <textarea id="bnote" rows="1"
           placeholder="A line about today - what you did, decisions made, anything worth remembering."></textarea>
+        <span class="bnoteacts">
+          <button class="btn" id="bnoteClear" type="button">Clear</button>
+          <button class="btn done" id="bnoteDone" type="button">Done</button>
+        </span>
       </div>
 
       <div class="gridbox" id="glanceBox" style="margin-top:14px">
@@ -151,7 +156,7 @@
           <span class="dfield">
             <input type="text" id="tDate" placeholder="yyyy-mm-dd" aria-label="Date, yyyy-mm-dd">
             <button class="dbtn" id="tPick" type="button" aria-label="Pick a date">&#128197;</button>
-            <input type="date" id="tNative" class="dpick" tabindex="-1" aria-hidden="true">
+            <input type="date" id="tNative" class="dpick" tabindex="-1" aria-hidden="true" aria-label="Pick a countdown date">
           </span>
           <select id="tUnit" aria-label="Count in">
             <option value="days">count in days</option><option value="weeks">count in weeks</option>
@@ -178,7 +183,7 @@
       <button class="btn" id="expCsv">Export tasks</button>
       <button class="btn" id="expJson">Backup</button>
       <button class="btn" id="impJson">Restore</button>
-      <input type="file" id="impFile" accept="application/json,.json" class="hidden">
+      <input type="file" id="impFile" accept="application/json,.json" class="hidden" aria-label="Choose a backup file to restore">
       <button class="btn danger" id="wipe">Clear data</button>
     </div>
     <div style="margin-top:8px">Your board is saved in this browser. <strong>Sign in to sync it across your devices.</strong></div>
@@ -197,13 +202,16 @@
       <textarea class="mnote" id="mNote" rows="4"
         placeholder="A line about today - what you did, decisions made, anything worth remembering."></textarea>
       <div id="mKb"></div>
-      <div class="mfoot"><button class="btn primary" id="mDone">Done</button></div>
+      <div class="mfoot">
+        <button class="btn" id="mClear" type="button">Clear note</button>
+        <button class="btn primary" id="mDone" type="button">Done</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=15"></script>
-<script src="assets/auth.js?v=15"></script>
+<script src="assets/app.js?v=17"></script>
+<script src="assets/auth.js?v=17"></script>
 </body>
 </html>

@@ -543,8 +543,17 @@ function renderGlance(){
 }
 
 /* ---------- CALENDAR ---------- */
+var calFocus = null;   /* the single year a narrow screen shows */
 function calYears(){
   var cy = today().getFullYear();
+  /* On a phone only one year is shown, so the range IS that year. Rendering
+     three and hiding two left the arrows apparently dead: they moved the range
+     while the focused year stayed put. */
+  if (narrow()){
+    var f = (calFocus === null) ? cy : calFocus;
+    f = Math.min(cy+CAP, Math.max(cy-CAP, f));
+    return { from:f, to:f };
+  }
   return { from:Math.max(cy-CAP, cy-cfg.back+cfg.shift), to:Math.min(cy+CAP, cy+cfg.fwd+cfg.shift) };
 }
 function stepGlance(d){
@@ -553,7 +562,14 @@ function stepGlance(d){
   renderGlance();
 }
 function stepCal(d){
-  var r = calYears(), cy = today().getFullYear();
+  var cy = today().getFullYear();
+  if (narrow()){
+    var f = ((calFocus === null) ? cy : calFocus) + d;
+    calFocus = Math.min(cy+CAP, Math.max(cy-CAP, f));
+    renderCalendar();
+    return;
+  }
+  var r = calYears();
   if (d < 0 && r.from <= cy-CAP) return;
   if (d > 0 && r.to   >= cy+CAP) return;
   cfg.shift = Math.min(CAP, Math.max(-CAP, cfg.shift + d));
@@ -565,13 +581,15 @@ function renderCalendar(){
   el.cyPrev.disabled = r.from <= cy-CAP;
   el.cyNext.disabled = r.to   >= cy+CAP;
   el.rail.innerHTML = "";
-  /* On a phone the year blocks stack, so the earliest year lands on top and you
-     scroll past a whole year to reach today. Tagging the current year lets CSS
-     float it to the front when stacked, without changing desktop order. */
+  /* A phone shows ONE year (CSS hides the rest) - three stacked years is
+     unusable, and reordering them produced a nonsense 2026/2025/2027 sequence.
+     Focus the current year when it is in range; otherwise the middle of the
+     range, so panning with the arrows never leaves the view blank. */
+  var focus = (cy >= r.from && cy <= r.to) ? cy : Math.floor((r.from + r.to) / 2);
   for (var y=r.from;y<=r.to;y++){
     var g = renderWeekGrid({ label:String(y), weeks:weeksForYear(y), compact:false,
                              monthHint:"Jan\u2013Dec" });
-    if (y === cy) g.className += " thisyear";
+    if (y === focus) g.className += " focusyear";
     el.rail.appendChild(g);
   }
 }
@@ -831,8 +849,8 @@ function cacheEls(){
   var ids = ["dPrev","dPick","dInput","isoOut","dNext","dToday","metaOut","scopeSeg",
     "wsSel","ctrySel","holReg","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
-    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
-    "ov","mDate","mWk","mClose","mDone","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
+    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
+    "ov","mDate","mWk","mClose","mDone","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
 function typing(e){
@@ -908,6 +926,13 @@ function wire(){
 
   el.mClose.addEventListener("click", closeDay);
   el.mDone.addEventListener("click", closeDay);
+  el.mClear.addEventListener("click", function(){
+    if (!mDate) return;
+    el.mNote.value = "";
+    var r = notes[mDate] || { color:null, note:"" };
+    r.note = ""; notes[mDate] = r; save(LS.notes,notes);
+    el.mNote.focus();
+  });
   el.ov.addEventListener("click", function(e){ if (e.target === el.ov) closeDay(); });
   el.bnote.addEventListener("input", function(){
     var r = notes[sel] || { color:null, note:"" };
@@ -915,12 +940,25 @@ function wire(){
     el.bnoteWrap.classList.toggle("filled", !!el.bnote.value);
   });
   el.bnote.addEventListener("blur", function(){ renderAll(); });
+  el.bnoteDone.addEventListener("click", function(){ el.bnote.blur(); renderAll(); });
+  el.bnoteClear.addEventListener("click", function(){
+    el.bnote.value = "";
+    var r = notes[sel] || { color:null, note:"" };
+    r.note = ""; notes[sel] = r; save(LS.notes,notes);
+    el.bnoteWrap.classList.remove("filled");
+    el.bnote.focus();
+  });
   el.mNote.addEventListener("input", function(){
     if (!mDate) return;
     var r = notes[mDate] || { color:null, note:"" };
     r.note = el.mNote.value; notes[mDate] = r; save(LS.notes,notes);
   });
 
+  var wasNarrow = narrow();
+  window.addEventListener("resize", function(){
+    var n = narrow();
+    if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
+  });
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape" && !el.ov.classList.contains("hidden")){ closeDay(); return; }
     if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
