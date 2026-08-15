@@ -18,11 +18,11 @@ var CATS = ["#dc2626","#d97706","#059669","#2563eb"];
    holiday files live in assets/holidays/<CODE>.js and are loaded on demand -
    4 MB in total, but only ~16 KB ever reaches the browser. They are .js rather
    than .json so they also work when index.html is opened straight from disk. */
-var COUNTRIES = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","American Samoa"],["AD","Andorra"],["AO","Angola"],["AI","Anguilla"],["AQ","Antarctica"],["AG","Antigua and Barbuda"],["AR","Argentina"],["AM","Armenia"],["AW","Aruba"],["AU","Australia"],["AT","Austria"],["AZ","Azerbaijan"],["BS","Bahamas"],["BH","Bahrain"],["BD","Bangladesh"],["BB","Barbados"],["BY","Belarus"],["BE","Belgium"],["BZ","Belize"],["BJ","Benin"],["BM","Bermuda"],["BT","Bhutan"],["BO","Bolivia, Plurinational State of"],["BQ","Bonaire, Sint Eustatius and Saba"],["BA","Bosnia and Herzegovina"],["BW","Botswana"],["BR","Brazil"],["BN","Brunei Darussalam"],["BG","Bulgaria"],["BF","Burkina Faso"],["BI","Burundi"],["CV","Cabo Verde"],["KH","Cambodia"],["CM","Cameroon"],["CA","Canada"],["KY","Cayman Islands"],["CF","Central African Republic"],["TD","Chad"],["CL","Chile"],["CN","China"],["CX","Christmas Island"],["CC","Cocos (Keeling) Islands"],["CO","Colombia"],["KM","Comoros"],["CG","Congo"],["CD","Congo, The Democratic Republic of the"],["CK","Cook Islands"],["CR","Costa Rica"],["HR","Croatia"],["CU","Cuba"],["CW","Curaçao"],["CY","Cyprus"],["CZ","Czechia"],["CI","Côte d'Ivoire"],["DK","Denmark"],["DJ","Djibouti"],["DM","Dominica"],["DO","Dominican Republic"],["EC","Ecuador"],["EG","Egypt"],["SV","El Salvador"],["GQ","Equatorial Guinea"],["ER","Eritrea"],["EE","Estonia"],["SZ","Eswatini"],["ET","Ethiopia"],["FK","Falkland Islands (Malvinas)"],["FO","Faroe Islands"],["FJ","Fiji"],["FI","Finland"],["FR","France"],["GF","French Guiana"],["PF","French Polynesia"],["TF","French Southern Territories"],["GA","Gabon"],["GM","Gambia"],["GE","Georgia"],["DE","Germany"],["GH","Ghana"],["GI","Gibraltar"],["GR","Greece"],["GL","Greenland"],["GD","Grenada"],["GP","Guadeloupe"],["GU","Guam"],["GT","Guatemala"],["GG","Guernsey"],["GN","Guinea"],["GW","Guinea-Bissau"],["GY","Guyana"],["HT","Haiti"],["VA","Holy See (Vatican City State)"],["HN","Honduras"],["HK","Hong Kong"],["HU","Hungary"],["IS","Iceland"],["IN","India"],["ID","Indonesia"],["IR","Iran, Islamic Republic of"],["IQ","Iraq"],["IE","Ireland"],["IM","Isle of Man"],["IL","Israel"],["IT","Italy"],["JM","Jamaica"],["JP","Japan"],["JE","Jersey"],["JO","Jordan"],["KZ","Kazakhstan"],["KE","Kenya"],["KI","Kiribati"],["KP","Korea, Democratic People's Republic of"],["KR","Korea, Republic of"],["KW","Kuwait"],["KG","Kyrgyzstan"],["LA","Lao People's Democratic Republic"],["LV","Latvia"],["LB","Lebanon"],["LS","Lesotho"],["LR","Liberia"],["LY","Libya"],["LI","Liechtenstein"],["LT","Lithuania"],["LU","Luxembourg"],["MO","Macao"],["MG","Madagascar"],["MW","Malawi"],["MY","Malaysia"],["MV","Maldives"],["ML","Mali"],["MT","Malta"],["MH","Marshall Islands"],["MQ","Martinique"],["MR","Mauritania"],["MU","Mauritius"],["YT","Mayotte"],["MX","Mexico"],["FM","Micronesia, Federated States of"],["MD","Moldova, Republic of"],["MC","Monaco"],["MN","Mongolia"],["ME","Montenegro"],["MS","Montserrat"],["MA","Morocco"],["MZ","Mozambique"],["MM","Myanmar"],["NA","Namibia"],["NR","Nauru"],["NP","Nepal"],["NL","Netherlands"],["NC","New Caledonia"],["NZ","New Zealand"],["NI","Nicaragua"],["NE","Niger"],["NG","Nigeria"],["NU","Niue"],["NF","Norfolk Island"],["MK","North Macedonia"],["MP","Northern Mariana Islands"],["NO","Norway"],["OM","Oman"],["PK","Pakistan"],["PW","Palau"],["PS","Palestine, State of"],["PA","Panama"],["PG","Papua New Guinea"],["PY","Paraguay"],["PE","Peru"],["PH","Philippines"],["PN","Pitcairn"],["PL","Poland"],["PT","Portugal"],["PR","Puerto Rico"],["QA","Qatar"],["RO","Romania"],["RU","Russian Federation"],["RW","Rwanda"],["RE","Réunion"],["BL","Saint Barthélemy"],["SH","Saint Helena, Ascension and Tristan da Cunha"],["KN","Saint Kitts and Nevis"],["LC","Saint Lucia"],["MF","Saint Martin (French part)"],["PM","Saint Pierre and Miquelon"],["VC","Saint Vincent and the Grenadines"],["WS","Samoa"],["SM","San Marino"],["ST","Sao Tome and Principe"],["SA","Saudi Arabia"],["SN","Senegal"],["RS","Serbia"],["SC","Seychelles"],["SL","Sierra Leone"],["SG","Singapore"],["SX","Sint Maarten (Dutch part)"],["SK","Slovakia"],["SI","Slovenia"],["SB","Solomon Islands"],["SO","Somalia"],["ZA","South Africa"],["GS","South Georgia and the South Sandwich Islands"],["SS","South Sudan"],["ES","Spain"],["LK","Sri Lanka"],["SD","Sudan"],["SR","Suriname"],["SJ","Svalbard and Jan Mayen"],["SE","Sweden"],["CH","Switzerland"],["SY","Syrian Arab Republic"],["TW","Taiwan, Province of China"],["TJ","Tajikistan"],["TZ","Tanzania, United Republic of"],["TH","Thailand"],["TL","Timor-Leste"],["TG","Togo"],["TK","Tokelau"],["TO","Tonga"],["TT","Trinidad and Tobago"],["TN","Tunisia"],["TM","Turkmenistan"],["TC","Turks and Caicos Islands"],["TV","Tuvalu"],["TR","Türkiye"],["UK","UK"],["UG","Uganda"],["UA","Ukraine"],["AE","United Arab Emirates"],["GB","United Kingdom"],["US","United States"],["UM","United States Minor Outlying Islands"],["UY","Uruguay"],["UZ","Uzbekistan"],["VU","Vanuatu"],["VE","Venezuela, Bolivarian Republic of"],["VN","Viet Nam"],["VG","Virgin Islands, British"],["VI","Virgin Islands, U.S."],["WF","Wallis and Futuna"],["EH","Western Sahara"],["XK","XK"],["YE","Yemen"],["ZM","Zambia"],["ZW","Zimbabwe"],["AX","Åland Islands"]];
+var COUNTRIES = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","American Samoa"],["AD","Andorra"],["AO","Angola"],["AI","Anguilla"],["AQ","Antarctica"],["AG","Antigua and Barbuda"],["AR","Argentina"],["AM","Armenia"],["AW","Aruba"],["AU","Australia"],["AT","Austria"],["AZ","Azerbaijan"],["BS","Bahamas"],["BH","Bahrain"],["BD","Bangladesh"],["BB","Barbados"],["BY","Belarus"],["BE","Belgium"],["BZ","Belize"],["BJ","Benin"],["BM","Bermuda"],["BT","Bhutan"],["BO","Bolivia, Plurinational State of"],["BQ","Bonaire, Sint Eustatius and Saba"],["BA","Bosnia and Herzegovina"],["BW","Botswana"],["BR","Brazil"],["BN","Brunei Darussalam"],["BG","Bulgaria"],["BF","Burkina Faso"],["BI","Burundi"],["CV","Cabo Verde"],["KH","Cambodia"],["CM","Cameroon"],["CA","Canada"],["KY","Cayman Islands"],["CF","Central African Republic"],["TD","Chad"],["CL","Chile"],["CN","China"],["CX","Christmas Island"],["CC","Cocos (Keeling) Islands"],["CO","Colombia"],["KM","Comoros"],["CG","Congo"],["CD","Congo, The Democratic Republic of the"],["CK","Cook Islands"],["CR","Costa Rica"],["HR","Croatia"],["CU","Cuba"],["CW","Curaçao"],["CY","Cyprus"],["CZ","Czechia"],["CI","Côte d'Ivoire"],["DK","Denmark"],["DJ","Djibouti"],["DM","Dominica"],["DO","Dominican Republic"],["EC","Ecuador"],["EG","Egypt"],["SV","El Salvador"],["GQ","Equatorial Guinea"],["ER","Eritrea"],["EE","Estonia"],["SZ","Eswatini"],["ET","Ethiopia"],["FK","Falkland Islands (Malvinas)"],["FO","Faroe Islands"],["FJ","Fiji"],["FI","Finland"],["FR","France"],["GF","French Guiana"],["PF","French Polynesia"],["TF","French Southern Territories"],["GA","Gabon"],["GM","Gambia"],["GE","Georgia"],["DE","Germany"],["GH","Ghana"],["GI","Gibraltar"],["GR","Greece"],["GL","Greenland"],["GD","Grenada"],["GP","Guadeloupe"],["GU","Guam"],["GT","Guatemala"],["GG","Guernsey"],["GN","Guinea"],["GW","Guinea-Bissau"],["GY","Guyana"],["HT","Haiti"],["VA","Holy See (Vatican City State)"],["HN","Honduras"],["HK","Hong Kong"],["HU","Hungary"],["IS","Iceland"],["IN","India"],["ID","Indonesia"],["IR","Iran, Islamic Republic of"],["IQ","Iraq"],["IE","Ireland"],["IM","Isle of Man"],["IL","Israel"],["IT","Italy"],["JM","Jamaica"],["JP","Japan"],["JE","Jersey"],["JO","Jordan"],["KZ","Kazakhstan"],["KE","Kenya"],["KI","Kiribati"],["KP","Korea, Democratic People's Republic of"],["KR","Korea, Republic of"],["XK","Kosovo"],["KW","Kuwait"],["KG","Kyrgyzstan"],["LA","Lao People's Democratic Republic"],["LV","Latvia"],["LB","Lebanon"],["LS","Lesotho"],["LR","Liberia"],["LY","Libya"],["LI","Liechtenstein"],["LT","Lithuania"],["LU","Luxembourg"],["MO","Macao"],["MG","Madagascar"],["MW","Malawi"],["MY","Malaysia"],["MV","Maldives"],["ML","Mali"],["MT","Malta"],["MH","Marshall Islands"],["MQ","Martinique"],["MR","Mauritania"],["MU","Mauritius"],["YT","Mayotte"],["MX","Mexico"],["FM","Micronesia, Federated States of"],["MD","Moldova, Republic of"],["MC","Monaco"],["MN","Mongolia"],["ME","Montenegro"],["MS","Montserrat"],["MA","Morocco"],["MZ","Mozambique"],["MM","Myanmar"],["NA","Namibia"],["NR","Nauru"],["NP","Nepal"],["NL","Netherlands"],["NC","New Caledonia"],["NZ","New Zealand"],["NI","Nicaragua"],["NE","Niger"],["NG","Nigeria"],["NU","Niue"],["NF","Norfolk Island"],["MK","North Macedonia"],["MP","Northern Mariana Islands"],["NO","Norway"],["OM","Oman"],["PK","Pakistan"],["PW","Palau"],["PS","Palestine, State of"],["PA","Panama"],["PG","Papua New Guinea"],["PY","Paraguay"],["PE","Peru"],["PH","Philippines"],["PN","Pitcairn"],["PL","Poland"],["PT","Portugal"],["PR","Puerto Rico"],["QA","Qatar"],["RO","Romania"],["RU","Russian Federation"],["RW","Rwanda"],["RE","Réunion"],["BL","Saint Barthélemy"],["SH","Saint Helena, Ascension and Tristan da Cunha"],["KN","Saint Kitts and Nevis"],["LC","Saint Lucia"],["MF","Saint Martin (French part)"],["PM","Saint Pierre and Miquelon"],["VC","Saint Vincent and the Grenadines"],["WS","Samoa"],["SM","San Marino"],["ST","Sao Tome and Principe"],["SA","Saudi Arabia"],["SN","Senegal"],["RS","Serbia"],["SC","Seychelles"],["SL","Sierra Leone"],["SG","Singapore"],["SX","Sint Maarten (Dutch part)"],["SK","Slovakia"],["SI","Slovenia"],["SB","Solomon Islands"],["SO","Somalia"],["ZA","South Africa"],["GS","South Georgia and the South Sandwich Islands"],["SS","South Sudan"],["ES","Spain"],["LK","Sri Lanka"],["SD","Sudan"],["SR","Suriname"],["SJ","Svalbard and Jan Mayen"],["SE","Sweden"],["CH","Switzerland"],["SY","Syrian Arab Republic"],["TW","Taiwan, Province of China"],["TJ","Tajikistan"],["TZ","Tanzania, United Republic of"],["TH","Thailand"],["TL","Timor-Leste"],["TG","Togo"],["TK","Tokelau"],["TO","Tonga"],["TT","Trinidad and Tobago"],["TN","Tunisia"],["TM","Turkmenistan"],["TC","Turks and Caicos Islands"],["TV","Tuvalu"],["TR","Türkiye"],["UG","Uganda"],["UA","Ukraine"],["AE","United Arab Emirates"],["GB","United Kingdom"],["US","United States"],["UM","United States Minor Outlying Islands"],["UY","Uruguay"],["UZ","Uzbekistan"],["VU","Vanuatu"],["VE","Venezuela, Bolivarian Republic of"],["VN","Viet Nam"],["VG","Virgin Islands, British"],["VI","Virgin Islands, U.S."],["WF","Wallis and Futuna"],["EH","Western Sahara"],["YE","Yemen"],["ZM","Zambia"],["ZW","Zimbabwe"],["AX","Åland Islands"]];
 var HOL = {};                 /* code -> { "2026": { "0101": [name, 0|1] } } */
 var holWanted = null;
 
-var DEF = { holRegional:false, weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
+var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
             catLabels:["Milestone","Travel","Leave","WFH"] };
 
 var cfg = null, tasks = null, notes = null, track = null;
@@ -115,21 +115,55 @@ function sow(d){
   x.setHours(0,0,0,0); return x;
 }
 function dowLabels(){ var o=[]; for (var i=0;i<7;i++) o.push(DOW[(cfg.weekStart+i)%7]); return o; }
-/* Wk 1 = the week containing Jan 1. Last = the week containing Dec 31.
-   Every week is emitted; sparse edge weeks are never dropped. */
+/* ---------------------------------------------------------------------------
+   WEEK NUMBERING
+
+   Two rules, because organisations genuinely differ:
+
+   "thursday" (default) - week 1 is the week containing the year's first
+      Thursday. This is the logic ISO 8601 uses, but applied to whatever day
+      the user starts their week on. It is what most payroll, retail and
+      reporting calendars use. A year has 52 or 53 weeks, and the first days
+      of January often belong to the previous year's last week.
+
+   "jan1" - week 1 is simply the week containing 1 January. Easier to explain,
+      but it produces a 53rd week far more often and splits the year oddly.
+
+   Worked example with weeks starting Sunday: 1 Jan 2026 is a Thursday, so
+   week 1 of 2026 starts Sunday 28 Dec 2025 - which means 31 Dec 2025 is in
+   week 1 of 2026, not week 53 of 2025. For 2027, the first Thursday is 7 Jan,
+   so week 1 starts Sunday 3 Jan 2027.
+   --------------------------------------------------------------------------- */
+function firstThursday(y){
+  var d = new Date(y,0,1); d.setHours(0,0,0,0);
+  while (d.getDay() !== 4) d.setDate(d.getDate()+1);
+  return d;
+}
+function week1Start(y){
+  return sow(cfg.weekRule === "jan1" ? new Date(y,0,1) : firstThursday(y));
+}
 function weeksForYear(y){
-  var dec31 = new Date(y,11,31); dec31.setHours(0,0,0,0);
-  var cur = sow(new Date(y,0,1)), out = [], n = 1, guard = 0;
-  while (cur.getTime() <= dec31.getTime() && guard < 60){
-    var days = []; for (var i=0;i<7;i++) days.push(addDays(cur,i));
-    out.push({ num:n, year:y, start:new Date(cur.getTime()), days:days });
-    n++; guard++; cur = addDays(cur,7);
+  var start = week1Start(y), out = [], n;
+  if (cfg.weekRule === "jan1"){
+    /* keep the original behaviour: run to the week containing 31 December */
+    n = Math.round((sow(new Date(y,11,31)) - start) / (7*MS_DAY)) + 1;
+  } else {
+    /* the year ends exactly where the next one's week 1 begins */
+    n = Math.round((week1Start(y+1) - start) / (7*MS_DAY));
+  }
+  if (!(n > 0) || n > 60) n = 52;                 /* never emit a broken grid */
+  for (var i=0;i<n;i++){
+    var cur = addDays(start, i*7), days = [];
+    for (var j=0;j<7;j++) days.push(addDays(cur,j));
+    out.push({ num:i+1, year:y, start:cur, days:days });
   }
   return out;
 }
 function weekOf(ds){
   var d = parseISO(ds); if (!d) return null;
-  var s = sow(d).getTime(), y = sow(d).getFullYear(), yy = [y-1,y,y+1];
+  /* a late-December date can belong to next year's week 1, and an early
+     January date to last year's final week - so check the neighbours too */
+  var s = sow(d).getTime(), y = d.getFullYear(), yy = [y-1,y,y+1];
   for (var c=0;c<yy.length;c++){
     var ws = weeksForYear(yy[c]);
     for (var i=0;i<ws.length;i++) if (ws[i].start.getTime() === s) return ws[i];
@@ -228,6 +262,55 @@ function moveTaskToDate(id, newDate){
   renumber(newDate, st);
   save(LS.tasks, tasks);
 }
+/* ---------------------------------------------------------------------------
+   RECURRING TASKS
+
+   A repeating task is an ordinary task carrying repeat:"d"|"w"|"m". Instances
+   are written into the task list as real tasks the first time their day is
+   viewed, so drag, reorder, move and delete all behave normally with no special
+   cases. The template records which dates it has already produced, so deleting
+   an instance does not make it come back.
+   --------------------------------------------------------------------------- */
+var REPEATS = { d:"Every day", w:"Every week", m:"Every month" };
+function repeatMatches(t, from, target){
+  if (t.repeat === "d") return true;
+  if (t.repeat === "w") return from.getDay() === target.getDay();
+  if (t.repeat === "m") return from.getDate() === target.getDate();
+  return false;
+}
+function materialiseRepeats(uptoISO){
+  var upto = parseISO(uptoISO); if (!upto) return;
+  var changed = false;
+  for (var i = tasks.length - 1; i >= 0; i--){
+    var t = tasks[i];
+    if (!t.repeat || t.fromRepeat) continue;
+    var from = parseISO(t.date); if (!from) continue;
+    if (upto <= from) continue;
+    if (Math.round((upto - from) / MS_DAY) > 400) continue;   /* sanity cap */
+    t.gen = t.gen || [];
+    var cur = addDays(from, 1);
+    while (cur <= upto){
+      var ds = iso(cur);
+      if (repeatMatches(t, from, cur) && t.gen.indexOf(ds) < 0){
+        t.gen.push(ds);
+        tasks.push({ id:uid(), date:ds, text:t.text, status:"todo",
+                     order:lane(ds,"todo").length, fromRepeat:t.id,
+                     ts:{todo:stamp(),doing:null,done:null} });
+        changed = true;
+      }
+      cur = addDays(cur, 1);
+    }
+  }
+  if (changed) save(LS.tasks,tasks);
+}
+function setRepeat(id, kind){
+  var t = byId(id); if (!t) return;
+  if (t.fromRepeat){ t = byId(t.fromRepeat) || t; }   /* edit the template */
+  t.repeat = kind || null;
+  if (!kind) delete t.gen;
+  save(LS.tasks,tasks);
+  materialiseRepeats(sel);
+}
 function delTask(id){
   var t = byId(id); if (!t) return;
   var d = t.date, s = t.status;
@@ -314,6 +397,16 @@ function taskRow(task, st, idx, total){
   ops.appendChild(opBtn("\u25bc","Move down", idx === total-1, function(){ nudge(task.id, 1); refresh(); }));
   ops.appendChild(opBtn("\u2190","Move left", st.k === "todo", function(){ shiftStatus(task.id,-1); refresh(); }));
   ops.appendChild(opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); }));
+  var rp = byId(task.fromRepeat) || task;
+  var rpTitle = rp.repeat ? (REPEATS[rp.repeat] + " - click to change") : "Repeat this task";
+  var rpBtn = opBtn("\u21bb", rpTitle, false, function(){
+    var order = [null,"d","w","m"];
+    var next = order[(order.indexOf(rp.repeat || null) + 1) % order.length];
+    setRepeat(task.id, next);
+    refresh();
+  });
+  if (rp.repeat) rpBtn.className = "op on";
+  ops.appendChild(rpBtn);
   ops.appendChild(opBtn("\u{1F4C5}","Move to another day", false, function(){
     var inp = document.createElement("input");
     inp.type = "date"; inp.value = task.date;
@@ -473,6 +566,7 @@ function renderDayNote(){
 function renderBoard(){
   el.isoOut.textContent = sel;
   el.dInput.value = sel;
+  materialiseRepeats(sel);
   renderCarry();
   var d = parseISO(sel), wk = weekOf(sel);
   if (cfg.scope === "day"){
@@ -595,6 +689,51 @@ function renderCalendar(){
 }
 
 /* ---------- RIGHT RAIL ---------- */
+/* --------------------------------------------------------------------------
+   SEARCH - lives in an overlay so it costs no permanent screen space.
+   Opens with the magnifier or the "/" key.
+   -------------------------------------------------------------------------- */
+function openSearch(){
+  el.sov.classList.remove("hidden");
+  el.sInput.value = ""; el.sOut.innerHTML = "";
+  if (el.sInput.focus) el.sInput.focus();
+}
+function closeSearch(){ el.sov.classList.add("hidden"); }
+function runSearch(){
+  var q = (el.sInput.value || "").trim().toLowerCase();
+  el.sOut.innerHTML = "";
+  if (q.length < 2){
+    el.sOut.appendChild(mk("div","none","Type at least two characters."));
+    return;
+  }
+  var hits = [];
+  for (var i=0;i<tasks.length && hits.length<200;i++)
+    if ((tasks[i].text || "").toLowerCase().indexOf(q) > -1)
+      hits.push({ date:tasks[i].date, kind:ST[stIndex(tasks[i].status)].label, text:tasks[i].text });
+  Object.keys(notes).forEach(function(ds){
+    var n = notes[ds] && notes[ds].note;
+    if (n && n.toLowerCase().indexOf(q) > -1) hits.push({ date:ds, kind:"Day note", text:n });
+  });
+  hits.sort(function(a,b){ return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; });
+  if (!hits.length){
+    el.sOut.appendChild(mk("div","none","Nothing found for \u201c" + q + "\u201d."));
+    return;
+  }
+  el.sOut.appendChild(mk("div","scount", hits.length + (hits.length===1?" result":" results")));
+  for (var h=0;h<hits.length;h++){
+    (function(hit){
+      var r = mk("button","srow"); r.type = "button";
+      r.appendChild(mk("span","sdate", hit.date));
+      r.appendChild(mk("span","skind", hit.kind));
+      var tx = mk("span","stext", hit.text); tx.title = hit.text;
+      r.appendChild(tx);
+      r.addEventListener("click", function(){
+        closeSearch(); setScope("day"); setView("board"); setDate(hit.date);
+      });
+      el.sOut.appendChild(r);
+    })(hits[h]);
+  }
+}
 function renderRail(){
   el.cats.innerHTML = "";
   for (var i=0;i<CATS.length;i++){
@@ -628,21 +767,32 @@ function renderTracked(){
   for (var i=0;i<sorted.length;i++){
     (function(e){
       var box = mk("div","tk" + (soon && e.id === soon.id ? " next" : ""));
-      var lb = mk("span","tkl", e.label);
-      lb.title = e.date;
+      var lb = document.createElement("input");
+      lb.type = "text"; lb.className = "tkl"; lb.value = e.label;
+      lb.title = e.date + " - click to rename";
+      lb.setAttribute("aria-label","Rename countdown " + e.label);
+      lb.addEventListener("change", function(){
+        var v = lb.value.trim();
+        if (v){ e.label = v; } else { lb.value = e.label; }
+        save(LS.track,track); renderTracked();
+      });
+      lb.addEventListener("keydown", function(ev){
+        if (ev.key === "Enter") lb.blur();
+        if (ev.key === "Escape"){ lb.value = e.label; lb.blur(); }
+      });
       box.appendChild(lb);
       var row = mk("div","tkr");
       row.appendChild(mk("span","tkc" + (entryDays(e) < 0 ? " fut" : ""), countText(e)));
-      var s = document.createElement("select");
-      s.setAttribute("aria-label","Count " + e.label + " in");
+      var sel2 = document.createElement("select");
+      sel2.setAttribute("aria-label","Count " + e.label + " in");
       ["days","weeks","months","years"].forEach(function(u){
         var o = document.createElement("option");
         o.value = u; o.textContent = u;
         if ((e.unit || "days") === u) o.selected = true;
-        s.appendChild(o);
+        sel2.appendChild(o);
       });
-      s.addEventListener("change", function(){ e.unit = s.value; save(LS.track,track); renderTracked(); });
-      row.appendChild(s);
+      sel2.addEventListener("change", function(){ e.unit = sel2.value; save(LS.track,track); renderTracked(); });
+      row.appendChild(sel2);
       var x = mk("button","x","\u00d7"); x.type = "button"; x.title = "Remove " + e.label;
       x.addEventListener("click", function(){
         track = track.filter(function(t){ return t.id !== e.id; });
@@ -677,6 +827,10 @@ function openDay(ds){
                        (hol ? "  ·  " + hol[0] + (hol[1] === 1 ? " (regional)" : "") : "");
   renderSw();
   el.mNote.value = (notes[ds] && notes[ds].note) || "";
+  /* snapshot so Cancel has something to restore */
+  var nrec = notes[ds] || { color:null, note:"" };
+  nrec.noteBefore = nrec.note || "";
+  notes[ds] = nrec;
   renderKanban(el.mKb, ds);
   el.ov.classList.remove("hidden");
 }
@@ -847,10 +1001,10 @@ function migrate(){
 /* ---------- boot ---------- */
 function cacheEls(){
   var ids = ["dPrev","dPick","dInput","isoOut","dNext","dToday","metaOut","scopeSeg",
-    "wsSel","ctrySel","holReg","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
+    "wsSel","wkRule","ctrySel","holReg","rgLabel","rgBack","rgFwd","rgReset","adToggle","expCsv","expJson","impJson","impFile","wipe",
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
-    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
-    "ov","mDate","mWk","mClose","mDone","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
+    "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","bnoteCancel","bnoteX","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
+    "ov","mDate","mWk","mClose","mDone","mCancel","mClear","sov","sInput","sOut","sClose","searchBtn","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
 function typing(e){
@@ -892,6 +1046,10 @@ function wire(){
 
   el.wsSel.addEventListener("change", function(){ setWeekStart(el.wsSel.value); });
   el.ctrySel.addEventListener("change", function(){ setCountry(el.ctrySel.value); });
+  el.wkRule.addEventListener("change", function(){
+    cfg.weekRule = el.wkRule.value === "jan1" ? "jan1" : "thursday";
+    save(LS.cfg,cfg); renderAll();
+  });
   el.holReg.addEventListener("change", function(){
     cfg.holRegional = el.holReg.checked; save(LS.cfg,cfg); renderAll();
   });
@@ -924,8 +1082,31 @@ function wire(){
   el.tAdd.addEventListener("click", addTracked);
   el.tDate.addEventListener("keydown", function(e){ if (e.key === "Enter") addTracked(); });
 
+  el.searchBtn.addEventListener("click", openSearch);
+  el.sClose.addEventListener("click", closeSearch);
+  el.sov.addEventListener("click", function(e){ if (e.target === el.sov) closeSearch(); });
+  el.sInput.addEventListener("input", runSearch);
+  el.sInput.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){ var f = el.sOut.querySelector(".srow"); if (f) f.click(); }
+    if (e.key === "Escape") closeSearch();
+  });
   el.mClose.addEventListener("click", closeDay);
   el.mDone.addEventListener("click", closeDay);
+  el.mClear.addEventListener("click", function(){
+    if (!mDate) return;
+    var r = notes[mDate] || { color:null, note:"" };
+    r.note = ""; notes[mDate] = r; save(LS.notes,notes);
+    el.mNote.value = "";
+  });
+  el.mCancel.addEventListener("click", function(){
+    if (mDate){
+      var r = notes[mDate];
+      if (r && r.noteBefore !== undefined){
+        r.note = r.noteBefore; delete r.noteBefore; save(LS.notes,notes);
+      }
+    }
+    closeDay();
+  });
   el.mClear.addEventListener("click", function(){
     if (!mDate) return;
     el.mNote.value = "";
@@ -939,9 +1120,47 @@ function wire(){
     r.note = el.bnote.value; notes[sel] = r; save(LS.notes,notes);
     el.bnoteWrap.classList.toggle("filled", !!el.bnote.value);
   });
-  el.bnote.addEventListener("blur", function(){ renderAll(); });
-  el.bnoteDone.addEventListener("click", function(){ el.bnote.blur(); renderAll(); });
-  el.bnoteClear.addEventListener("click", function(){
+  el.bnote.addEventListener("focus", function(){
+    el.bnoteWrap.classList.add("editing");
+    /* remember the text as it was, so Cancel has something to restore */
+    var r = notes[sel] || { color:null, note:"" };
+    r.noteBefore = r.note || "";
+    notes[sel] = r;
+  });
+  el.bnote.addEventListener("blur", function(){
+    /* keep the controls up if the click that blurred us was one of them */
+    setTimeout(function(){
+      var a = document.activeElement;
+      if (a !== el.bnoteDone && a !== el.bnoteClear &&
+          a !== el.bnoteCancel && a !== el.bnoteX) el.bnoteWrap.classList.remove("editing");
+    }, 120);
+    renderAll();
+  });
+  function closeNote(){ el.bnoteWrap.classList.remove("editing"); el.bnote.blur(); renderAll(); }
+  /* Mouse users need mousedown: blur fires between mousedown and click, so a
+     click-only handler reached a button the re-render had already replaced -
+     that is why Done had to be pressed twice. Keyboard users only ever get a
+     click (Enter on a focused button), so bind both and de-duplicate. */
+  function onPress(node, fn){
+    var last = 0;
+    node.addEventListener("mousedown", function(e){ e.preventDefault(); last = Date.now(); fn(); });
+    node.addEventListener("click", function(){ if (Date.now() - last > 400) fn(); });
+  }
+  /* mousedown, not click: blur fires between mousedown and click, and the old
+     click handler was reaching a button the re-render had already replaced -
+     which is why Done had to be pressed twice. */
+  onPress(el.bnoteDone, closeNote);
+  onPress(el.bnoteX, closeNote);
+  /* Cancel puts back whatever was saved before this edit, then closes */
+  onPress(el.bnoteCancel, function(){
+    var rec = notes[sel];
+    el.bnote.value = (rec && rec.noteBefore !== undefined) ? rec.noteBefore : ((rec && rec.note) || "");
+    if (rec && rec.noteBefore !== undefined){
+      rec.note = rec.noteBefore; delete rec.noteBefore; save(LS.notes,notes);
+    }
+    closeNote();
+  });
+  onPress(el.bnoteClear, function(){
     el.bnote.value = "";
     var r = notes[sel] || { color:null, note:"" };
     r.note = ""; notes[sel] = r; save(LS.notes,notes);
@@ -960,7 +1179,9 @@ function wire(){
     if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
   });
   document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }
     if (e.key === "Escape" && !el.ov.classList.contains("hidden")){ closeDay(); return; }
+    if (e.key === "/" && !typing(e)){ openSearch(); e.preventDefault(); return; }
     if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
     var k = e.key;
     if (k === "ArrowLeft"){ setDate(iso(addDays(parseISO(sel),-1))); e.preventDefault(); }
@@ -1024,6 +1245,7 @@ function init(){
   }
   el.ctrySel.value = cfg.country || "";
   el.holReg.checked = !!cfg.holRegional;
+  el.wkRule.value = cfg.weekRule === "jan1" ? "jan1" : "thursday";
   wire();
   rangeLabel();
   applyAds();

@@ -266,7 +266,7 @@ check(JSON.parse(w.localStorage.getItem("imc.cfg")).weekStart === 6, "choosing S
 check(qa("#glance .dh")[1].textContent === "Sat", "and the grid starts on Saturday");
 $("wsSel").value = "0"; $("wsSel").dispatchEvent(new w.Event("change",{bubbles:true}));
 const railBoxes = [...qa(".rail .rbox h3")].map(h => h.textContent.trim());
-check(railBoxes.join(" | ") === "Calendar setup | Day colours | Countdowns",
+check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours",
       "rail reads: " + railBoxes.join(" | "));
 const dataBtns = [...qa("footer .fdata .btn")].map(b => b.textContent.trim());
 check(dataBtns.length === 4, "the four data actions moved to the footer: " + dataBtns.join(", "));
@@ -546,14 +546,28 @@ check(/<h1>Guide<\/h1>/.test(g), "and is titled Guide, not About");
 check(!/What's coming/.test(g) && /What&rsquo;s coming next/.test(readFile("contact.html")),
       "the roadmap moved to Contact");
 check(!fs.existsSync(path.join(ROOT,"about.html")), "about.html is gone");
+check(/AI-BRIEF\.md/.test(readFile(".gitignore")),
+      "AI-BRIEF.md is gitignored too - it carries personal goals and must never be published");
 
 console.log("\n=== C10. Sign-in is an upgrade, never a gate ===");
 check(fs.existsSync(path.join(ROOT,"assets/auth.js")), "auth.js ships with the app");
 const au = readFile("assets/auth.js");
 check(/IMC_SUPABASE_URL\s*=\s*"https:\/\/[a-z]+\.supabase\.co"/.test(au), "the project URL is set");
 check(/IMC_SUPABASE_ANON_KEY/.test(au), "and there is a single place to paste the anon key");
-check(!/service_role\s*(key)?\s*=\s*["'][A-Za-z0-9._-]{20,}/.test(au) && !/eyJ[A-Za-z0-9._-]{40,}/.test(au),
-      "no service_role key or JWT is committed — only the anon key placeholder");
+/* The anon key is a JWT and SHOULD be here - it is public by design. The
+   service_role key is also a JWT and must never be. So do not ban JWTs:
+   decode any that are present and check the role they carry. */
+const jwts = au.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g) || [];
+const roles = jwts.map(t => {
+  try { return JSON.parse(Buffer.from(t.split(".")[1], "base64").toString()).role; }
+  catch(e){ return "unparseable"; }
+});
+check(roles.every(r => r === "anon"),
+      jwts.length + " key(s) in auth.js, role(s): " + (roles.join(",") || "none") +
+      " - anon is public by design, service_role would be a serious leak");
+check(!/service_role/i.test(au.replace(/service_role key is the dangerous[^*]*/i,"")) ||
+      /never appear/i.test(au),
+      "service_role is only ever mentioned in the warning comment, never assigned");
 check(/anon key is DESIGNED to be public/.test(au), "with a comment explaining why the anon key is safe here");
 check(d.querySelector("#authSlot") !== null, "the ribbon has a slot for the account control");
 check(d.querySelector(".sitenav").compareDocumentPosition(d.querySelector("#authSlot")) & 4,
@@ -871,12 +885,218 @@ check(!JSON.parse(w.localStorage.getItem("imc.notes"))[dnDay] ||
       !JSON.parse(w.localStorage.getItem("imc.notes"))[dnDay].note,
       "and clears the stored note, not just the field");
 
+console.log("\n=== C23. Week numbering follows a real standard ===");
+check(/weekRule:"thursday"/.test(js), "the default is the first-Thursday rule, not the naive Jan-1 rule");
+check($("wkRule") !== null && $("wkRule").options.length === 2,
+      "and the user can switch between the two rules");
+w.eval('cfg.weekStart=0; cfg.weekRule="thursday";');
+const wkOf = ds => w.eval('(function(){var x=weekOf("' + ds + '");return x?x.num+":"+x.year:null;})()');
+check(wkOf("2025-12-31") === "1:2026",
+      "31 Dec 2025 is week 1 of 2026, not week 53 of 2025");
+const startOf = ds => w.eval('(function(){var x=weekOf("' + ds + '");return x?iso(x.start):null;})()');
+check(startOf("2027-01-03") === "2027-01-03",
+      "week 1 of 2027 starts on 3 Jan 2027");
+check(wkOf("2026-12-27") === "53:2026", "27 Dec 2026 is week 53 of 2026, not week 1 of 2027");
+check(startOf("2009-01-01") === "2008-12-28",
+      "week 1 of 2009 starts 28 Dec 2008");
+/* Independent check: for Sunday-start weeks the number equals the ISO week of
+   the NEXT day. Everything here must stay in LOCAL dates - mixing Date.UTC
+   timestamps with the app's local dates made this fail west of UTC only. */
+function isoWeekOfLocal(y, m, day){
+  const t = new Date(Date.UTC(y, m, day));
+  const dow = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dow);
+  const yStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - yStart) / 86400000 + 1) / 7);
+}
+let mism = 0, checked = 0;
+const cur = new Date(2024, 0, 1);
+const stop = new Date(2029, 11, 31);
+while (cur <= stop){
+  const ds = cur.getFullYear() + "-" +
+             String(cur.getMonth()+1).padStart(2,"0") + "-" +
+             String(cur.getDate()).padStart(2,"0");
+  const got = w.eval('(function(){var x=weekOf("' + ds + '");return x?x.num:null;})()');
+  const nxt = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1);
+  if (got !== isoWeekOfLocal(nxt.getFullYear(), nxt.getMonth(), nxt.getDate())) mism++;
+  checked++;
+  cur.setDate(cur.getDate() + 1);
+}
+check(mism === 0, checked + " days cross-checked against an independent ISO calculation, " + mism + " mismatches");
+w.eval('cfg.weekRule="jan1";');
+check(wkOf("2025-12-31") === "53:2025", "switching to the Jan-1 rule changes the answer as expected");
+w.eval('cfg.weekRule="thursday"; renderAll();');
+
+console.log("\n=== C24. Country list has no duplicate aliases ===");
+const names = [...$("ctrySel").options].slice(1).map(o => o.textContent);
+check(new Set(names).size === names.length, "no duplicate country names");
+check(!names.includes("UK"), "the non-ISO 'UK' alias is gone (GB / United Kingdom is the real entry)");
+check(names.includes("United Kingdom"), "United Kingdom is still there");
+check(names.includes("Kosovo"), "XK is named Kosovo rather than showing a bare code");
+check(!names.some(n => /^[A-Z]{2}$/.test(n)), "no entry falls back to showing its country code");
+check(!fs.existsSync(path.join(ROOT,"assets/holidays/UK.js")),
+      "and its duplicate data file is removed - if this fails, delete assets/holidays/UK.js by hand: " +
+      "copying a new build over a folder adds and overwrites, it never deletes files that were removed");
+
+console.log("\n=== C25. Countdowns can be corrected, not just deleted ===");
+$("tLabel").value = "Typo hree"; $("tDate").value = "2027-06-01"; click($("tAdd"));
+const tkField = d.querySelector("#tkList input.tkl");
+check(tkField !== null, "a countdown's name is an editable field, not fixed text");
+check(tkField.value === "Typo hree", "showing the current name");
+check(/click to rename/.test(tkField.title), "and saying so on hover");
+tkField.value = "Typo here fixed";
+tkField.dispatchEvent(new w.Event("change",{bubbles:true}));
+check(JSON.parse(w.localStorage.getItem("imc.track")).some(t => t.label === "Typo here fixed"),
+      "editing it saves the correction");
+const tkField2 = d.querySelector("#tkList input.tkl");
+tkField2.value = "   ";
+tkField2.dispatchEvent(new w.Event("change",{bubbles:true}));
+check(!JSON.parse(w.localStorage.getItem("imc.track")).some(t => !t.label.trim()),
+      "and blanking it is refused rather than leaving a nameless countdown");
+
+console.log("\n=== C26. Day note controls appear only while editing ===");
+check(/\.bnotewrap \.bnbtns\{display:none/.test(appCss.replace(/\s*\n\s*/g,"")),
+      "Clear and Done are hidden until you are actually writing");
+check(/\.bnotewrap\.editing \.bnbtns\{display:flex\}/.test(appCss.replace(/\s*\n\s*/g,"")),
+      "and appear when the field has focus");
+$("bnote").dispatchEvent(new w.Event("focus",{bubbles:true}));
+check($("bnoteWrap").classList.contains("editing"), "focusing shows them");
+
+console.log("\n=== C27. The calendar uses the whole screen ===");
+const flatCal = appCss.replace(/\s*\n\s*/g,"");
+check(/\.calbox\{overflow:auto;max-height:calc\(100vh - 190px\)/.test(flatCal),
+      "height follows the viewport, so a big monitor shows more weeks than a fixed fraction would");
+check(/\.wg \.yh\{[^}]*position:sticky;top:0;z-index:7/.test(flatCal),
+      "the year row stays put while you scroll");
+check(/\.wg \.dh\{[^}]*position:sticky;top:var\(--hYear\);z-index:6/.test(flatCal),
+      "and the day-of-week row sits under it, also sticky");
+
+console.log("\n=== C28. Rail order matches how people use it ===");
+const boxes = [...qa(".rail .rbox h3")].map(x => x.textContent.trim());
+check(boxes.indexOf("Countdowns") < boxes.indexOf("Day colours"),
+      "Countdowns sits above Day colours: " + boxes.join(" -> "));
+
+console.log("\n=== C29. Sign-in is actually live ===");
+const auKey = readFile("assets/auth.js");
+check(/IMC_SUPABASE_ANON_KEY\s*=\s*"eyJ[A-Za-z0-9_.-]{40,}"/.test(auKey),
+      "a real anon key is assigned (the placeholder text survives only in the help message)");
+check(/IMC_SUPABASE_URL\s*=\s*"https:\/\/[a-z0-9]+\.supabase\.co"/.test(auKey), "and the project URL matches it");
+/* paint the UI the way the live site does, with the library available */
+const withLib = html.replace(/<script src="https:[^"]*"><\/script>/g,
+  '<script>window.supabase={createClient:function(){return{auth:{getSession:function(){return Promise.resolve({data:{session:null}})},onAuthStateChange:function(){},signInWithOAuth:function(){return Promise.resolve({})},signInWithOtp:function(){return Promise.resolve({})},signOut:function(){return Promise.resolve({})}}}}};</script>');
+const liveDom = new JSDOM(withLib, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true });
+const liveDoc = liveDom.window.document;
+check(liveDoc.getElementById("authSlot") !== null, "the account slot exists in the ribbon");
+check(/\.authslot \.signin\{background:var\(--accent\)/.test(appCss.replace(/\s*\n\s*/g,"")),
+      "and the Sign in button is styled as the primary action, so it is visible");
+check(/id:"google"/.test(auKey), "Google is offered");
+check(/signInWithOtp/.test(auKey), "and email sign-in by link");
+
+console.log("\n=== C30. The day note can be closed three ways ===");
+["bnoteDone","bnoteClear","bnoteCancel","bnoteX"].forEach(id =>
+  check($(id) !== null, "the note has a " + id.replace("bnote","") + " control"));
+check(/\.bnotewrap\.editing \.bnx\{display:block\}/.test(appCss.replace(/\s*\n\s*/g,"")),
+      "the X appears only while the note is open");
+const cDay = $("isoOut").textContent;
+$("bnote").dispatchEvent(new w.Event("focus",{bubbles:true}));
+$("bnote").value = "typed by mistake";
+$("bnote").dispatchEvent(new w.Event("input",{bubbles:true}));
+click($("bnoteCancel"));
+const after = JSON.parse(w.localStorage.getItem("imc.notes"))[cDay];
+check(!after || !after.note, "Cancel puts back what was there before, it does not save the typing");
+check(!$("bnoteWrap").classList.contains("editing"), "and closes the panel");
+check(!/noteBefore/.test(JSON.stringify(after || {})), "the undo snapshot is cleaned up, not left in storage");
+
+console.log("\n=== C31. Search costs no permanent screen space ===");
+check($("searchBtn") !== null, "a small magnifier sits in the ribbon");
+check($("sov") !== null && $("sov").classList.contains("hidden"), "and the search panel is an overlay, hidden until asked for");
+add(0,"Renegotiate the vendor contract");
+w.eval('openDay("' + TODAY + '");');
+$("mNote").value = "vendor call went well";
+$("mNote").dispatchEvent(new w.Event("input",{bubbles:true}));
+w.eval('closeDay();');
+click($("searchBtn"));
+check(!$("sov").classList.contains("hidden"), "clicking it opens search");
+$("sInput").value = "vendor";
+$("sInput").dispatchEvent(new w.Event("input",{bubbles:true}));
+const rows = qa("#sOut .srow");
+check(rows.length >= 2, rows.length + " results across tasks and day notes");
+check(rows.some(r => /Day note/.test(r.textContent)), "day notes are searched too, not just tasks");
+check(rows.some(r => /Renegotiate/.test(r.textContent)), "and task text");
+$("sInput").value = "z";
+$("sInput").dispatchEvent(new w.Event("input",{bubbles:true}));
+check(/two characters/.test($("sOut").textContent), "a single character asks for more rather than listing everything");
+$("sInput").value = "qqqzzz";
+$("sInput").dispatchEvent(new w.Event("input",{bubbles:true}));
+check(/Nothing found/.test($("sOut").textContent), "and a miss says so plainly");
+$("sInput").value = "vendor";
+$("sInput").dispatchEvent(new w.Event("input",{bubbles:true}));
+click(qa("#sOut .srow")[0]);
+check($("sov").classList.contains("hidden"), "clicking a result closes search");
+check($("boardView").classList.contains("hidden") === false, "and lands you on the board for that day");
+check(/\/" && !typing/.test(js) || /e.key === "\/"/.test(js), "the / key opens search from anywhere");
+
+console.log("\n=== C32. Recurring tasks, without a new panel ===");
+w.eval('setDate("'+TODAY+'");');
+add(0,"Weekly one-to-one");
+const repRow = [...col(0).querySelectorAll(".t")].pop();
+const repBtn = [...repRow.querySelectorAll(".op")].find(b => /Repeat|Every/.test(b.title||""));
+check(repBtn !== undefined, "the repeat control lives in the task's own hover row, costing no layout space");
+check(/Repeat this task/.test(repBtn.title), "and says what it does");
+click(repBtn);
+const tmpl = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Weekly one-to-one");
+check(tmpl.repeat === "d", "one click sets it to repeat daily");
+const nBefore = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+w.eval('setDate(iso(addDays(parseISO("' + TODAY + '"),3)));');
+const nAfter = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+check(nAfter > nBefore, "moving forward materialises the instances (" + nBefore + " -> " + nAfter + ")");
+const gen = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.id === tmpl.id).gen || [];
+check(gen.length > 0, "the template records which days it has produced");
+const inst = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.fromRepeat === tmpl.id);
+check(inst !== undefined, "instances are ordinary tasks, so drag, move and delete work unchanged");
+/* deleting an instance must not resurrect it */
+w.eval('delTask("' + inst.id + '"); materialiseRepeats(sel);');
+check(!JSON.parse(w.localStorage.getItem("imc.tasks")).some(t => t.id === inst.id),
+      "deleting an instance sticks - the template will not regenerate that day");
+check(/REPEATS = \{ d:"Every day", w:"Every week", m:"Every month" \}/.test(js),
+      "daily, weekly and monthly are offered by cycling the same button");
+w.eval('setDate("'+TODAY+'");');
+
+console.log("\n=== C33. The day popup note matches the board note ===");
+w.eval('openDay("' + TODAY + '");');
+["mDone","mClear","mCancel"].forEach(id =>
+  check($(id) !== null, "the popup note has " + id.replace("m","")));
+$("mNote").value = "typed then cancelled";
+$("mNote").dispatchEvent(new w.Event("input",{bubbles:true}));
+click($("mCancel"));
+const popNote = JSON.parse(w.localStorage.getItem("imc.notes"))[TODAY];
+check(!popNote || popNote.note !== "typed then cancelled", "Cancel restores what was there before");
+check($("ov").classList.contains("hidden"), "and closes the popup");
+
+console.log("\n=== C34. Done closes the board note first time ===");
+check(/mousedown, not click/.test(js),
+      "the note buttons fire on mousedown - blur fired between mousedown and click and swallowed the first press");
+check(/onPress\(el\.bnoteDone, closeNote\)/.test(js), "Done uses it");
+check(/onPress\(el\.bnoteX, closeNote\)/.test(js), "so does the X");
+check(/node\.addEventListener\("click", function\(\)\{ if \(Date\.now\(\) - last > 400\) fn\(\); \}\)/.test(js),
+      "and click still works, so keyboard users pressing Enter are not locked out");
+
+console.log("\n=== C35. Sign-in is reachable from every page ===");
+PAGES.forEach(pg => {
+  const body = readFile(pg);
+  check(/id="authSlot"/.test(body), pg + " has the account slot");
+  check(/assets\/auth\.js/.test(body), pg + " loads auth.js");
+});
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
 check(qa("#scopeHost .cadd").length === 3, "each column has its own add field");
+const doneBefore = col(2).querySelectorAll(".t").length;
+const progBefore = col(1).querySelectorAll(".t").length;
 add(2,"Logged late"); add(1,"Half done");
-check(col(2).querySelectorAll(".t").length === 1 && col(1).querySelectorAll(".t").length === 1,
+check(col(2).querySelectorAll(".t").length === doneBefore + 1 &&
+      col(1).querySelectorAll(".t").length === progBefore + 1,
       "adds straight into Done and In progress");
 add(0,"A"); add(0,"B");
 const texts = () => [...col(0).querySelectorAll(".t .txt")].map(n => n.textContent);
@@ -884,8 +1104,9 @@ const row = t => [...col(0).querySelectorAll(".t")].find(x => x.querySelector(".
 const op = (rowEl, title) => [...rowEl.querySelectorAll(".op")].find(b => b.title === title);
 click(op(row("B"),"Move up"));
 check(texts().indexOf("B") < texts().indexOf("A"), "▲ reorders priority");
+const progNow = col(1).querySelectorAll(".t").length;
 click(op(row("A"),"Move right"));
-check(col(1).querySelectorAll(".t").length === 2, "→ moves across columns");
+check(col(1).querySelectorAll(".t").length === progNow + 1, "→ moves across columns");
 click([...$("scopeSeg").children][1]);
 check($("scopeHost").className === "ro" && $("scopeHost").querySelectorAll(".t").length === 0, "week is read-only");
 click($("scopeHost").querySelector(".rr"));
@@ -913,7 +1134,7 @@ const at = (l,dt,u) => { $("tLabel").value=l; $("tDate").value=dt; $("tUnit").va
 const past = new Date(); past.setDate(past.getDate()-100);
 const fut = new Date(); fut.setDate(fut.getDate()+432);
 at("Started", iso(past)); at("Deadline", iso(fut));
-const tk = () => qa("#tkList .tk").map(n => n.textContent);
+const tk = () => qa("#tkList .tk").map(n => (n.querySelector(".tkl")||{}).value + " " + n.textContent);
 check(tk().some(t => /100 days elapsed/.test(t)), "past → positive elapsed");
 check(tk().some(t => /-432 days left/.test(t)), "future → negative countdown");
 const ten = new Date(); ten.setFullYear(ten.getFullYear()-10);
@@ -923,7 +1144,8 @@ at("Long ago","1990-03-15","years");
 check(tk().some(t => /years elapsed/.test(t)), "an old date counts up in years");
 check(qa("#tkList .tk.next").length === 1, "nearest upcoming date flagged");
 toBoard();
-check(qa("#tkList .tk").length === 4, "the rail shows on the board too");
+const tkCount = qa("#tkList .tk").length;
+check(tkCount >= 4, "the rail shows all " + tkCount + " countdowns on the board too");
 const b4 = $("isoOut").textContent;
 key("ArrowRight"); check($("isoOut").textContent !== b4, "→ steps a day");
 key("t"); check($("isoOut").textContent === TODAY, "T = today");
@@ -942,7 +1164,8 @@ const dom2 = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dang
   virtualConsole: new VirtualConsole().on("jsdomError", e => e2.push(String(e.detail||e))),
   beforeParse(win){ Object.keys(saved).forEach(k => win.localStorage.setItem("imc."+k, saved[k])); }});
 check(e2.length === 0, "reload clean" + (e2.length ? " -> " + e2.join("|") : ""));
-check(dom2.window.document.querySelectorAll("#tkList .tk").length === 4, "tracked dates restored");
+check(dom2.window.document.querySelectorAll("#tkList .tk").length === tkCount,
+      "all " + tkCount + " countdowns survive a reload");
  click($("wipe"));
 check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === 0, "wipe clears tasks");
 

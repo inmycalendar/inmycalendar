@@ -15,7 +15,7 @@
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/guide.html">
 <link rel="canonical" href="https://inmycalendar.com/guide.html">
-<link rel="stylesheet" href="assets/site.css?v=17">
+<link rel="stylesheet" href="assets/site.css?v=20">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Article",
  "headline":"What a Kanban board is, and how to use one",
@@ -35,6 +35,7 @@
     <span class="gap"></span>
     <a class="page" href="guide.html" class="on">Guide</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
   </nav>
+  <span class="authslot hidden" id="authSlot"></span>
  </div>
 </header>
 
@@ -66,8 +67,14 @@
 <p>Years sit side by side, laid out by week rather than by month, so a long stretch of time reads at a glance. The arrows in the calendar's own header move the whole window a year at a time. Colour a day and the whole cell takes that colour.</p>
 <p>Four things can mark a day and they never clash: the <strong>cell colour</strong> is your own category, a <strong>coloured line underneath</strong> is a public holiday (red for national, blue for regional), a <strong>ring</strong> is today, and a <strong>small dot</strong> means that day has tasks. Hovering a day shows the holiday name, your note, and the tasks on it.</p>
 
-<h2>How weeks are counted</h2>
-<p>Week 1 is the week containing January 1st. The last week is the week containing December 31st. That means the first and last weeks usually borrow a few days from the year next door - those are greyed rather than hidden, because a date you can't see is a date you'll miss.</p>
+<h2>How weeks are numbered</h2>
+<p>Two rules exist, and organisations genuinely disagree about which to use, so you can pick. Both are under <strong>Calendar setup</strong>.</p>
+<ul>
+  <li><strong>Standard (ISO week numbers)</strong> (the default) - week 1 is the first week that falls mostly in the new year - technically, the week containing the year's first Thursday. This is the international standard, and what most payroll, retail and reporting calendars follow. A year has 52 or 53 weeks, never more.</li>
+  <li><strong>The week holding 1 January</strong> - simpler to explain, but it produces a 53rd week far more often and splits the year awkwardly.</li>
+</ul>
+<p>Under the first rule, the last days of December often belong to the <em>next</em> year's week 1, and the first days of January often belong to the <em>previous</em> year's final week. That is correct, not a mistake. With weeks starting on Sunday, for example, week 1 of 2026 begins on Sunday 28 December 2025.</p>
+<p>You choose which day your week starts on separately, so the two settings work together: the rule decides which week is first, and the start day decides where each week begins.</p>
 
 <h2>Keyboard</h2>
 <ul>
@@ -75,6 +82,18 @@
   <li><strong>T</strong> - jump to today &nbsp;·&nbsp; <strong>N</strong> - new task</li>
   <li><strong>1 / 2 / 3</strong> - day, week, month &nbsp;·&nbsp; <strong>B / C</strong> - board, calendar</li>
 </ul>
+
+<h2>Finding something later</h2>
+<p>Press <strong>/</strong> anywhere, or click the magnifier by the date, to search every task and day note you have written. Click a result to jump straight to that day.</p>
+
+<h2>Repeating a task</h2>
+<p>Hover a task and click the <strong>&#8635;</strong> button to cycle it through every day, every week, every month and off. Repeats appear as ordinary tasks on the days they fall, so you can move, rename or delete any single one without touching the rest.</p>
+
+<h2>Day notes</h2>
+<p>Every day can carry a short note - what happened, a decision, anything worth remembering. Write it under the board, or open the day from the calendar. <strong>Done</strong> closes it, <strong>Cancel</strong> puts back what was there before, and <strong>Clear</strong> empties it. Notes show when you hover a day, and they come out in the CSV export.</p>
+
+<h2>Countdowns</h2>
+<p>Add any date that matters and it counts the days since, or until, it happens. Click a countdown's name to correct it, and switch between days, weeks, months and years with the dropdown beside it.</p>
 
 <h2>Where your data lives</h2>
 <p>By default, in this browser and nowhere else. No account is needed and nothing is uploaded.</p>
@@ -109,6 +128,8 @@
     <div style="margin-top:5px">Everything is stored only in this browser.</div>
   </div>
 </footer>
-<script src="assets/site.js?v=17"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/site.js?v=20"></script>
+<script src="assets/auth.js?v=20"></script>
 </body>
 </html>

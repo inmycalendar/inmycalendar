@@ -20,7 +20,7 @@
    restricted by Row Level Security on the database side. The service_role
    key is the dangerous one and must never appear anywhere in this repo. */
 var IMC_SUPABASE_URL = "https://zkedkgzguhrrnsvetinl.supabase.co";
-var IMC_SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_PUBLIC_KEY_HERE";
+var IMC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InprZWRrZ3pndWhycm5zdmV0aW5sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NjU2MTEsImV4cCI6MjEwMjA0MTYxMX0.caxz9LM6QjJ5IRor5DnQ2wLMIpBQ4-W2SZEXivhtnD8";
 /* ------------------------------------------------------------------------- */
 
 window.imcAuth = { user:null, client:null, ready:false };

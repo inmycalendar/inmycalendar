@@ -11,7 +11,7 @@
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="canonical" href="https://inmycalendar.com/contact.html">
-<link rel="stylesheet" href="assets/site.css?v=17">
+<link rel="stylesheet" href="assets/site.css?v=20">
 </head>
 <body>
 <header class="bar">
@@ -24,6 +24,7 @@
     <span class="gap"></span>
     <a class="page" href="guide.html">Guide</a><a class="page" href="contact.html" class="on">Contact</a><a class="page" href="privacy.html">Privacy</a>
   </nav>
+  <span class="authslot hidden" id="authSlot"></span>
  </div>
 </header>
 
@@ -50,7 +51,7 @@
 
 <h2>What&rsquo;s coming next</h2>
 <ul>
-  <li>Syncing your board across devices once you are signed in</li>
+  <li>Syncing your board across devices once you are signed in (sign-in itself is live now)</li>
   <li>An ad-free tier for anyone who&rsquo;d rather not see ads</li>
   <li>Install to home screen on phones and tablets</li>
 </ul>
@@ -62,6 +63,8 @@
     <div style="margin-top:5px">Everything is stored only in this browser.</div>
   </div>
 </footer>
-<script src="assets/site.js?v=17"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/site.js?v=20"></script>
+<script src="assets/auth.js?v=20"></script>
 </body>
 </html>

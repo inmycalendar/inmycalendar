@@ -11,7 +11,7 @@
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="canonical" href="https://inmycalendar.com/privacy.html">
-<link rel="stylesheet" href="assets/site.css?v=17">
+<link rel="stylesheet" href="assets/site.css?v=20">
 </head>
 <body>
 <header class="bar">
@@ -24,6 +24,7 @@
     <span class="gap"></span>
     <a class="page" href="guide.html">Guide</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html" class="on">Privacy</a>
   </nav>
+  <span class="authslot hidden" id="authSlot"></span>
  </div>
 </header>
 
@@ -45,7 +46,7 @@
 <p><strong>Backup</strong> and <strong>Export tasks</strong> write a file to your own device. What happens to it after that is up to you; it is not uploaded anywhere.</p>
 
 <h2>Public holiday data</h2>
-<p>Holiday dates are files served from this site. Choosing a country loads one small file; it does not tell anyone where you are, and no location data is collected.</p>
+<p>Holiday dates for 247 countries are files served from this site. Choosing a country loads one small file; it does not tell anyone where you are, and no location data is collected.</p>
 
 <h2>Fonts</h2>
 <p>Two typefaces load from Google Fonts, which means Google receives your IP address as part of that request, the same as on most sites using web fonts. Nothing about your tasks or notes is included.</p>
@@ -63,6 +64,8 @@
     <div style="margin-top:5px">Everything is stored only in this browser.</div>
   </div>
 </footer>
-<script src="assets/site.js?v=17"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/site.js?v=20"></script>
+<script src="assets/auth.js?v=20"></script>
 </body>
 </html>

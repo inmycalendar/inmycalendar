@@ -90,7 +90,7 @@ main{padding:16px 0 0}
 .rbox{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
 .rbox>h3{font-family:var(--disp);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--soft);padding:10px 12px 2px;margin:0;font-weight:500}
-.rhint{font-size:10px;color:var(--faint);padding:0 12px 8px;font-style:italic;line-height:1.4}
+.rhint{font-size:10px;color:var(--faint);padding:0 12px 6px;font-style:italic;line-height:1.35}
 .rbody{padding:2px 12px 10px}
 .cat{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .cat i{width:11px;height:11px;border-radius:3px;flex:none}
@@ -105,12 +105,19 @@ main{padding:16px 0 0}
 .tk{border-top:1px solid var(--rule2);padding:7px 0;font-size:11.5px}
 .tk:first-child{border-top:0}
 .tk.next{border-left:2px solid var(--accent);padding-left:8px;margin-left:-12px;padding-right:0}
-.tkl{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+/* an input styled as text - same pattern as the Day colours rename, which is
+   reliable. An overlay editor that swapped nodes on click was not. */
+.tkl{display:block;width:100%;font-weight:700;color:var(--ink);font-size:11.5px;
+  background:transparent;border:0;border-bottom:1px solid transparent;padding:1px 0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tkl:hover{border-bottom-color:var(--rule)}
+.tkl:focus{outline:none;border-bottom-color:var(--accent)}
 .tkr{display:flex;align-items:center;gap:4px;margin-top:2px}
 .tkc{flex:1;min-width:0;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 .tkc.fut{color:var(--doing)}
 .tk select{background:transparent;border:0;font-size:10px;color:var(--faint);max-width:58px}
 .tk .x{background:transparent;border:0;color:var(--faint);padding:0 2px;font-size:13px;line-height:1}
+
 .tk .x:hover{color:var(--danger)}
 .tform{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--rule2);
   margin-top:6px;padding-top:8px}
@@ -121,7 +128,7 @@ main{padding:16px 0 0}
 .fld>span em{font-style:normal;text-transform:none;letter-spacing:0;font-size:9px;color:var(--faint)}
 .fld>span em::before{content:"\00b7";margin:0 4px}
 .fld .sel{width:100%;height:29px}
-.chk{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--soft);margin:2px 0 6px}
+.chk{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--soft);margin:2px 0 6px;white-space:nowrap}
 .hkey{display:flex;gap:12px;font-size:10px;color:var(--soft);padding-top:2px}
 .hkey span{display:inline-flex;align-items:center;gap:5px}
 .hkey .sw{width:12px;height:3px;border-radius:2px;display:inline-block}
@@ -214,6 +221,13 @@ main{padding:16px 0 0}
 /* ---------------- calendar / glance ---------------- */
 /* Day note under the board. One line tall until it is used or focused, so it
    costs almost no vertical space - the calendar below must not move down. */
+.bnotewrap .bnbtns{display:none;gap:6px;flex:none;align-self:flex-end}
+.bnotewrap.editing .bnbtns{display:flex}
+.bnotewrap .bnbtns .btn{padding:4px 12px;font-size:11px}
+.bnx{display:none;background:transparent;border:0;color:var(--faint);font-size:17px;line-height:1;
+  padding:0 2px;flex:none;align-self:flex-start}
+.bnx:hover{color:var(--ink)}
+.bnotewrap.editing .bnx{display:block}
 .bnotewrap{display:flex;align-items:flex-start;gap:10px;margin-top:12px;padding:7px 12px;
   background:var(--card);border:1px solid var(--rule);border-radius:var(--r)}
 .bnotewrap label{font-family:var(--disp);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
@@ -245,7 +259,10 @@ main{padding:16px 0 0}
 .fold:hover,.yarr:hover:not(:disabled){background:var(--card2);color:var(--ink)}
 .yarr:disabled{opacity:.3;cursor:not-allowed}
 .gridbox.folded .glance{display:none}
-.calbox{overflow:auto;max-height:70vh}
+/* Height follows the actual viewport, so a large monitor shows more weeks
+   instead of stopping at an arbitrary fraction. 190px covers the ribbon,
+   the grid header and the footer padding. */
+.calbox{overflow:auto;max-height:calc(100vh - 190px);min-height:320px}
 /* years wrap onto new rows instead of forcing a horizontal scrollbar */
 .calrail{display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;padding:12px}
 .glance{display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;padding:12px}
@@ -253,14 +270,15 @@ main{padding:16px 0 0}
 
 .wg{display:grid;grid-template-columns:26px repeat(7,minmax(0,1fr));
   border:1px solid var(--rule2);border-radius:8px;overflow:hidden;background:var(--card)}
-.wg .yh{grid-column:1/-1;min-height:var(--hYear);position:sticky;top:0;z-index:6;background:var(--card);
+.wg .yh{grid-column:1/-1;min-height:var(--hYear);position:sticky;top:0;z-index:7;background:var(--card);
   color:var(--ink);font-family:var(--disp);font-weight:600;font-size:12.5px;letter-spacing:.02em;
   display:flex;align-items:baseline;gap:7px;padding:7px 11px 5px;border-bottom:1px solid var(--rule2)}
 .wg .yh .mo{color:var(--faint);font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:0}
 .wg .yh .sub{color:var(--faint);font-family:var(--mono);font-weight:400;font-size:9.5px;
   margin-left:auto;padding-left:8px}
 .wg.c .yh{position:static}
-.wg .dh{min-height:var(--hDow);position:sticky;top:var(--hYear);z-index:5;background:var(--card);
+/* sits directly under the year row, which is why the offset is --hYear */
+.wg .dh{min-height:var(--hDow);position:sticky;top:var(--hYear);z-index:6;background:var(--card);
   color:var(--faint);font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.02em;
   display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--rule2)}
 .wg .dh.wknd{color:var(--soft)}
@@ -318,7 +336,23 @@ main{padding:16px 0 0}
   text-transform:uppercase;color:var(--soft);margin:12px 0 5px}
 .mnlabel em{font-style:normal;text-transform:none;letter-spacing:0;font-size:10.5px;color:var(--faint)}
 .mnlabel em::before{content:"\00b7";margin:0 5px}
-.mnote{width:100%;min-height:76px;background:var(--card);border:1px solid var(--rule);border-radius:8px;
+/* search overlay */
+.md.search{width:min(680px,100%)}
+.sinput{width:100%;border:1px solid var(--rule);border-radius:8px;padding:10px 12px;font-size:14px;
+  background:var(--card)}
+.sinput:focus{outline:none;border-color:var(--accent)}
+.sout{margin-top:10px;max-height:52vh;overflow-y:auto}
+.scount{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:6px 2px}
+.srow{display:flex;align-items:baseline;gap:10px;width:100%;text-align:left;background:transparent;
+  border:0;border-top:1px solid var(--rule2);padding:8px 4px;font-size:12.5px;color:var(--ink)}
+.srow:hover{background:var(--card2)}
+.sdate{font-family:var(--mono);font-size:11px;color:var(--soft);flex:none}
+.skind{font-family:var(--disp);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--faint);flex:none;min-width:64px}
+.stext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.op.on{background:var(--accentBg);color:var(--ink);border-color:var(--accent)}
+
+.mnote{width:100%;min-height:60px;background:var(--card);border:1px solid var(--rule);border-radius:8px;
   padding:8px;font-size:12.5px;resize:vertical;margin:10px 0 12px}
 .dab{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.1);padding:0}
 .mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;
