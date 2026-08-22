@@ -113,7 +113,7 @@ check(JSON.stringify(calDh) === JSON.stringify(glDh),
 
 console.log("\n=== B2. The carry-over banner was rendering above the calendar ===");
 const yest = iso(new Date(Date.now()-86400000));
-dom.window.eval('tasks.push({id:"c1",date:"'+yest+'",text:"Left over",status:"todo",order:0,ts:{todo:"x",doing:null,done:null}}); save(LS.tasks,tasks); refresh();');
+dom.window.eval('tasks.push({id:"c1",date:"'+yest+'",text:"Left over",status:"todo",order:0,ts:{todo:"x",doing:null,done:null}}); commit("tasks"); refresh();');
 check($("carryHost").closest("#boardView") !== null, "it now lives inside the board section");
 check($("carryHost").children.length === 1, "and shows there");
 toCal();
@@ -144,11 +144,11 @@ check(/var tally = \{\};/.test(js) && !/tasks\.filter\(function\(t\)\{ return t\
       "task counts are tallied once per grid instead of ~1100 times");
 const t0 = Date.now();
 for (let i=0;i<200;i++) dom.window.eval('tasks.push({id:"p"+'+ 'Math.random()' +',date:"'+TODAY+'",text:"x",status:"todo",order:0,ts:{todo:null,doing:null,done:null}});');
-dom.window.eval('save(LS.tasks,tasks);');
+dom.window.eval('commit("tasks");');
 toCal();
 console.log("        3-year calendar redrawn with 200+ tasks in " + (Date.now()-t0) + "ms");
 check(Date.now()-t0 < 6000, "a 3-year redraw with 200 tasks stays responsive");
-dom.window.eval('tasks = tasks.filter(function(t){return t.text!=="x"}); save(LS.tasks,tasks); renderAll();');
+dom.window.eval('tasks = tasks.filter(function(t){return t.text!=="x"}); commit("tasks"); renderAll();');
 toBoard();
 
 console.log("\n=== B6. Calendar pan and glance year disagreed after a reload ===");
@@ -1088,6 +1088,107 @@ PAGES.forEach(pg => {
   check(/assets\/auth\.js/.test(body), pg + " loads auth.js");
 });
 
+console.log("\n=== C36. The save choke point records what changed ===");
+/* Sync merges row by row, and the agreed rule keeps deletions as markers. So
+   these check the journal itself, not merely that a write happened. A blanket
+   "something changed" flag would pass a naive test and still lose data. */
+check(typeof w.commit === "function", "commit() exists as the single write path");
+check((js.match(/localStorage\.setItem/g) || []).length === 1,
+      "exactly one place in the whole app writes to localStorage");
+check(/function writeRaw\(/.test(js), "and it is writeRaw(), reached only through commit()");
+check(!/\bsave\(LS\./.test(js), "no call site pairs a key with a value by hand any more");
+
+toBoard();
+dom.window.eval('setScope("day"); setDate(iso(today()));');
+const jr    = () => w.imcStore.changes();
+const jrow  = (kind,id) => jr().find(r => r.kind === kind && r.id === id);
+const idOf  = text => JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === text).id;
+
+w.imcStore.fullSyncDone();
+check(jr().length === 0, "the journal is empty once a sync reports everything landed");
+
+add(0, "Choke point task");
+const ckId = idOf("Choke point task");
+check(!!jrow("tasks", ckId), "adding a task records that row as changed");
+check(jrow("tasks", ckId).op === "upsert", "and records it as an upsert");
+
+/* The point of diffing rather than flagging: one edit must mark one row. If it
+   marked the whole array, task-level merge would be impossible. */
+w.imcStore.fullSyncDone();
+dom.window.eval('byId("'+ckId+'").text = "Choke point renamed"; commit("tasks");');
+check(jr().length === 1, "editing one task marks exactly one row, not the whole board");
+check(jrow("tasks", ckId).op === "upsert", "and that row is the one that was edited");
+
+w.imcStore.fullSyncDone();
+add(0, "Untouched neighbour");
+const nbId = idOf("Untouched neighbour");
+w.imcStore.fullSyncDone();
+dom.window.eval('byId("'+ckId+'").text = "Choke point again"; commit("tasks");');
+check(!jrow("tasks", nbId), "a task nobody touched is not marked as changed");
+
+/* The resurrection bug the sync rule exists to prevent: a deleted row that is
+   simply dropped is invisible to the other device, which sends it back. */
+w.imcStore.fullSyncDone();
+const delRow = d.querySelector('[data-id="'+ckId+'"]');
+const delBtn = [...delRow.querySelectorAll("button")].find(b => b.title === "Delete");
+click(delBtn);
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).every(t => t.id !== ckId),
+      "deleting a task removes it from storage");
+check(!!jrow("tasks", ckId), "but the deletion is still recorded, not dropped silently");
+check(jrow("tasks", ckId).op === "delete", "as a delete marker naming that exact task");
+
+const onDisk = JSON.parse(w.localStorage.getItem("imc.pending"));
+check(!!onDisk && !!onDisk.rows["tasks:"+ckId],
+      "the journal is persisted, so a change made offline survives closing the tab");
+
+/* A push that succeeds clears only the version it actually sent. */
+w.imcStore.fullSyncDone();
+dom.window.eval('byId("'+nbId+'").text = "Edit one"; commit("tasks");');
+const inFlight = jr();
+w.imcStore.settled(inFlight);
+check(jr().length === 0, "rows the sync confirms are cleared from the journal");
+
+w.imcStore.fullSyncDone();
+dom.window.eval('byId("'+nbId+'").text = "Edit two"; commit("tasks");');
+const pushed = jr();
+dom.window.eval('byId("'+nbId+'").text = "Edit three"; commit("tasks");');
+w.imcStore.settled(pushed);
+check(jr().length === 1, "an edit made while a push was in flight is not cleared with it");
+
+/* Day notes are keyed by date, not by a row id. */
+w.imcStore.fullSyncDone();
+dom.window.eval('notes["'+cy+'-04-07"] = { color:1, note:"journal check" }; commit("notes");');
+check(!!jrow("notes", cy+"-04-07"), "a day note is journalled under its own date");
+w.imcStore.fullSyncDone();
+dom.window.eval('delete notes["'+cy+'-04-07"]; commit("notes");');
+check(jrow("notes", cy+"-04-07") && jrow("notes", cy+"-04-07").op === "delete",
+      "and removing that note leaves a delete marker too");
+
+/* Unsynced history cannot grow without limit. Past the cap it gives up on the
+   detail and asks the next sync to reconcile everything once. */
+w.imcStore.fullSyncDone();
+check(w.imcStore.needsFullSync() === false, "normally the journal replays row by row");
+dom.window.eval('for (var ci=0; ci<PENDING_CAP+2; ci++) markPending("tasks","cap"+ci,"upsert");');
+check(w.imcStore.needsFullSync() === true,
+      "past " + dom.window.PENDING_CAP + " unsynced rows it falls back to a full reconcile");
+w.imcStore.fullSyncDone();
+check(w.imcStore.needsFullSync() === false && jr().length === 0,
+      "and a completed full sync resets it");
+
+/* A corrupt journal must never stop the app loading. */
+const seedKeys = {};
+["tasks","notes","track","cfg"].forEach(k => seedKeys["imc."+k] = w.localStorage.getItem("imc."+k));
+const e3 = [];
+const dom3 = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true,
+  virtualConsole: new VirtualConsole().on("jsdomError", e => e3.push(String(e.detail||e))),
+  beforeParse(win){
+    Object.keys(seedKeys).forEach(k => { if (seedKeys[k] !== null) win.localStorage.setItem(k, seedKeys[k]); });
+    win.localStorage.setItem("imc.pending", "not json at all");
+  }});
+check(e3.length === 0, "a corrupt journal does not stop the app booting" + (e3.length ? " -> " + e3.join("|") : ""));
+check(dom3.window.imcStore.changes().length === 0, "it just starts from an empty journal");
+
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
@@ -1119,7 +1220,7 @@ check(titles.filter(t => t.startsWith(cy+"-")).length === (leap?366:365), "every
 check(titles.includes(cy+"-12-31") && titles.includes(cy+"-01-01"), "Jan 1 and Dec 31 present");
 check(mid.querySelectorAll(".dc.out").length > 0, "edge days greyed, not dropped");
 check(/^\d{2}-\d{2}$/.test(mid.querySelector(".dc").textContent), "cells are MM-DD");
-dom.window.eval('notes["'+cy+'-03-05"]={color:2,note:"x"}; save(LS.notes,notes); renderAll();');
+dom.window.eval('notes["'+cy+'-03-05"]={color:2,note:"x"}; commit("notes"); renderAll();');
 const painted = qa("#rail .dc").find(c => c.title.startsWith(cy+"-03-05"));
 check(/\bk2\b/.test(painted.className) && !painted.querySelector(".dot"), "a coloured day fills the whole cell");
 const tgt = qa("#rail .dc").find(c => c.title.startsWith(cy+"-03-1"));

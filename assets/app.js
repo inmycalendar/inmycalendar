@@ -3,9 +3,12 @@
    ORDERING RULE: every binding is declared here, above every function.
    init() is the only top-level call and it is the last line of the file.
    ----------------------------------------------------------------- */
-var LS = { tasks:"imc.tasks", notes:"imc.notes", track:"imc.track", cfg:"imc.cfg" };
+var LS = { tasks:"imc.tasks", notes:"imc.notes", track:"imc.track", cfg:"imc.cfg",
+           pending:"imc.pending" };
 var MS_DAY = 86400000;
 var CAP = 20;
+/* Unsynced history has to stop growing somewhere. See markPending(). */
+var PENDING_CAP = 5000;
 var ST = [
   { k:"todo",  label:"To do",       cls:"c-todo"  },
   { k:"doing", label:"In progress", cls:"c-doing" },
@@ -26,6 +29,9 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
             catLabels:["Milestone","Travel","Leave","WFH"] };
 
 var cfg = null, tasks = null, notes = null, track = null;
+var shadow = { tasks:null, notes:null, track:null, cfg:null };
+var pending = { full:false, n:0, rows:{} };
+var pendingSeq = 0;
 var sel = null, mDate = null, glanceYear = null, dragId = null, carryHidden = {};
 var el = {};
 
@@ -59,7 +65,110 @@ function load(k,f){
         var v = JSON.parse(r); return (v === null || v === undefined) ? f : v; }
   catch (e){ return f; }
 }
-function save(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){} }
+/* ---------------------------------------------------------------------------
+   THE SAVE CHOKE POINT
+
+   Every durable write goes through commit(). writeRaw() is the only thing in
+   the app that touches localStorage. This exists before any sync code does,
+   for two reasons:
+
+   1. Sync has to know WHAT changed, not merely that something did. The agreed
+      rule merges at task level, so re-sending the whole array on every
+      keystroke would throw away exactly the information that makes "most
+      recent edit wins" resolvable.
+   2. Deletions have to survive as markers. A row that is simply dropped is
+      invisible to the other device, which re-sends the task and resurrects it.
+
+   commit() works out what changed by diffing against a shadow copy of what was
+   last written, rather than asking each call site to declare it. Forty call
+   sites each remembering to name the row they touched is forty chances to get
+   it wrong, and that class of mistake surfaces weeks later as missing data.
+   --------------------------------------------------------------------------- */
+function writeRaw(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){} }
+function has(o,k){ return Object.prototype.hasOwnProperty.call(o,k); }
+
+/* The live value behind a bucket name. commit() looks the state up itself, so
+   no call site can pass a mismatched key and value the way save(k,v) allowed. */
+function stateOf(kind){
+  if (kind === "tasks") return tasks;
+  if (kind === "notes") return notes;
+  if (kind === "track") return track;
+  return cfg;
+}
+
+/* A bucket flattened to row id -> serialised row, which is the unit sync
+   merges. Settings are one row per user, so they collapse to a single key. */
+function rowMap(kind, value){
+  var out = {}, i, r, k;
+  if (kind === "tasks" || kind === "track"){
+    if (!Array.isArray(value)) return out;
+    for (i=0;i<value.length;i++){ r = value[i]; if (r && r.id) out[r.id] = JSON.stringify(r); }
+    return out;
+  }
+  if (kind === "notes"){
+    if (!value || typeof value !== "object") return out;
+    for (k in value) if (has(value,k)) out[k] = JSON.stringify(value[k]);
+    return out;
+  }
+  out.cfg = JSON.stringify(value || {});
+  return out;
+}
+
+function markPending(kind, id, op){
+  if (pending.full) return;
+  var key = kind + ":" + id;
+  if (!has(pending.rows, key)) pending.n += 1;
+  /* at + seq identify this exact version of the row. settled() below clears a
+     row only if both still match, so an edit made while a push is in flight is
+     not silently dropped. */
+  pending.rows[key] = { kind:kind, id:id, op:op, at:Date.now(), seq:++pendingSeq };
+  if (pending.n > PENDING_CAP) pending = { full:true, n:0, rows:{} };
+}
+
+/* Called once, first thing in init(). The baseline is what is ON DISK, so a
+   change made during startup - the catLabels migration - is recorded like any
+   other. The journal persists across reloads; the shadow does not need to,
+   because anything changed before a reload is already in the journal. */
+function openStore(){
+  var p = load(LS.pending, null);
+  pending = (p && typeof p === "object" && p.rows) ? p : { full:false, n:0, rows:{} };
+  if (typeof pending.n !== "number") pending.n = Object.keys(pending.rows).length;
+  shadow.tasks = rowMap("tasks", load(LS.tasks, []));
+  shadow.notes = rowMap("notes", load(LS.notes, {}));
+  shadow.track = rowMap("track", load(LS.track, []));
+  shadow.cfg   = rowMap("cfg",   load(LS.cfg, {}));
+
+  /* The seam the sync layer attaches to, kept deliberately small: read the
+     journal, and report which rows have landed. app.js never learns that sync
+     exists, and the app keeps working identically if it never ships. */
+  window.imcStore = {
+    changes: function(){
+      var out = [], k;
+      for (k in pending.rows) if (has(pending.rows,k)) out.push(pending.rows[k]);
+      return out;
+    },
+    settled: function(rows){
+      if (!rows || !rows.length) return;
+      for (var i=0;i<rows.length;i++){
+        var r = rows[i], key = r.kind + ":" + r.id, cur = pending.rows[key];
+        if (cur && cur.at === r.at && cur.seq === r.seq){ delete pending.rows[key]; pending.n -= 1; }
+      }
+      writeRaw(LS.pending, pending);
+    },
+    needsFullSync: function(){ return !!pending.full; },
+    fullSyncDone: function(){ pending = { full:false, n:0, rows:{} }; writeRaw(LS.pending, pending); }
+  };
+}
+
+function commit(kind){
+  var value = stateOf(kind);
+  writeRaw(LS[kind], value);
+  var now = rowMap(kind, value), was = shadow[kind] || {}, k;
+  for (k in now) if (has(now,k) && now[k] !== was[k]) markPending(kind, k, "upsert");
+  for (k in was) if (has(was,k) && !has(now,k)) markPending(kind, k, "delete");
+  shadow[kind] = now;
+  writeRaw(LS.pending, pending);
+}
 function stIndex(k){ for (var i=0;i<ST.length;i++) if (ST[i].k === k) return i; return 0; }
 function monthSpan(weeks){
   // the dominant months this block of weeks covers, e.g. "Jan" or "Mar-Apr"
@@ -220,7 +329,7 @@ function addTask(ds,text,status){
   var t = { id:uid(), date:ds, text:text, status:status,
             order:lane(ds,status).length, ts:{todo:null,doing:null,done:null} };
   t.ts[status] = stamp();
-  tasks.push(t); save(LS.tasks,tasks);
+  tasks.push(t); commit("tasks");
   return t;
 }
 function byId(id){ for (var i=0;i<tasks.length;i++) if (tasks[i].id === id) return tasks[i]; return null; }
@@ -236,7 +345,7 @@ function placeTask(id,status,index){
   if (!t.ts[status]) t.ts[status] = stamp();
   for (var i=0;i<l.length;i++) l[i].order = i;
   if (from !== status) renumber(fromDate,from);
-  save(LS.tasks,tasks);
+  commit("tasks");
 }
 function nudge(id,delta){
   var t = byId(id); if (!t) return;
@@ -260,7 +369,7 @@ function moveTaskToDate(id, newDate){
   t.order = 99999;                 /* drop it at the bottom of the target lane */
   renumber(oldDate, st);
   renumber(newDate, st);
-  save(LS.tasks, tasks);
+  commit("tasks");
 }
 /* ---------------------------------------------------------------------------
    RECURRING TASKS
@@ -301,21 +410,21 @@ function materialiseRepeats(uptoISO){
       cur = addDays(cur, 1);
     }
   }
-  if (changed) save(LS.tasks,tasks);
+  if (changed) commit("tasks");
 }
 function setRepeat(id, kind){
   var t = byId(id); if (!t) return;
   if (t.fromRepeat){ t = byId(t.fromRepeat) || t; }   /* edit the template */
   t.repeat = kind || null;
   if (!kind) delete t.gen;
-  save(LS.tasks,tasks);
+  commit("tasks");
   materialiseRepeats(sel);
 }
 function delTask(id){
   var t = byId(id); if (!t) return;
   var d = t.date, s = t.status;
   tasks = tasks.filter(function(x){ return x.id !== id; });
-  renumber(d,s); save(LS.tasks,tasks);
+  renumber(d,s); commit("tasks");
 }
 
 /* ---------- KANBAN ---------- */
@@ -443,7 +552,7 @@ function inlineEdit(row, txt, task){
   if (inp.focus) inp.focus();
   function done(keep){
     var v = inp.value.trim();
-    if (keep && v){ task.text = v; save(LS.tasks,tasks); }
+    if (keep && v){ task.text = v; commit("tasks"); }
     refresh();
   }
   inp.addEventListener("blur", function(){ done(true); });
@@ -606,7 +715,7 @@ function renderCarry(){
     }
     renumber(prev,"todo");   renumber(prev,"doing");
     renumber(nowISO,"todo"); renumber(nowISO,"doing");
-    save(LS.tasks,tasks); refresh();
+    commit("tasks"); refresh();
   });
   var no = mk("button","btn","Dismiss"); no.type = "button";
   no.addEventListener("click", function(){ carryHidden[nowISO] = true; renderCarry(); });
@@ -667,7 +776,7 @@ function stepCal(d){
   if (d < 0 && r.from <= cy-CAP) return;
   if (d > 0 && r.to   >= cy+CAP) return;
   cfg.shift = Math.min(CAP, Math.max(-CAP, cfg.shift + d));
-  save(LS.cfg,cfg); renderCalendar();
+  commit("cfg"); renderCalendar();
 }
 function renderCalendar(){
   var r = calYears(), cy = today().getFullYear();
@@ -746,7 +855,7 @@ function renderRail(){
       inp.title = "Click to rename";
       inp.addEventListener("change", function(){
         cfg.catLabels[idx] = inp.value.trim() || DEF.catLabels[idx];
-        save(LS.cfg,cfg); renderCalendar(); renderGlance();
+        commit("cfg"); renderCalendar(); renderGlance();
       });
       row.appendChild(dot); row.appendChild(inp);
       row.appendChild(mk("span","pen","\u270e"));
@@ -774,7 +883,7 @@ function renderTracked(){
       lb.addEventListener("change", function(){
         var v = lb.value.trim();
         if (v){ e.label = v; } else { lb.value = e.label; }
-        save(LS.track,track); renderTracked();
+        commit("track"); renderTracked();
       });
       lb.addEventListener("keydown", function(ev){
         if (ev.key === "Enter") lb.blur();
@@ -791,12 +900,12 @@ function renderTracked(){
         if ((e.unit || "days") === u) o.selected = true;
         sel2.appendChild(o);
       });
-      sel2.addEventListener("change", function(){ e.unit = sel2.value; save(LS.track,track); renderTracked(); });
+      sel2.addEventListener("change", function(){ e.unit = sel2.value; commit("track"); renderTracked(); });
       row.appendChild(sel2);
       var x = mk("button","x","\u00d7"); x.type = "button"; x.title = "Remove " + e.label;
       x.addEventListener("click", function(){
         track = track.filter(function(t){ return t.id !== e.id; });
-        save(LS.track,track); renderTracked();
+        commit("track"); renderTracked();
       });
       row.appendChild(x);
       box.appendChild(row);
@@ -812,14 +921,14 @@ function addTracked(){
                       el.tErr.classList.remove("hidden"); return; }
   track.push({ id:uid(), label:lb, date:dt,
                unit:el.tUnit.value });
-  save(LS.track,track);
+  commit("track");
   el.tLabel.value = ""; el.tDate.value = "";
   renderTracked();
 }
 
 /* ---------- day popup ---------- */
 function openDay(ds){
-  mDate = ds; sel = ds; cfg.lastDate = ds; save(LS.cfg,cfg);
+  mDate = ds; sel = ds; cfg.lastDate = ds; commit("cfg");
   var d = parseISO(ds), wk = weekOf(ds);
   el.mDate.textContent = ds;
   var hol = holidayOn(ds);
@@ -847,7 +956,7 @@ function renderSw(){
       b.addEventListener("click", function(){
         var r = notes[mDate] || { color:null, note:"" };
         r.color = (r.color === idx) ? null : idx;
-        notes[mDate] = r; save(LS.notes,notes); renderSw();
+        notes[mDate] = r; commit("notes"); renderSw();
       });
       el.mSw.appendChild(b);
       el.mSw.appendChild(mk("span","none", cfg.catLabels[idx]));
@@ -856,14 +965,14 @@ function renderSw(){
   var c = mk("button","btn","No colour"); c.type = "button";
   c.addEventListener("click", function(){
     var r = notes[mDate] || { color:null, note:"" };
-    r.color = null; notes[mDate] = r; save(LS.notes,notes); renderSw();
+    r.color = null; notes[mDate] = r; commit("notes"); renderSw();
   });
   el.mSw.appendChild(c);
 }
 
 /* ---------- navigation ---------- */
 function setView(v){
-  cfg.view = v; save(LS.cfg,cfg);
+  cfg.view = v; commit("cfg");
   var b = (v === "board");
   el.boardView.classList.toggle("hidden", !b);
   el.calView.classList.toggle("hidden", b);
@@ -875,18 +984,18 @@ function setView(v){
   try { history.replaceState(null, "", "#" + v); } catch (e){}
   if (b) renderBoard(); else renderCalendar();
 }
-function setScope(s){ cfg.scope = s; save(LS.cfg,cfg); segOn(el.scopeSeg,"scope",s); renderBoard(); }
+function setScope(s){ cfg.scope = s; commit("cfg"); segOn(el.scopeSeg,"scope",s); renderBoard(); }
 function setDate(ds){
   if (!parseISO(ds)) return;
-  sel = ds; cfg.lastDate = ds; save(LS.cfg,cfg); renderBoard();
+  sel = ds; cfg.lastDate = ds; commit("cfg"); renderBoard();
 }
 function setCountry(code){
-  cfg.country = code || ""; save(LS.cfg,cfg);
+  cfg.country = code || ""; commit("cfg");
   loadHolidays(cfg.country);
 }
 function setWeekStart(v){
   v = parseInt(v,10); if (isNaN(v) || v < 0 || v > 6) v = 0;
-  cfg.weekStart = v; save(LS.cfg,cfg);
+  cfg.weekStart = v; commit("cfg");
   el.wsSel.value = String(cfg.weekStart);
   renderAll();
 }
@@ -898,7 +1007,7 @@ function openWeek(week){
   var t = today();
   var inWeek = t >= week.start && t <= addDays(week.start,6);
   sel = iso(inWeek ? t : week.start); cfg.lastDate = sel;
-  cfg.scope = "week"; save(LS.cfg,cfg);
+  cfg.scope = "week"; commit("cfg");
   segOn(el.scopeSeg,"scope","week");
   setView("board");
 }
@@ -963,11 +1072,11 @@ function importJson(file){
     var nK = Array.isArray(data.track) ? data.track.length : 0;
     if (!confirm("Replace what's here with " + nT + " tasks, " + nN + " day notes and " +
                  nK + " tracked dates from this file?")) return;
-    if (Array.isArray(data.tasks)){ tasks = data.tasks; migrate(); save(LS.tasks,tasks); }
-    if (data.notes && typeof data.notes === "object"){ notes = data.notes; save(LS.notes,notes); }
-    if (Array.isArray(data.track)){ track = data.track; save(LS.track,track); }
+    if (Array.isArray(data.tasks)){ tasks = data.tasks; migrate(); commit("tasks"); }
+    if (data.notes && typeof data.notes === "object"){ notes = data.notes; commit("notes"); }
+    if (Array.isArray(data.track)){ track = data.track; commit("track"); }
     if (data.cfg && typeof data.cfg === "object"){
-      cfg = Object.assign({}, DEF, data.cfg); save(LS.cfg,cfg);
+      cfg = Object.assign({}, DEF, data.cfg); commit("cfg");
       el.wsSel.value = String(cfg.weekStart);
     }
     renderAll(); setView(cfg.view === "calendar" ? "calendar" : "board");
@@ -977,7 +1086,7 @@ function importJson(file){
 function wipe(){
   if (!confirm("Delete every task, note and tracked date in this browser? This can't be undone.")) return;
   tasks = []; notes = {}; track = []; carryHidden = {};
-  save(LS.tasks,tasks); save(LS.notes,notes); save(LS.track,track);
+  commit("tasks"); commit("notes"); commit("track");
   renderAll(); setView(cfg.view);
 }
 function rangeLabel(){
@@ -1032,7 +1141,7 @@ function wire(){
   });
 
   el.glFold.addEventListener("click", function(){
-    cfg.glanceOpen = !cfg.glanceOpen; save(LS.cfg,cfg); renderGlance();
+    cfg.glanceOpen = !cfg.glanceOpen; commit("cfg"); renderGlance();
   });
   el.isoOut.addEventListener("click", function(){
     if (el.dInput.showPicker){ try { el.dInput.showPicker(); return; } catch (e){} }
@@ -1048,19 +1157,19 @@ function wire(){
   el.ctrySel.addEventListener("change", function(){ setCountry(el.ctrySel.value); });
   el.wkRule.addEventListener("change", function(){
     cfg.weekRule = el.wkRule.value === "jan1" ? "jan1" : "thursday";
-    save(LS.cfg,cfg); renderAll();
+    commit("cfg"); renderAll();
   });
   el.holReg.addEventListener("change", function(){
-    cfg.holRegional = el.holReg.checked; save(LS.cfg,cfg); renderAll();
+    cfg.holRegional = el.holReg.checked; commit("cfg"); renderAll();
   });
   el.rgBack.addEventListener("click", function(){
-    if (cfg.back < CAP) cfg.back += 1; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
+    if (cfg.back < CAP) cfg.back += 1; commit("cfg"); rangeLabel(); renderCalendar();
   });
   el.rgFwd.addEventListener("click", function(){
-    if (cfg.fwd < CAP) cfg.fwd += 1; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
+    if (cfg.fwd < CAP) cfg.fwd += 1; commit("cfg"); rangeLabel(); renderCalendar();
   });
   el.rgReset.addEventListener("click", function(){
-    cfg.back = 1; cfg.fwd = 1; cfg.shift = 0; save(LS.cfg,cfg); rangeLabel(); renderCalendar();
+    cfg.back = 1; cfg.fwd = 1; cfg.shift = 0; commit("cfg"); rangeLabel(); renderCalendar();
   });
 
   el.expCsv.addEventListener("click", exportCsv);
@@ -1095,14 +1204,14 @@ function wire(){
   el.mClear.addEventListener("click", function(){
     if (!mDate) return;
     var r = notes[mDate] || { color:null, note:"" };
-    r.note = ""; notes[mDate] = r; save(LS.notes,notes);
+    r.note = ""; notes[mDate] = r; commit("notes");
     el.mNote.value = "";
   });
   el.mCancel.addEventListener("click", function(){
     if (mDate){
       var r = notes[mDate];
       if (r && r.noteBefore !== undefined){
-        r.note = r.noteBefore; delete r.noteBefore; save(LS.notes,notes);
+        r.note = r.noteBefore; delete r.noteBefore; commit("notes");
       }
     }
     closeDay();
@@ -1111,13 +1220,13 @@ function wire(){
     if (!mDate) return;
     el.mNote.value = "";
     var r = notes[mDate] || { color:null, note:"" };
-    r.note = ""; notes[mDate] = r; save(LS.notes,notes);
+    r.note = ""; notes[mDate] = r; commit("notes");
     el.mNote.focus();
   });
   el.ov.addEventListener("click", function(e){ if (e.target === el.ov) closeDay(); });
   el.bnote.addEventListener("input", function(){
     var r = notes[sel] || { color:null, note:"" };
-    r.note = el.bnote.value; notes[sel] = r; save(LS.notes,notes);
+    r.note = el.bnote.value; notes[sel] = r; commit("notes");
     el.bnoteWrap.classList.toggle("filled", !!el.bnote.value);
   });
   el.bnote.addEventListener("focus", function(){
@@ -1156,21 +1265,21 @@ function wire(){
     var rec = notes[sel];
     el.bnote.value = (rec && rec.noteBefore !== undefined) ? rec.noteBefore : ((rec && rec.note) || "");
     if (rec && rec.noteBefore !== undefined){
-      rec.note = rec.noteBefore; delete rec.noteBefore; save(LS.notes,notes);
+      rec.note = rec.noteBefore; delete rec.noteBefore; commit("notes");
     }
     closeNote();
   });
   onPress(el.bnoteClear, function(){
     el.bnote.value = "";
     var r = notes[sel] || { color:null, note:"" };
-    r.note = ""; notes[sel] = r; save(LS.notes,notes);
+    r.note = ""; notes[sel] = r; commit("notes");
     el.bnoteWrap.classList.remove("filled");
     el.bnote.focus();
   });
   el.mNote.addEventListener("input", function(){
     if (!mDate) return;
     var r = notes[mDate] || { color:null, note:"" };
-    r.note = el.mNote.value; notes[mDate] = r; save(LS.notes,notes);
+    r.note = el.mNote.value; notes[mDate] = r; commit("notes");
   });
 
   var wasNarrow = narrow();
@@ -1201,6 +1310,7 @@ function wire(){
   });
 }
 function init(){
+  openStore();   /* baseline the change journal before anything can commit */
   cfg = Object.assign({}, DEF, load(LS.cfg, {}));
   if (!Array.isArray(cfg.catLabels) || cfg.catLabels.length !== 4) cfg.catLabels = DEF.catLabels.slice();
   // one-time migration: replace the OLD placeholder defaults with the new ones,
@@ -1210,7 +1320,7 @@ function init(){
                   ["Deadline","Travel","Leave","WFH"]];
   for (var oi=0; oi<OLD_SETS.length; oi++){
     if (cfg.catLabels.every(function(l,i){ return l === OLD_SETS[oi][i]; })){
-      cfg.catLabels = DEF.catLabels.slice(); save(LS.cfg,cfg); break;
+      cfg.catLabels = DEF.catLabels.slice(); commit("cfg"); break;
     }
   }
   cfg.back  = Math.min(CAP, Math.max(0, cfg.back|0));

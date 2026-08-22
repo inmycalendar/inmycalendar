@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 467 passed, 0 failed
+npm test         # expect: 490 passed, 0 failed
 ```
 
 ---
@@ -48,13 +48,13 @@ privacy.html        privacy policy
 assets/
   site.css          design tokens, ribbon, footer, content-page type - shared by all four pages
   app.css           board, calendar, rail, modal - loaded only by the app
-  app.js            all application logic (~974 lines)
+  app.js            all application logic (~1370 lines)
   auth.js           Supabase sign-in (Google / Microsoft / GitHub / email magic link)
   site.js           marks the current page in the nav on content pages
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       467 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       490 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -87,6 +87,33 @@ Look-alike duplicates of either drifted apart within a week when they existed.
 | `imc.notes` | `{ "yyyy-mm-dd": { color, note } }` |
 | `imc.track` | `[{ id, label, date, unit }]` |
 | `imc.cfg`   | weekStart, country, holRegional, catLabels, view, scope, glanceOpen |
+| `imc.pending` | the change journal - `{ full, n, rows:{ "kind:id": {kind,id,op,at,seq} } }` |
+
+**`commit(kind)` is the only way anything is written.** `writeRaw()` is the single place in
+the app that calls `localStorage.setItem`, and only `commit()` reaches it. There is no
+`save(key, value)` any more, because a call site could pass a mismatched pair.
+
+`commit()` also records **what** changed, into `imc.pending`. It does this by diffing the
+bucket against a shadow copy of what was last written, rather than asking each of the forty-odd
+call sites to declare the row it touched - forty chances to get it wrong, and that mistake
+surfaces weeks later as missing data rather than as a failing test.
+
+Why this exists before any sync code does:
+
+- The agreed rule merges **at task level**. Re-sending the whole array on every keystroke throws
+  away exactly the information that makes "most recent edit wins" resolvable.
+- **Deletions have to survive as markers.** A row that is simply dropped is invisible to the
+  other device, which re-sends the task and resurrects it. The diff produces those markers for
+  free, and correctly, because it compares against what was actually last written.
+- `settled(rows)` clears a row only if its `at` **and** `seq` still match what was pushed.
+  An edit made while a push is in flight therefore stays pending instead of being silently lost.
+- Past `PENDING_CAP` (5000) unsynced rows the journal stops growing, sets `full`, and asks the
+  next sync to reconcile everything once.
+
+The sync layer attaches through `window.imcStore` (`changes`, `settled`, `needsFullSync`,
+`fullSyncDone`) and nothing in `app.js` knows sync exists. A corrupt `imc.pending` starts
+from an empty journal rather than stopping the app booting. Section C36 of the test file covers
+all of this.
 
 **`placeTask(id, status, index)` is the only mutation primitive.** Status change and reordering
 are the same operation. Earlier versions had separate move and reorder functions and the
@@ -157,7 +184,7 @@ collide with the semantic colours.
 npm test
 ```
 
-467 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+490 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
