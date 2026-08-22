@@ -1189,6 +1189,39 @@ check(e3.length === 0, "a corrupt journal does not stop the app booting" + (e3.l
 check(dom3.window.imcStore.changes().length === 0, "it just starts from an empty journal");
 
 
+console.log("\n=== C37. A sign-in token survives the page load ===");
+/* Sign-in returns its token in the URL fragment. init() used to replace the
+   whole fragment with "#board" before auth.js had loaded and read it, so every
+   sign-in succeeded on the server and silently failed in the browser. The
+   Supabase logs showed five successful Google logins on a day the button never
+   once changed to signed in. Structure tests cannot catch that; these boot the
+   real app at the real URL Google sends people back to. */
+function bootAt(url){
+  const errs = [];
+  const dm = new JSDOM(html, { url, runScripts:"dangerously", pretendToBeVisual:true,
+    virtualConsole: new VirtualConsole().on("jsdomError", e => errs.push(String(e.detail||e))) });
+  return { win: dm.window, errs };
+}
+
+const okBoot = bootAt("https://inmycalendar.com/#access_token=TESTTOKEN&token_type=bearer&expires_in=3600");
+check(okBoot.errs.length === 0,
+      "the app boots cleanly when Google returns a token" + (okBoot.errs.length ? " -> " + okBoot.errs.join("|") : ""));
+check(okBoot.win.location.hash.indexOf("access_token") >= 0,
+      "the sign-in token is still in the URL after init(), so auth.js can read it");
+
+const errBoot = bootAt("https://inmycalendar.com/#error_description=access_denied");
+check(errBoot.win.location.hash.indexOf("error_description") >= 0,
+      "a refused sign-in keeps its error in the URL, so it can be reported rather than vanishing");
+
+const calBoot = bootAt("https://inmycalendar.com/#calendar");
+check(calBoot.win.location.hash === "#calendar",
+      "an ordinary view hash is untouched by the guard");
+
+const plainBoot = bootAt("https://inmycalendar.com/");
+check(plainBoot.win.location.hash === "#board",
+      "and a plain visit still gets its #board hash exactly as before");
+
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");

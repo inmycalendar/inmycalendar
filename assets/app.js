@@ -981,7 +981,16 @@ function setView(v){
   var links = document.querySelectorAll(".sitenav a[data-view]");
   for (var i=0;i<links.length;i++)
     links[i].classList.toggle("on", links[i].getAttribute("data-view") === v);
-  try { history.replaceState(null, "", "#" + v); } catch (e){}
+  /* Never overwrite an auth response. Sign-in returns its token in the URL
+     fragment, and this line used to replace the whole fragment with "#board"
+     before auth.js had loaded and read it. Every sign-in therefore succeeded
+     on the server and silently failed in the browser: the Supabase logs show
+     five successful Google logins on a day the button never changed. The view
+     hash is cosmetic; the token is not, so the token wins. */
+  var curHash = window.location.hash || "";
+  if (curHash.indexOf("access_token") < 0 && curHash.indexOf("error_description") < 0){
+    try { history.replaceState(null, "", "#" + v); } catch (e){}
+  }
   if (b) renderBoard(); else renderCalendar();
 }
 function setScope(s){ cfg.scope = s; commit("cfg"); segOn(el.scopeSeg,"scope",s); renderBoard(); }
