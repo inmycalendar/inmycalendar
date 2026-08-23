@@ -505,7 +505,31 @@ check(/\.lane\{[^}]*max-height:var\(--laneMax\);overflow-y:auto/.test(flatL),
 check(/\.t\{[^}]*min-height:28px/.test(flatL), "task rows are compact so more fit before scrolling");
 
 console.log("\n=== C8. Kanban naming and explanation ===");
-check(qa(".sitenav a[data-view=board]")[0].textContent === "Kanban Board", "the tab is called Kanban Board");
+/* The link carries both a full and a short label; CSS shows one at a time, so
+   textContent is now the concatenation of the two. Check the visible long form
+   and that the short one is a real abbreviation of it, not a different word. */
+const boardTab = qa(".sitenav a[data-view=board]")[0];
+check(boardTab.querySelector(".navlong").textContent === "Kanban Board", "the tab is called Kanban Board");
+check(boardTab.querySelector(".navshort").textContent === "Board",
+      "with a short form for narrow desktops, so the ribbon shrinks instead of overlapping");
+check(/\.navshort\{display:none\}/.test(flat), "the short form is hidden by default");
+/* THE OVERLAP REGRESSION, guarded. min-width:0 lets a flex item shrink below
+   its own contents; the contents do not shrink with it, they spill out and
+   paint over the neighbour. "Month" ended up sitting on top of "Kanban Board"
+   on a 1440px screen. jsdom cannot catch this because it does not lay out, so
+   the defence is to forbid the property on the two zones that overlapped and
+   to keep wrap as the base everywhere. Overlapping is worse than wrapping. */
+const desktopBar = (flat.split("@media (min-width:901px)")[1] || "").split("@media")[0];
+check(!/\.appzone\{[^}]*min-width:0/.test(desktopBar),
+      "the app zone may not shrink below its contents, which is what made them overlap");
+check(!/\.sitenav\{[^}]*min-width:0/.test(desktopBar),
+      "and neither may the nav");
+check(/\.bar \.wrap\{[^}]*flex-wrap:wrap/.test(flat),
+      "wrap stays the base, so an overflow grows a second row rather than overlapping");
+check(/@media \(max-width:1499px\)\{\.meta\{display:none\}\}/.test(flat),
+      "the date meta is dropped first when space runs short, being 150 fixed pixels and duplicated nearby");
+check(/@media \(max-width:1249px\)\{[^@]*\.navlong\{display:none\}/.test(flat),
+      "and swaps in only where the full label would not fit");
 PAGES.forEach(pg => check(/>Kanban Board</.test(readFile(pg)), pg + " uses the same label"));
 const ab = readFile("guide.html");
 check(/What a Kanban board is/.test(ab), "the Guide explains what a Kanban board is");
