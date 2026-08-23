@@ -2005,8 +2005,13 @@ check(/functions\/v1\/delete-account/.test(au), "which calls the delete-account 
 
 /* Two steps, and the second will not arm until the word is typed. There is no
    undo and no backup to restore from, and Sign out sits directly above it. */
-check(/toUpperCase\(\)\s*!==\s*"DELETE"/.test(au),
+/* Two guards, and they need two checks. A single regex for the phrase matched
+   whichever one survived, so removing the button guard still passed - the
+   test looked green while half the protection was gone. */
+check(/delGo\.disabled\s*=\s*delType\.value\.trim\(\)\.toUpperCase\(\)\s*!==\s*"DELETE"/.test(au),
       "the delete button stays disabled until DELETE is typed");
+check(/if\s*\(delType\.value\.trim\(\)\.toUpperCase\(\)\s*!==\s*"DELETE"\)\s*return;/.test(au),
+      "and the click handler checks again, so an enabled button is still not enough");
 check(/confirm:\s*"DELETE"/.test(au),
       "and the request carries that confirmation, so a stray call deletes nothing");
 
