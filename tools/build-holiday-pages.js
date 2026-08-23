@@ -33,7 +33,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "44";                        /* cache tag, keep in step with the pages */
+const V    = "45";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
@@ -135,6 +135,7 @@ ${body}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
+<script src="../assets/errors.js?v=${V}"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/site.js?v=${V}"></script>
 <script src="../assets/auth.js?v=${V}"></script>

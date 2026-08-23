@@ -1766,6 +1766,123 @@ PAGES.forEach(f => {
 }
 
 
+console.log("\n=== C48. Errors in a visitor's browser get reported ===");
+{
+/* Until this shipped, a JS error in someone else's browser was invisible: the
+   board stopped working, the tab closed, and nothing recorded it anywhere.
+   These pin the parts that are easy to break silently - load order, the
+   scrubbing, and the caps that stop the reporter becoming the problem. */
+
+check(fs.existsSync(path.join(ROOT,"assets/errors.js")), "errors.js ships with the app");
+
+/* LOAD ORDER IS THE WHOLE POINT. A reporter that loads third only sees the
+   errors thrown after it, which are not the ones that break a page load. */
+PAGES.forEach(f => {
+  const raw = readFile(f);
+  const tags  = [...raw.matchAll(/<script src="([^"]+)"/g)];
+  const mine   = raw.indexOf("assets/errors.js");
+  const others = tags.filter(m => m[1].indexOf("errors.js") < 0).map(m => m.index);
+  check(mine >= 0, f + ": loads errors.js");
+  check(mine >= 0 && others.every(i => mine < i),
+        f + ": errors.js is the FIRST script, so it sees errors thrown by the others");
+});
+
+/* Same shared-markup trap as the logo: the holiday pages are generated from a
+   separate copy of this block, so wiring the five hand-written pages proves
+   nothing about the other 1,719. */
+check(/errors\.js\?v=\$\{V\}/.test(readFile("tools/build-holiday-pages.js")),
+      "the holiday-page generator carries the reporter too");
+check(/\.\.\/assets\/errors\.js\?v=\d+/.test(readFile("holidays/IN-2027.html")),
+      "which is visible in a page it actually produced");
+
+/* Every page must claim the same build, or an error report names a version
+   that never existed. */
+const vs = new Set();
+PAGES.forEach(f => (readFile(f).match(/\?v=(\d+)/g) || []).forEach(t => vs.add(t)));
+vs.add((readFile("holidays/IN-2027.html").match(/\?v=(\d+)/) || [])[0]);
+check(vs.size === 1, "every page and every generated page claim one build tag, not " +
+      vs.size + " (" + [...vs].join(", ") + ")");
+
+const E = w.imcErrors;
+check(!!E, "the reporter exposes a seam, the way imcStore does");
+
+/* THE SECURITY ONE. After an OAuth round trip the URL fragment holds a live
+   access_token. A reporter that logs location.href copies session tokens into
+   a table - so the fragment and query string are cut before anything is kept. */
+const oauth = "https://inmycalendar.com/#access_token=eyJhbGciOiJIUzI1NiJ9.abc.def&refresh_token=xyz";
+check(E.scrubUrl(oauth) === "https://inmycalendar.com/",
+      "the OAuth fragment is stripped from a logged URL - no access_token ever reaches the log");
+check(E.scrubUrl("https://inmycalendar.com/x?apikey=secret&a=1") === "https://inmycalendar.com/x",
+      "and so is the query string");
+
+/* Error text is written by whatever threw, including third-party code. */
+check(!/eyJhbGciOiJIUzI1NiJ9\.abcdefghij\.k/.test(
+        E.scrubText("failed with eyJhbGciOiJIUzI1NiJ9.abcdefghij.klmnop", 500)),
+      "a JWT inside an error message is removed before it is sent");
+check(!/someone@example\.com/.test(E.scrubText("bad login for someone@example.com", 500)),
+      "so is an email address");
+check(/access_token=\[removed\]/.test(E.scrubText("GET /cb?access_token=abc123", 500)),
+      "so is a token in a query fragment of the message");
+check(E.scrubText("x".repeat(900), 500).length === 500, "and the text is capped");
+
+/* The reporter must not become the outage. A page looping on an error would
+   otherwise file thousands of reports. */
+const fresh = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                pretendToBeVisual:true });
+const FE = fresh.window.imcErrors;
+const before = FE.capacity();
+for (let i = 0; i < 40; i++) FE.record({ kind:"error", message:"loop " + i, line:i });
+check(FE.capacity() === 0 && before > 0 && before <= 10,
+      "a runaway page files at most " + before + " reports, not one per throw");
+
+const fresh2 = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                 pretendToBeVisual:true });
+const F2 = fresh2.window.imcErrors;
+F2.record({ kind:"error", message:"same", line:7 });
+const afterFirst = F2.pending().length;
+F2.record({ kind:"error", message:"same", line:7 });
+check(F2.pending().length === afterFirst, "the same error twice is one report, not two");
+F2.record({ kind:"error", message:"different", line:8 });
+check(F2.pending().length === afterFirst + 1, "but a genuinely different one still gets through");
+
+/* A real throw, not a hand-built record() call. */
+const fresh3 = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                 pretendToBeVisual:true });
+const w3 = fresh3.window;
+w3.dispatchEvent(new w3.ErrorEvent("error",
+  { message:"boom", filename:"https://inmycalendar.com/assets/app.js?v=1", lineno:12, colno:3 }));
+const caught = w3.imcErrors.pending();
+check(caught.length === 1 && caught[0].message === "boom",
+      "an error thrown on the page is actually captured");
+check(caught[0].page.indexOf("?") < 0 && caught[0].page.indexOf("#") < 0,
+      "and the page it records carries no query string or fragment");
+check(caught[0].load_id && caught[0].load_id.length > 1,
+      "reports from one page load share an id, so six reports from one visit do not read as six problems");
+
+/* jsdom has neither fetch nor sendBeacon. Sending must find no transport and
+   stop, rather than throwing - a reporter that throws while reporting is a
+   loop. This is also what keeps it inert in this suite. */
+check(typeof w3.fetch === "undefined", "the test environment has no fetch, so sending is exercised with none");
+let threw = null;
+try { w3.imcErrors.flush(); } catch (e) { threw = e; }
+check(!threw, "flushing with no transport does not throw" + (threw ? " -> " + threw.message : ""));
+check(w3.imcErrors.pending().length === 0, "and the queue is dropped rather than growing for ever");
+
+/* Shipping a reporter without saying so in the privacy policy is the actual
+   compliance failure, and it is invisible in the code. The policy used to say
+   "Nothing is collected" for signed-out visitors; that stopped being true the
+   moment this script shipped, because a crash report is sent either way. */
+const priv = readFile("privacy.html");
+check(priv.indexOf("<h2>Crash reports</h2>") >= 0,
+      "the privacy policy discloses crash reporting in a section of its own");
+check(priv.indexOf("Nothing is collected") < 0,
+      "and no longer claims nothing at all is collected from signed-out visitors");
+check(/30 days/.test(priv),
+      "it states the retention period, which matches prune_client_errors() in the database");
+check(/never contains your tasks/.test(priv),
+      "and states what a report never carries");
+}
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
