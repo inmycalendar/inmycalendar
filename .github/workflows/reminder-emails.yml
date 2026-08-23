@@ -1,0 +1,148 @@
+# Calls the send-emails Edge Function on a schedule.
+#
+# WHY THIS EXISTS
+# The function was deployed and working, but nothing was calling it. pg_cron and
+# pg_net are not installed on the Supabase project, so the scheduled run it was
+# written for never existed: welcome emails had never gone out to anybody, and
+# reminders could not go out at all. This is the scheduler.
+#
+# WHY IT RUNS EVERY DAY
+# The function decides who is actually due, from each person's own reminderFreq
+# (daily / weekly / monthly) and when they were last emailed. Running daily and
+# letting it choose is correct; running weekly would mean a person on "daily"
+# still only heard from us once a week.
+#
+# THIS LOG IS PUBLIC. NEVER PRINT THE RESPONSE BODY.
+# The function returns a plan containing every account's email address. This
+# repository is public, which makes its Actions logs public. Printing the raw
+# response here would publish the email address of every person who has ever
+# signed in. Every step below prints counts only, and the response file is
+# deleted at the end of the job. If you need the detail, read it in the
+# Supabase dashboard under Edge Functions -> send-emails -> Logs, which is
+# private to you.
+#
+# SETUP, ONCE
+# Add the secret at:
+#   github.com/suyash-keshri/inmycalendar/settings/secrets/actions
+#   Name:  CRON_SECRET
+#   Value: the same CRON_SECRET set on the Supabase function
+# Without it the live run is refused by the function with a 403.
+#
+# A NOTE ON GITHUB'S SCHEDULER
+# Scheduled workflows are disabled automatically after 60 days with no commits
+# to the repository, and the run time drifts under load - treat it as "some
+# time after 06:00 UTC", not as a precise clock.
+
+name: reminder emails
+
+on:
+  schedule:
+    - cron: "0 6 * * *"     # 06:00 UTC daily; the function decides who is due
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry = report who would be emailed and send nothing"
+        type: choice
+        default: dry
+        options: [dry, live]
+
+concurrency:
+  # Two overlapping runs would race on the email_log rows that enforce
+  # "send once". Never let a second run start while one is in flight.
+  group: reminder-emails
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide the mode
+        id: mode
+        run: |
+          # A scheduled run is always live. A manual run is whatever was picked,
+          # and defaults to dry so an accidental click cannot mail anybody.
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "live=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.mode }}" = "live" ]; then
+            echo "live=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "live=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check the secret is present
+        if: steps.mode.outputs.live == 'true'
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set on this repository, so the function"
+            echo "would refuse the request with 403 and no mail would be sent."
+            echo "Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "CRON_SECRET is present (value not printed)."
+
+      - name: Call send-emails
+        id: call
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          LIVE: ${{ steps.mode.outputs.live }}
+        run: |
+          set -u
+          BASE="https://zkedkgzguhrrnsvetinl.supabase.co/functions/v1/send-emails"
+          if [ "$LIVE" = "true" ]; then
+            URL="$BASE"
+            CODE=$(curl -sS -o response.json -w "%{http_code}" -X POST "$URL" \
+                     -H "x-cron-secret: $CRON_SECRET")
+          else
+            URL="$BASE?dry=1"
+            CODE=$(curl -sS -o response.json -w "%{http_code}" -X POST "$URL")
+          fi
+          echo "http_status=$CODE" >> "$GITHUB_OUTPUT"
+          echo "HTTP $CODE"
+          if [ "$CODE" != "200" ]; then
+            # Status codes only. The body may name accounts.
+            echo "The function did not return 200. Read the detail in the"
+            echo "Supabase dashboard: Edge Functions -> send-emails -> Logs."
+            exit 1
+          fi
+
+      - name: Summarise, without printing a single address
+        run: |
+          node -e '
+            const fs = require("fs");
+            const j = JSON.parse(fs.readFileSync("response.json", "utf8"));
+            const plan   = j.plan   || [];
+            const sent   = j.sent   || [];
+            const failed = j.failed || [];
+
+            // Group by kind and reason. Both are written by the function and
+            // contain no addresses; the address lives on a separate field that
+            // is deliberately never read here.
+            const counts = {};
+            for (const p of plan) {
+              const key = p.kind + (p.reason ? " - " + p.reason : "");
+              counts[key] = (counts[key] || 0) + 1;
+            }
+
+            console.log("mode:              " + j.mode);
+            console.log("accounts examined: " + j.accounts_examined);
+            console.log("sent:              " + sent.length);
+            console.log("failed:            " + failed.length);
+            console.log("plan:");
+            for (const k of Object.keys(counts).sort()) {
+              console.log("  " + String(counts[k]).padStart(4) + "  " + k);
+            }
+
+            if (failed.length) {
+              console.log("");
+              console.log(failed.length + " message(s) failed to send. The reasons name");
+              console.log("accounts, so they are not printed here - read them in the");
+              console.log("Supabase dashboard under Edge Functions, send-emails, Logs.");
+              process.exit(1);
+            }
+          '
+
+      - name: Shred the response
+        if: always()
+        run: rm -f response.json

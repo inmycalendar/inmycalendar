@@ -397,6 +397,34 @@ lands there, so a red run does not stop a deploy. To make it a real gate, work o
 branch and merge to `main` only when the run is green. That is a workflow choice, not a
 setting, and it is written down here rather than assumed.
 
+The tests need **Node 22.22.2 or newer**, and the workflow pins the same major version the
+suite is developed against. The first run of this workflow pinned Node 20 and every timezone
+job died inside jsdom, which reads as a code failure rather than a version one - so the floor
+now lives in `package.json` with `engine-strict` set, and a wrong version stops at install.
+
+## Scheduled emails
+
+`.github/workflows/reminder-emails.yml` calls the `send-emails` Edge Function at 06:00 UTC
+daily. The function was deployed and correct, but nothing was calling it: `pg_cron` and
+`pg_net` are not installed on the Supabase project, so the scheduled run it was written for
+never existed and no welcome email had ever gone out.
+
+It runs **daily** on purpose. The function works out who is actually due from each person's
+own `reminderFreq` and the last send recorded in `email_log`; a weekly schedule would mean
+somebody set to "daily" still only heard from us once a week.
+
+**The response body is never printed.** It contains the email address of every account, and a
+public repository has public Actions logs - printing it would publish the lot. Every step
+prints counts only, and the response file is deleted at the end of the job. Read the detail in
+the Supabase dashboard under Edge Functions -> send-emails -> Logs, which only you can see.
+
+Requires one repository secret, `CRON_SECRET`, matching the value set on the function. Without
+it the live run is refused with a 403. Run it by hand from the Actions tab to test - it
+defaults to a **dry run**, which reports who would be emailed and sends nothing.
+
+GitHub disables scheduled workflows after 60 days without a commit, and the fire time drifts
+under load. Treat it as "some time after 06:00 UTC".
+
 ## Deployment
 
 GitHub -> Hostinger auto-deploy -> Porkbun domain.
