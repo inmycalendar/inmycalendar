@@ -103,8 +103,8 @@ function shell({ title, desc, canonical, ld, body }){
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" href="../assets/favicon.ico" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+<link rel="icon" href="../assets/favicon.ico?v=${V}" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
 <link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="../assets/site.css?v=${V}">
 <style>${STYLE}</style>
