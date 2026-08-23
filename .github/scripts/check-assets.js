@@ -61,7 +61,13 @@ function pngSize(b) {
   let bad = 0, checked = 0;
   for (const f of files) {
     let live;
-    try { live = await get(SITE + f); }
+    /* A unique query string per request. The CDN keys on the query, so this
+       forces a MISS and a fetch from the origin. Without it the check can read
+       a stale edge copy of a URL nobody actually requests - pages reference
+       every asset as "?v=N" - and report a file as stale when the version the
+       browser gets is correct. That happened, and cost a round of confusion. */
+    const bust = SITE + f + "?nocache=" + Date.now() + "-" + Math.random().toString(36).slice(2);
+    try { live = await get(bust); }
     catch (e) { console.log("ERROR    " + f + " -> " + e.message); bad++; continue; }
 
     if (live.status !== 200) { console.log("MISSING  " + f + " -> HTTP " + live.status); bad++; continue; }
