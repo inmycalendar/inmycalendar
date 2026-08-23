@@ -32,9 +32,17 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 ```
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
-npm install      # only needed to run the tests
+npm ci           # only needed to run the tests
 npm test         # expect: 685 passed, 0 failed
 ```
+
+The tests need **Node 22.22.2 or newer** - jsdom 30 refuses to run on anything
+older. `package.json` records that floor and `.npmrc` sets `engine-strict`, so a
+too-old Node stops at install with a plain message, rather than failing later
+inside jsdom where the stack trace looks like an unrelated bug. `package-lock.json`
+is committed on purpose: `npm ci` then installs the exact versions CI uses, so a
+dependency publishing a patch release cannot break a run on a day nobody changed
+anything.
 
 ---
 

@@ -2,6 +2,9 @@
   "name": "inmycalendar",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "description": "A daily sticky-note kanban board joined to a multi-year week calendar. No build step, no framework, no server.",
   "scripts": {
     "test": "node tests/app.test.js"
