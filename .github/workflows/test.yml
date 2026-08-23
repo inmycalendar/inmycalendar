@@ -1,0 +1,76 @@
+# Runs the suite on every push and every pull request.
+#
+# WHY THIS EXISTS
+# Hostinger deploys whatever lands on main. Until now the only thing standing
+# between a broken commit and the live site was somebody remembering to run
+# `npm test` first. That worked while one person was pushing and paying
+# attention; it is not a control.
+#
+# WHAT IT DOES AND DOES NOT DO
+# This reports. It cannot stop Hostinger deploying, because Hostinger watches
+# the branch directly. To actually GATE a deploy you would work on a `dev`
+# branch and only merge to main once this is green - the README records that
+# choice rather than pretending the check is a gate.
+#
+# The suite is run under several timezones on purpose. Date bugs in this
+# project have twice only appeared either side of UTC, and a run in a single
+# timezone would have passed both times.
+
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:        # so it can be run by hand from the Actions tab
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false      # report every failing timezone, not just the first
+      matrix:
+        tz:
+          - UTC
+          - Pacific/Kiritimati    # UTC+14, the furthest ahead
+          - Pacific/Niue          # UTC-11, the furthest behind
+          - Asia/Kolkata          # a half-hour offset, which breaks naive maths
+          - Europe/Luxembourg     # where the app is actually used
+    name: ${{ matrix.tz }}
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install
+        run: npm ci || npm install
+
+      - name: Run the suite
+        run: npm test
+
+  generated-files-are-in-step:
+    # The 1,719 holiday pages and the sitemap are GENERATED. If someone edits
+    # the generator and forgets to re-run it, or hand-edits a generated page,
+    # the repo and the generator disagree and nobody finds out. Re-running it
+    # and checking nothing changed is the only way to know.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rebuild the generated pages
+        run: node tools/build-holiday-pages.js
+      - name: Fail if the committed output differs from a fresh build
+        run: |
+          if [ -n "$(git status --porcelain holidays sitemap.xml)" ]; then
+            echo "The committed holiday pages or sitemap do not match a fresh run"
+            echo "of tools/build-holiday-pages.js. Re-run it and commit the result."
+            git --no-pager diff --stat holidays sitemap.xml
+            exit 1
+          fi
+          echo "Generated files match the generator."

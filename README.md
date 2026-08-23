@@ -372,6 +372,21 @@ bugs that static review missed.
 
 ---
 
+## Continuous integration
+
+`.github/workflows/test.yml` runs the suite on every push and pull request, under five
+timezones (UTC, UTC+14, UTC-11, a half-hour offset, and Europe/Luxembourg). Date bugs here
+have twice appeared only on one side of UTC, so a single-timezone run would have missed them.
+
+A second job **re-runs the holiday-page generator and fails if the committed output differs**.
+The 1,719 pages and the sitemap are generated; without this check, editing the generator and
+forgetting to re-run it leaves the repo and the generator silently disagreeing.
+
+**This reports, it does not gate.** Hostinger watches `main` directly and deploys whatever
+lands there, so a red run does not stop a deploy. To make it a real gate, work on a `dev`
+branch and merge to `main` only when the run is green. That is a workflow choice, not a
+setting, and it is written down here rather than assumed.
+
 ## Deployment
 
 GitHub -> Hostinger auto-deploy -> Porkbun domain.

@@ -9,7 +9,10 @@ const sharp = require("sharp");
 const fs = require("fs");
 const path = require("path");
 
-const REPO = "C:/suyash_apps/inmycalendar/inmycalendar_repo";
+/* Resolved from this file, not hardcoded: an absolute path from one machine
+   both leaks a local folder layout into a public repo and makes the tool
+   useless to anyone who clones it. */
+const REPO = path.join(__dirname, "..");
 const SVG  = fs.readFileSync(path.join(REPO, "assets/favicon.svg"));
 
 /* The font in the SVG may not exist on this machine; librsvg would silently
