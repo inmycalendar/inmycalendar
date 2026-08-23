@@ -183,7 +183,13 @@ const shape = f => {
              .filter(c => c.indexOf("authslot") === -1)      /* app-only control */
              .join("|"),
     links: [...dd.querySelectorAll("header.bar .sitenav a")].map(a => a.textContent.trim()).join(","),
-    footer: [...dd.querySelectorAll("footer a")].map(a => a.getAttribute("href")).join(","),
+    /* Footer NAVIGATION must match across pages. The .fdata row is deliberately
+       app-only - Export, Backup, Restore, the analytics download and Clear data
+       have nothing to act on from a content page - so it is excluded rather
+       than allowed to fail this check. */
+    footer: [...dd.querySelectorAll("footer a")]
+             .filter(a => !a.closest(".fdata"))
+             .map(a => a.getAttribute("href")).join(","),
     hasMenuBtn: dd.querySelector("#menuBtn, #gear") !== null,
     hasMenuPanel: dd.querySelector("#pop") !== null
   };
@@ -275,7 +281,9 @@ const railBoxes = [...qa(".rail .rbox h3")].map(h => h.textContent.trim());
 check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours",
       "rail reads: " + railBoxes.join(" | "));
 const dataBtns = [...qa("footer .fdata .btn")].map(b => b.textContent.trim());
-check(dataBtns.length === 4, "the four data actions moved to the footer: " + dataBtns.join(", "));
+check(dataBtns.length === 5, "the data actions live in the footer: " + dataBtns.join(", "));
+check(dataBtns.indexOf("Analytics template") === 1,
+      "with the analytics download directly after Export tasks, which is the file it consumes");
 check(d.querySelector(".rail .databox") === null,
       "and out of the rail, so it can no longer run past the main column");
 
@@ -1600,6 +1608,28 @@ check(/href="\.\.\/index\.html#board"/.test(jp), "with working relative links ba
 
 
 }
+console.log("\n=== C46. The analytics workbook ===");
+{
+/* Built by tools/build-analytics-workbook.js and verified in Excel against
+   hand-computed cycle times before shipping (1/2/3, 0.5/1.5/2, 4/1/5 days).
+   The checks here can only confirm it is present and reachable: proving the
+   formulas needs a spreadsheet engine, so that verification is a documented
+   step rather than something this suite can claim. */
+const XLSX = path.join(ROOT, "downloads", "inmycalendar-analytics.xlsx");
+check(fs.existsSync(XLSX), "the analytics workbook ships with the site");
+check(fs.statSync(XLSX).size > 20000, "and is a real workbook, not an empty stub");
+check(fs.existsSync(path.join(ROOT, "tools", "build-analytics-workbook.js")),
+      "its generator is in the repo, so it can be rebuilt rather than hand-patched");
+const idxHtml = readFile("index.html");
+check(/href="downloads\/inmycalendar-analytics\.xlsx" download/.test(idxHtml),
+      "the app offers it as a real download, next to Export tasks which is the file it consumes");
+/* Every zip begins PK. Catches a truncated or text-mangled commit, which is a
+   real risk for a binary in a repo that normalises line endings. */
+const head = fs.readFileSync(XLSX).slice(0, 2).toString("latin1");
+check(head === "PK", "the file is a valid archive, so it survived being committed");
+}
+
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");

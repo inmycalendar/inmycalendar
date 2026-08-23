@@ -22,8 +22,8 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=37">
-<link rel="stylesheet" href="assets/app.css?v=37">
+<link rel="stylesheet" href="assets/site.css?v=38">
+<link rel="stylesheet" href="assets/app.css?v=38">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -196,6 +196,10 @@
     <a href="about.html">About</a><a href="guide.html">Guide</a><a href="holidays/index.html">Holidays</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
     <div class="fdata">
       <button class="btn" id="expCsv">Export tasks</button>
+      <!-- Sits next to Export tasks because that is the file it consumes.
+           A real download, not a button, so the browser handles it. -->
+      <a class="btn" href="downloads/inmycalendar-analytics.xlsx" download
+         title="Excel workbook: paste an export into it for cycle time, throughput and completion analysis">Analytics template</a>
       <button class="btn" id="expJson">Backup</button>
       <button class="btn" id="impJson">Restore</button>
       <input type="file" id="impFile" accept="application/json,.json" class="hidden" aria-label="Choose a backup file to restore">
@@ -242,8 +246,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=37"></script>
-<script src="assets/auth.js?v=37"></script>
-<script src="assets/sync.js?v=37"></script>
+<script src="assets/app.js?v=38"></script>
+<script src="assets/auth.js?v=38"></script>
+<script src="assets/sync.js?v=38"></script>
 </body>
 </html>

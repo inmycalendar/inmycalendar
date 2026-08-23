@@ -23,7 +23,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "37";                     /* cache tag, keep in step with the pages */
+const V    = "38";                     /* cache tag, keep in step with the pages */
 /* Six years, not three. The data runs 2015-2045, and every extra year is
    another search phrase someone actually types ("public holidays 2030").
    Six is where the page is still readable; the app covers the rest. */
