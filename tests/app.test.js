@@ -1036,32 +1036,6 @@ check($("sov").classList.contains("hidden"), "clicking a result closes search");
 check($("boardView").classList.contains("hidden") === false, "and lands you on the board for that day");
 check(/\/" && !typing/.test(js) || /e.key === "\/"/.test(js), "the / key opens search from anywhere");
 
-console.log("\n=== C32. Recurring tasks, without a new panel ===");
-w.eval('setDate("'+TODAY+'");');
-add(0,"Weekly one-to-one");
-const repRow = [...col(0).querySelectorAll(".t")].pop();
-const repBtn = [...repRow.querySelectorAll(".op")].find(b => /Repeat|Every/.test(b.title||""));
-check(repBtn !== undefined, "the repeat control lives in the task's own hover row, costing no layout space");
-check(/Repeat this task/.test(repBtn.title), "and says what it does");
-click(repBtn);
-const tmpl = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Weekly one-to-one");
-check(tmpl.repeat === "d", "one click sets it to repeat daily");
-const nBefore = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
-w.eval('setDate(iso(addDays(parseISO("' + TODAY + '"),3)));');
-const nAfter = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
-check(nAfter > nBefore, "moving forward materialises the instances (" + nBefore + " -> " + nAfter + ")");
-const gen = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.id === tmpl.id).gen || [];
-check(gen.length > 0, "the template records which days it has produced");
-const inst = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.fromRepeat === tmpl.id);
-check(inst !== undefined, "instances are ordinary tasks, so drag, move and delete work unchanged");
-/* deleting an instance must not resurrect it */
-w.eval('delTask("' + inst.id + '"); materialiseRepeats(sel);');
-check(!JSON.parse(w.localStorage.getItem("imc.tasks")).some(t => t.id === inst.id),
-      "deleting an instance sticks - the template will not regenerate that day");
-check(/REPEATS = \{ d:"Every day", w:"Every week", m:"Every month" \}/.test(js),
-      "daily, weekly and monthly are offered by cycling the same button");
-w.eval('setDate("'+TODAY+'");');
-
 console.log("\n=== C33. The day popup note matches the board note ===");
 w.eval('openDay("' + TODAY + '");');
 ["mDone","mClear","mCancel"].forEach(id =>
@@ -1220,6 +1194,58 @@ check(calBoot.win.location.hash === "#calendar",
 const plainBoot = bootAt("https://inmycalendar.com/");
 check(plainBoot.win.location.hash === "#board",
       "and a plain visit still gets its #board hash exactly as before");
+
+
+console.log("\n=== C38. A task can be added and read without a mouse ===");
+/* Three complaints drove this: a phone keyboard has no reliable Enter, a long
+   task showed only its first few words, and the row controls hid behind a
+   :hover that a touch screen cannot produce. */
+toBoard();
+dom.window.eval('setScope("day"); setDate(iso(today()));');
+
+const addBtns = qa("#scopeHost .addgo");
+check(addBtns.length === 3, "every column has a visible Add button, not just an Enter key");
+check(addBtns.every(b => b.type === "button"), "they are real buttons, so they never submit a form");
+check(addBtns.every(b => /^Add to /.test(b.title || "")),
+      "each says which column it adds to, for screen readers and tooltips");
+
+const beforeAdd = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+const todoField = col(0).querySelector(".cadd");
+todoField.value = "Added with the button, no Enter pressed";
+click(col(0).querySelector(".addgo"));
+const afterAdd = JSON.parse(w.localStorage.getItem("imc.tasks"));
+check(afterAdd.length === beforeAdd + 1, "clicking it adds the task without any key being pressed");
+check(afterAdd.some(t => t.text === "Added with the button, no Enter pressed"),
+      "and the task carries the text that was typed");
+check(col(0).querySelector(".cadd").value === "", "the field clears itself ready for the next one");
+
+const emptyBefore = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+col(0).querySelector(".cadd").value = "   ";
+click(col(0).querySelector(".addgo"));
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === emptyBefore,
+      "an empty or blank field adds nothing");
+
+/* The text itself: two lines then ellipsis, never one, never unlimited. */
+check(/\.t \.txt\{[^}]*-webkit-line-clamp:2/.test(flat),
+      "task text is clamped to two lines rather than truncated at one");
+check(!/\.t \.txt\{[^}]*white-space:nowrap/.test(flat),
+      "the single-line nowrap that hid most of every task is gone");
+check(/\.t \.txt\{[^}]*overflow-wrap:anywhere/.test(flat),
+      "a long unbroken word wraps instead of overflowing the card");
+check(/\.t\{[^}]*align-items:flex-start/.test(flat),
+      "the row aligns to the top, so controls stay on the first line when text wraps");
+
+/* Touch: the controls cannot live behind :hover alone. */
+check(/@media \(hover:none\)\{\.t \.ops\{visibility:visible\}\}/.test(flat),
+      "on a touch screen the row controls are always visible, not hover-gated");
+
+/* The repeat control is gone, and so is the machinery behind it. */
+const anyRow = qa("#scopeHost .t")[0];
+check(!!anyRow, "there is a task row to inspect");
+check(![...anyRow.querySelectorAll(".op")].some(b => /Repeat|Every day|Every week|Every month/.test(b.title || "")),
+      "the repeat control has been removed from the row");
+check(!/materialiseRepeats|setRepeat|repeatMatches/.test(js),
+      "and its machinery is gone too, so nothing keeps generating tasks with no way to stop it");
 
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

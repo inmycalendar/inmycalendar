@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 495 passed, 0 failed
+npm test         # expect: 502 passed, 0 failed
 ```
 
 ---
@@ -54,7 +54,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       495 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       502 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -184,7 +184,7 @@ collide with the semantic colours.
 npm test
 ```
 
-495 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+502 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -224,6 +224,16 @@ bugs that static review missed.
   string survives that call and a fragment does not, which is why the bug looked like
   "OAuth is broken" rather than "we overwrote the answer". Section C37 boots the app at
   the real URL Google redirects to and fails if the token is not still there.
+- **Hiding controls behind `:hover` makes them unreachable on a phone.** The task
+  row's edit / move / delete buttons were `visibility:hidden` until `:hover`, which a
+  touch screen never produces. `@media (hover:none)` now shows them always.
+- **`white-space:nowrap` plus `text-overflow:ellipsis` hides most of a real task.** One
+  line showed about three words of a sentence-length task. Two lines via
+  `-webkit-line-clamp:2` reads properly and still caps how much vertical space one task
+  can take. The row needs `align-items:flex-start` too, or the controls drop to the
+  second line with the text.
+- **An Enter-only input is unusable on a phone.** Mobile keyboards often show "go" or
+  nothing useful, so every add field needs a visible button doing the same job.
 - **Never run a blind find/replace across HTML.**
 - **A media query that changes `display` does not reset the other properties.** `.shell` is a grid
   with `align-items:start`; the mobile override switched it to `flex-direction:column` but `start`

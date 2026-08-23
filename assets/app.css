@@ -45,9 +45,12 @@
   text-transform:uppercase}
 .authslot .signin{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
 .authslot .signin:hover{background:var(--accent2);border-color:var(--accent2)}
-.authslot .who{width:26px;height:26px;border-radius:50%;background:var(--accentBg);color:var(--ink);
+/* Was a 26px circle holding one letter, which read as a placeholder rather
+   than as "you are signed in". It now carries the first name, so it has to be
+   a pill that grows with the text instead of a fixed circle. */
+.authslot .who{max-width:120px;height:26px;border-radius:13px;background:var(--accentBg);color:var(--ink);
   display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;
-  border:1px solid var(--rule)}
+  padding:0 10px;border:1px solid var(--rule);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .authslot{position:relative}
 .authmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;width:250px;background:var(--card);
@@ -163,8 +166,15 @@ main{padding:16px 0 0}
 .ch::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;background:var(--rule)}
 .c-todo::before{background:var(--todo)} .c-doing::before{background:var(--doing)} .c-done::before{background:var(--done)}
 .ch .n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
-.cadd{width:calc(100% - 20px);margin:0 10px 8px;background:var(--card);border:1px solid var(--rule);
-  border-radius:7px;padding:5px 9px;font-size:12px;height:30px;min-width:0}
+/* A phone keyboard has no reliable Enter, so the add field carries a visible
+   button. The row is the flex parent; the input flexes, the button does not. */
+.addrow{display:flex;gap:6px;align-items:center;margin:0 10px 8px;min-width:0}
+.cadd{flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);
+  border-radius:7px;padding:5px 9px;font-size:12px;height:30px}
+.addgo{flex:none;width:30px;height:30px;border:1px solid var(--rule);border-radius:7px;
+  background:var(--card);color:var(--soft);font-size:16px;line-height:1;padding:0;cursor:pointer}
+.addgo:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.addgo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cadd::placeholder{color:var(--faint)}
 .cadd:focus{outline:none;border-color:var(--accent)}
 /* Cap the lane so a long list scrolls inside the column instead of pushing
@@ -177,16 +187,27 @@ main{padding:16px 0 0}
    "Year at a glance" sits in the same place whichever scope you are in */
 .rlist{max-height:var(--laneMax);overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
 .lane.over{outline:2px dashed var(--accent);outline-offset:-4px}
-.t{display:flex;align-items:center;gap:6px;min-width:0;min-height:28px;padding:4px 8px;
+.t{display:flex;align-items:flex-start;gap:6px;min-width:0;min-height:28px;padding:4px 8px;
   border:1px solid var(--rule);border-radius:8px;background:var(--card)}
 .t.s-todo{background:var(--todoBg);border-color:var(--todoE)}
 .t.s-doing{background:var(--doingBg);border-color:var(--doingE)}
 .t.s-done{background:var(--doneBg);border-color:var(--doneE)}
 .t .grip{flex:none;color:var(--faint);font-size:11px;cursor:grab;letter-spacing:-1px}
-.t .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+/* Two lines, then ellipsis. One line hid all but the first few words of any
+   real task; unlimited lines would let one task eat the whole lane. Two is the
+   compromise: enough to read the task, capped so the board stays scannable.
+   -webkit-line-clamp is supported in every current browser including Firefox. */
+.t .txt{flex:1;min-width:0;font-size:12.5px;line-height:1.35;cursor:text;
+  display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;overflow-wrap:anywhere}
+/* the grip and the controls sit on the first line whatever the text does */
+.t .grip,.t .ops{margin-top:1px}
 .t.s-done .txt{text-decoration:line-through;color:var(--soft)}
 .t .ops{display:flex;gap:2px;flex:none;visibility:hidden}
 .t:hover .ops,.t:focus-within .ops{visibility:visible}
+/* A touch screen cannot hover, so hiding the controls behind :hover made them
+   unreachable on a phone. Anything that reports no hover gets them always on. */
+@media (hover:none){.t .ops{visibility:visible}}
 .t.dragging{opacity:.4}
 .op{background:var(--card);border:1px solid var(--rule);width:20px;height:19px;border-radius:5px;
   font-size:10.5px;line-height:1;padding:0;color:var(--soft)}

@@ -74,9 +74,17 @@ window.imcAuth = { user:null, client:null, ready:false };
       return;
     }
 
+    /* Google and Microsoft both hand back a display name. A single letter
+       told the user nothing and looked like a placeholder; the first name is
+       what every other app shows. Email is the fallback when a provider gives
+       no name at all, which is the case for a magic link. */
     var email = (user.email || "").toLowerCase();
-    var who = el("span","who", (email[0] || "?").toUpperCase());
-    who.title = email;
+    var meta = user.user_metadata || {};
+    var full = (meta.full_name || meta.name || meta.preferred_username || "").trim();
+    var label = full ? full.split(/s+/)[0] : (email.split("@")[0] || "Account");
+    if (label.length > 14) label = label.slice(0,13) + "…";
+    var who = el("span","who", label);
+    who.title = (full ? full + " - " : "") + email;
     var outBtn = el("button","btn signout","Sign out");
     outBtn.addEventListener("click", function(){
       outBtn.disabled = true;

@@ -380,46 +380,6 @@ function moveTaskToDate(id, newDate){
    cases. The template records which dates it has already produced, so deleting
    an instance does not make it come back.
    --------------------------------------------------------------------------- */
-var REPEATS = { d:"Every day", w:"Every week", m:"Every month" };
-function repeatMatches(t, from, target){
-  if (t.repeat === "d") return true;
-  if (t.repeat === "w") return from.getDay() === target.getDay();
-  if (t.repeat === "m") return from.getDate() === target.getDate();
-  return false;
-}
-function materialiseRepeats(uptoISO){
-  var upto = parseISO(uptoISO); if (!upto) return;
-  var changed = false;
-  for (var i = tasks.length - 1; i >= 0; i--){
-    var t = tasks[i];
-    if (!t.repeat || t.fromRepeat) continue;
-    var from = parseISO(t.date); if (!from) continue;
-    if (upto <= from) continue;
-    if (Math.round((upto - from) / MS_DAY) > 400) continue;   /* sanity cap */
-    t.gen = t.gen || [];
-    var cur = addDays(from, 1);
-    while (cur <= upto){
-      var ds = iso(cur);
-      if (repeatMatches(t, from, cur) && t.gen.indexOf(ds) < 0){
-        t.gen.push(ds);
-        tasks.push({ id:uid(), date:ds, text:t.text, status:"todo",
-                     order:lane(ds,"todo").length, fromRepeat:t.id,
-                     ts:{todo:stamp(),doing:null,done:null} });
-        changed = true;
-      }
-      cur = addDays(cur, 1);
-    }
-  }
-  if (changed) commit("tasks");
-}
-function setRepeat(id, kind){
-  var t = byId(id); if (!t) return;
-  if (t.fromRepeat){ t = byId(t.fromRepeat) || t; }   /* edit the template */
-  t.repeat = kind || null;
-  if (!kind) delete t.gen;
-  commit("tasks");
-  materialiseRepeats(sel);
-}
 function delTask(id){
   var t = byId(id); if (!t) return;
   var d = t.date, s = t.status;
@@ -441,18 +401,29 @@ function renderKanban(host, ds){
       h.appendChild(mk("span","n", String(l.length)));
       col.appendChild(h);
 
+      /* Enter still works, but a phone keyboard often has no Enter that
+         submits, so the field carries a visible button doing the same thing. */
+      var addRow = mk("div","addrow");
       var inp = document.createElement("input");
       inp.type = "text"; inp.className = "cadd"; inp.placeholder = "+ add";
       inp.setAttribute("aria-label","Add a task to " + st.label);
       inp.setAttribute("data-add", st.k);
-      inp.addEventListener("keydown", function(e){
-        if (e.key !== "Enter") return;
+      function submitAdd(){
         var v = inp.value.trim(); if (!v) return;
         addTask(ds, v, st.k); inp.value = ""; refresh();
         var again = host.querySelector('.cadd[data-add="' + st.k + '"]');
         if (again && again.focus) again.focus();
+      }
+      inp.addEventListener("keydown", function(e){
+        if (e.key === "Enter") submitAdd();
       });
-      col.appendChild(inp);
+      var addGo = mk("button","addgo","+");
+      addGo.type = "button";
+      addGo.title = "Add to " + st.label;
+      addGo.setAttribute("aria-label","Add to " + st.label);
+      addGo.addEventListener("click", submitAdd);
+      addRow.appendChild(inp); addRow.appendChild(addGo);
+      col.appendChild(addRow);
 
       var wrap = mk("div","lane");
       wrap.setAttribute("data-s", st.k);
@@ -506,16 +477,6 @@ function taskRow(task, st, idx, total){
   ops.appendChild(opBtn("\u25bc","Move down", idx === total-1, function(){ nudge(task.id, 1); refresh(); }));
   ops.appendChild(opBtn("\u2190","Move left", st.k === "todo", function(){ shiftStatus(task.id,-1); refresh(); }));
   ops.appendChild(opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); }));
-  var rp = byId(task.fromRepeat) || task;
-  var rpTitle = rp.repeat ? (REPEATS[rp.repeat] + " - click to change") : "Repeat this task";
-  var rpBtn = opBtn("\u21bb", rpTitle, false, function(){
-    var order = [null,"d","w","m"];
-    var next = order[(order.indexOf(rp.repeat || null) + 1) % order.length];
-    setRepeat(task.id, next);
-    refresh();
-  });
-  if (rp.repeat) rpBtn.className = "op on";
-  ops.appendChild(rpBtn);
   ops.appendChild(opBtn("\u{1F4C5}","Move to another day", false, function(){
     var inp = document.createElement("input");
     inp.type = "date"; inp.value = task.date;
@@ -675,7 +636,6 @@ function renderDayNote(){
 function renderBoard(){
   el.isoOut.textContent = sel;
   el.dInput.value = sel;
-  materialiseRepeats(sel);
   renderCarry();
   var d = parseISO(sel), wk = weekOf(sel);
   if (cfg.scope === "day"){
