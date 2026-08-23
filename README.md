@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 644 passed, 0 failed
+npm test         # expect: 652 passed, 0 failed
 ```
 
 ---
@@ -43,7 +43,8 @@ npm test         # expect: 644 passed, 0 failed
 ```
 index.html          the app
 about.html          what it is and why - the page search engines and AI summaries quote
-holidays/           246 generated country pages + index. Built by tools/build-holiday-pages.js;
+holidays/           1,719 generated pages: one hub per country plus one page per country
+                    per year, and an index. Built by tools/build-holiday-pages.js;
                     never hand-edit, re-run the generator
 downloads/          the analytics workbook offered next to Export tasks
 tools/
@@ -62,7 +63,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       644 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       652 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -256,7 +257,7 @@ collide with the semantic colours.
 npm test
 ```
 
-644 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+652 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
