@@ -1311,7 +1311,10 @@ console.log("\n=== C40. The phone pass ===");
 /* An Apple design reviewer's summary of the previous build was that the mobile
    version would lose users. These are the three faults that made it feel
    broken rather than merely cramped. */
-const phoneCss = flat.split("@media (max-width:640px)").pop();
+/* Every phone block, not just the last one. Using .pop() here broke the moment
+   a second (max-width:640px) block was appended lower down the file, which is
+   a normal thing to do and should not fail unrelated assertions. */
+const phoneCss = flat.split("@media (max-width:640px)").slice(1).join("");
 check(/font-size:16px/.test(phoneCss),
       "inputs are 16px on a phone, the exact threshold below which iOS zooms the page on focus");
 check(/\.wg \.dc\{min-height:34px/.test(phoneCss),
@@ -1331,6 +1334,73 @@ check(/#tLabel,#tDate,#tUnit\{min-height:38px\}/.test(phoneCss),
       "the countdown fields are named explicitly, or they keep zooming the page");
 check(/#holReg\{width:20px;height:20px\}/.test(phoneCss),
       "the regional-holidays checkbox is big enough to hit with a thumb");
+
+
+console.log("\n=== C41. The sync seam ===");
+/* sync.js needs four things from app.js and nothing else. If any of them goes
+   missing the sync layer fails silently, which is the worst possible failure
+   for a thing whose job is not losing your data. */
+check(typeof w.imcStore.read === "function", "sync can read the current state of a bucket");
+check(typeof w.imcStore.adopt === "function", "and write state that came from the server");
+check(typeof w.imcStore.discard === "function", "and drop a pending edit that lost a conflict");
+check(typeof w.imcStore.clearLocal === "function", "and clear this device on sign-out");
+check(typeof w.imcStore.repaint === "function", "and redraw once rows have landed");
+
+/* adopt() must NOT journal. Journalling a pulled row would push it straight
+   back on the next sync, and every device would re-send everything it had just
+   received, for ever. */
+w.imcStore.fullSyncDone();
+const adoptedId = "srv_" + Date.now().toString(36);
+const beforeAdopt = JSON.parse(JSON.stringify(w.imcStore.read("tasks")));
+w.imcStore.adopt("tasks", beforeAdopt.concat([{ id:adoptedId, date:TODAY, text:"came from the server",
+  status:"todo", order:99, ts:{todo:null,doing:null,done:null} }]));
+check(w.imcStore.read("tasks").some(t => t.id === adoptedId), "a pulled row lands in local state");
+check(w.imcStore.changes().length === 0,
+      "and creates NO journal entry, so it is never pushed back to the server it came from");
+
+/* A local edit after adopting must still journal normally. */
+dom.window.eval('byId("' + adoptedId + '").text = "edited locally"; commit("tasks");');
+check(w.imcStore.changes().some(c => c.id === adoptedId),
+      "but editing that same row locally does journal it, ready to push");
+
+/* discard() drops one pending row without touching the others. */
+w.imcStore.fullSyncDone();
+dom.window.eval('byId("' + adoptedId + '").text = "loses to the server"; commit("tasks");');
+const others = w.imcStore.changes().length;
+w.imcStore.discard("tasks", adoptedId);
+check(!w.imcStore.changes().some(c => c.id === adoptedId),
+      "a pending edit that lost on timestamp is dropped rather than pushed over the newer one");
+check(w.imcStore.changes().length === others - 1, "and only that one row is dropped");
+
+/* Sign-out must leave nothing personal behind on a shared machine. */
+w.imcStore.adopt("notes", { "2026-05-05": { color:1, note:"private note" } });
+w.imcStore.clearLocal();
+check(w.imcStore.read("tasks").length === 0, "signing out clears the tasks from this device");
+check(Object.keys(w.imcStore.read("notes")).length === 0, "and the day notes, which are the private part");
+check(w.imcStore.read("track").length === 0, "and the countdowns");
+check(w.imcStore.changes().length === 0, "and empties the journal, so nothing re-uploads to the wrong account");
+check(!!w.imcStore.read("cfg"), "but keeps settings like week-start and country, which are preferences not secrets");
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === 0, "the wipe reaches storage, not just memory");
+
+/* The change event is what tells sync there is work to do. */
+let fired = 0;
+w.addEventListener("imc:changed", () => fired++);
+dom.window.eval('addTask(sel, "fires the sync signal", "todo"); ');
+check(fired > 0, "a real edit fires imc:changed, which is how sync knows to push");
+const quiet = fired;
+dom.window.eval('commit("tasks");');
+check(fired === quiet, "committing with nothing changed fires nothing, so sync is not woken for no reason");
+
+console.log("\n=== C42. sync.js is optional, never load-bearing ===");
+const syncSrc = readFile("assets/sync.js");
+check(/PULL, MERGE, PUSH/.test(syncSrc),
+      "the order is documented: pushing first would overwrite a newer remote edit with an older local one");
+check(/deleted/.test(syncSrc), "deletions travel as markers, not as absent rows");
+check(!/service_role/.test(syncSrc), "no service_role key anywhere near this file");
+check(/imc\.lastPull/.test(syncSrc), "it pulls incrementally rather than refetching everything every time");
+/* index.html loads it, and the app has to survive it being absent. */
+check(/assets\/sync\.js\?v=\d+/.test(readFile("index.html")), "index.html loads sync.js with a cache tag");
+check(!/assets\/sync\.js/.test(readFile("guide.html")), "the content pages do not load it, having nothing to sync");
 
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

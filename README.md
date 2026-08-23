@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 523 passed, 0 failed
+npm test         # expect: 547 passed, 0 failed
 ```
 
 ---
@@ -50,11 +50,12 @@ assets/
   app.css           board, calendar, rail, modal - loaded only by the app
   app.js            all application logic (~1370 lines)
   auth.js           Supabase sign-in (Google / Microsoft / GitHub / email magic link)
+  sync.js           cross-device sync: pull, merge, push. Optional, never load-bearing
   site.js           marks the current page in the nav on content pages
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       523 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       547 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -126,6 +127,37 @@ useful for cycle time.
 **Settings migrations matter.** A returning user has old values in localStorage. When defaults
 change, migrate them (see `OLD_SETS` in `init()`) or the developer testing on their own browser
 sees stale data and concludes the deploy failed.
+
+### How sync works
+
+`assets/sync.js`, loaded only by `index.html`. Optional in exactly the way `auth.js` is: if it
+never loads, the app behaves as it always did.
+
+**Order is PULL, MERGE, PUSH, and that order is the whole design.** Pushing first would send our
+copy of a row over a newer edit made on another device, which is precisely the case
+"most recent edit wins" exists to decide.
+
+The merge is per row:
+
+- a remote row that is **not** in the local change journal: the server wins, adopt it.
+- a remote row that **is** in the journal: compare timestamps. Newer remote means our pending
+  edit lost, so it is discarded rather than pushed. Newer local means we keep it and push it.
+- a remote row with `deleted = true` removes the local row. Absent rows mean nothing, because an
+  absent row is indistinguishable from one this device has not seen yet.
+
+`imcStore.adopt()` writes pulled state **without journalling it**. Journalling a pulled row would
+push it straight back on the next sync, and every device would spend forever re-sending what it
+had just received.
+
+Sync is woken by an `imc:changed` event fired from `commit()`, and only when something actually
+differs. That single hook is the reason the save choke point was built first.
+
+**Sign-out clears this device and leaves the server untouched**, which is the point on a shared
+machine. Tasks, day notes and countdowns go; week-start and country stay, because they are
+preferences rather than private data.
+
+**Local field names and column names differ on purpose.** `order` is a reserved word in SQL, so
+the column is `pos`. Everything crosses through `toRemote` / `fromRemote` and nowhere else.
 
 ### Sync storage (Supabase Postgres)
 
@@ -217,7 +249,7 @@ collide with the semantic colours.
 npm test
 ```
 
-523 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+547 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -347,10 +379,8 @@ itself and the app carries on.
 ## Roadmap
 
 - [x] Postgres tables + Row Level Security - **done**, see "Sync storage" below
-- [ ] Sync. **Agreed conflict rule:** merge at task level, not day level. Different tasks on the
-      same day both survive. The same task edited in two places - most recent edit wins.
-      Deletions must be recorded as markers, not dropped rows, or deleted tasks resurrect from
-      the other device.
+- [x] Sync - **built**, see "How sync works" below. Still needs a real two-device run by a
+      signed-in user before it can be called proven.
 - [ ] Row quota + column length constraints per user, to cap abuse
 - [ ] Ad-free tier via Lemon Squeezy (merchant of record handles EU VAT)
 - [ ] Consent management platform, then AdSense (required for EU visitors; apply only once there

@@ -519,3 +519,13 @@ main{padding:16px 0 0}
   .none{font-size:13px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+
+/* sync status, left of the account controls. Deliberately quiet: it is
+   reassurance, not a control, and it must never push the ribbon around, so it
+   has a fixed width and truncates rather than growing. */
+.syncst{font-size:10px;font-family:var(--disp);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;
+  flex:none;align-self:center}
+.syncst.ok{color:var(--done)}
+.syncst.warn{color:var(--doing)}
+@media (max-width:640px){.syncst{max-width:70px;font-size:9px}}

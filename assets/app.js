@@ -156,16 +156,59 @@ function openStore(){
       writeRaw(LS.pending, pending);
     },
     needsFullSync: function(){ return !!pending.full; },
-    fullSyncDone: function(){ pending = { full:false, n:0, rows:{} }; writeRaw(LS.pending, pending); }
+    fullSyncDone: function(){ pending = { full:false, n:0, rows:{} }; writeRaw(LS.pending, pending); },
+
+    /* --- the pull side ------------------------------------------------- */
+    read: function(kind){ return stateOf(kind); },
+
+    /* Write state that came FROM the server. It must NOT enter the journal:
+       journalling a pulled row would push it straight back on the next sync,
+       for ever, and every device would keep re-sending everything it had just
+       received. Re-baselining the shadow is what makes it "already known". */
+    adopt: function(kind, value){
+      if (kind === "tasks") tasks = value;
+      else if (kind === "notes") notes = value;
+      else if (kind === "track") track = value;
+      else cfg = value;
+      writeRaw(LS[kind], value);
+      shadow[kind] = rowMap(kind, value);
+    },
+
+    /* Drop one journal entry outright, for when the server's copy of a row
+       turns out to be newer than ours and our pending edit has lost. */
+    discard: function(kind, id){
+      var key = kind + ":" + id;
+      if (has(pending.rows, key)){ delete pending.rows[key]; pending.n -= 1; writeRaw(LS.pending, pending); }
+    },
+
+    repaint: function(){ try { renderAll(); setView(cfg.view === "calendar" ? "calendar" : "board"); } catch (e){} },
+
+    /* Sign-out on a shared machine must leave nothing behind. Only the things
+       that are actually personal go: settings like week-start and country are
+       preferences, not private data, and wiping them is just annoying. */
+    clearLocal: function(){
+      tasks = []; notes = {}; track = []; carryHidden = {};
+      writeRaw(LS.tasks, tasks); writeRaw(LS.notes, notes); writeRaw(LS.track, track);
+      shadow.tasks = rowMap("tasks", tasks);
+      shadow.notes = rowMap("notes", notes);
+      shadow.track = rowMap("track", track);
+      pending = { full:false, n:0, rows:{} };
+      writeRaw(LS.pending, pending);
+      try { renderAll(); setView(cfg.view === "calendar" ? "calendar" : "board"); } catch (e){}
+    }
   };
 }
 
 function commit(kind){
   var value = stateOf(kind);
   writeRaw(LS[kind], value);
-  var now = rowMap(kind, value), was = shadow[kind] || {}, k;
-  for (k in now) if (has(now,k) && now[k] !== was[k]) markPending(kind, k, "upsert");
-  for (k in was) if (has(was,k) && !has(now,k)) markPending(kind, k, "delete");
+  var now = rowMap(kind, value), was = shadow[kind] || {}, k, changed = false;
+  for (k in now) if (has(now,k) && now[k] !== was[k]){ markPending(kind, k, "upsert"); changed = true; }
+  for (k in was) if (has(was,k) && !has(now,k)){ markPending(kind, k, "delete"); changed = true; }
+  /* One event, fired only when something actually differs. sync.js listens for
+     it; nothing else in the app does, and if sync.js never loads this is a
+     no-op. The choke point exists precisely so this hook has one home. */
+  if (changed) try { window.dispatchEvent(new CustomEvent("imc:changed", { detail:{ kind:kind } })); } catch (e){}
   shadow[kind] = now;
   writeRaw(LS.pending, pending);
 }
