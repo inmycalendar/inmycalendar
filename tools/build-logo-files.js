@@ -20,13 +20,13 @@ const SVG  = fs.readFileSync(path.join(REPO, "assets/favicon.svg"));
    the text is replaced with the same shapes drawn as paths - identical on
    every machine, and what a logo file has to be. */
 const OUT = [
-  { file: "downloads/imc-logo-512.png",  size: 512,  bg: null },
-  { file: "downloads/imc-logo-1024.png", size: 1024, bg: null },
-  { file: "downloads/imc-logo-512.jpg",  size: 512,  bg: "#ffffff", jpg: true },
-  { file: "downloads/imc-logo-1024.jpg", size: 1024, bg: "#ffffff", jpg: true },
-  { file: "assets/icon-192.png",         size: 192,  bg: "#ffffff" },
-  { file: "assets/icon-512.png",         size: 512,  bg: "#ffffff" },
-  { file: "assets/apple-touch-icon.png", size: 180,  bg: "#ffffff" }
+  { file: "downloads/imc-logo-512-v2.png",  size: 512,  bg: null },
+  { file: "downloads/imc-logo-1024-v2.png", size: 1024, bg: null },
+  { file: "downloads/imc-logo-512-v2.jpg",  size: 512,  bg: "#ffffff", jpg: true },
+  { file: "downloads/imc-logo-1024-v2.jpg", size: 1024, bg: "#ffffff", jpg: true },
+  { file: "assets/icon-192-v2.png",         size: 192,  bg: "#ffffff" },
+  { file: "assets/icon-512-v2.png",         size: 512,  bg: "#ffffff" },
+  { file: "assets/apple-touch-icon-v2.png", size: 180,  bg: "#ffffff" }
 ];
 
 (async () => {

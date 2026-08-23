@@ -105,7 +105,7 @@ function shell({ title, desc, canonical, ld, body }){
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon.ico?v=${V}" sizes="any">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=${V}">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=${V}">
 <link rel="manifest" href="../manifest.webmanifest?v=${V}">
 <meta name="theme-color" content="#18181b">
 <link rel="canonical" href="${canonical}">

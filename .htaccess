@@ -1,0 +1,34 @@
+# Apache configuration for Hostinger.
+#
+# WHY THIS FILE EXISTS
+# The web app manifest was being served as Content-Type: text/plain, because
+# Apache has no built-in type for .webmanifest. The spec calls for
+# application/manifest+json, and a browser that enforces it refuses to install
+# the app - the icons and the install prompt simply never appear, with nothing
+# in the page to explain why.
+
+<IfModule mod_mime.c>
+  AddType application/manifest+json  .webmanifest
+  AddType image/svg+xml              .svg
+  AddType image/x-icon               .ico
+</IfModule>
+
+# Long caching is right for these: their names change when their contents do,
+# so a stale copy is never served for a file that has been updated.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/png            "access plus 1 year"
+  ExpiresByType image/jpeg           "access plus 1 year"
+  ExpiresByType image/svg+xml        "access plus 1 week"
+  ExpiresByType image/x-icon         "access plus 1 week"
+
+  # The manifest and the pages must NOT be cached hard. The manifest names the
+  # icon files, so a stale one keeps pointing at artwork that has been replaced.
+  ExpiresByType application/manifest+json "access plus 1 hour"
+  ExpiresByType text/html            "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
