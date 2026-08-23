@@ -469,7 +469,12 @@ function taskRow(task, st, idx, total){
   /* click the text to rename. The old behaviour was double-click only, which
      is undiscoverable, and on touch it did nothing at all. */
   txt.addEventListener("click", function(){ inlineEdit(n, txt, task); });
-  n.appendChild(txt);
+  /* txt is appended AFTER ops, further down. The controls are a right-hand
+     float, and a line box only flows around a float that precedes it in the
+     source. With the old order the controls narrowed every line of the task
+     instead of just the first, so line two stopped short of the right edge for
+     no reason. Source order here is grip, ops, txt; the float puts ops back in
+     the top right visually. */
 
   var ops = mk("div","ops");
   ops.appendChild(opBtn("\u270e","Rename", false, function(){ inlineEdit(n, txt, task); }));
@@ -492,6 +497,7 @@ function taskRow(task, st, idx, total){
   x.className = "op x";
   ops.appendChild(x);
   n.appendChild(ops);
+  n.appendChild(txt);   /* after ops, so the text flows around the float */
   return n;
 }
 function opBtn(label,title,disabled,fn){

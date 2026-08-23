@@ -1229,15 +1229,27 @@ click(col(0).querySelector(".addgo"));
 check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === emptyBefore,
       "an empty or blank field adds nothing");
 
-/* The text itself: two lines then ellipsis, never one, never unlimited. */
-check(/\.t \.txt\{[^}]*-webkit-line-clamp:2/.test(flat),
-      "task text is clamped to two lines rather than truncated at one");
+/* The text itself: three lines, never one, never unlimited. The controls are a
+   float, so ONLY the first line shortens around them and lines two and three
+   run the full width of the card. A flex row narrowed every line equally,
+   which is what left line two stopping short of the right edge. */
+check(/\.t \.txt\{[^}]*max-height:calc\(1\.35em \* 3\)/.test(flat),
+      "task text is capped at three lines, not one");
+check(!/\.t \.txt\{[^}]*-webkit-line-clamp/.test(flat),
+      "the cap is max-height, because a -webkit-box will not flow around a float");
 check(!/\.t \.txt\{[^}]*white-space:nowrap/.test(flat),
       "the single-line nowrap that hid most of every task is gone");
 check(/\.t \.txt\{[^}]*overflow-wrap:anywhere/.test(flat),
       "a long unbroken word wraps instead of overflowing the card");
-check(/\.t\{[^}]*align-items:flex-start/.test(flat),
-      "the row aligns to the top, so controls stay on the first line when text wraps");
+check(/\.t\{display:block/.test(flat),
+      "the row is a block, not a flex row that would narrow every line equally");
+check(/\.t \.ops\{float:right/.test(flat),
+      "the controls are a right-hand float, so only the first line shortens around them");
+/* Source order is load-bearing: a line box only flows around a float that
+   PRECEDES it. ops must be appended before txt or the float does nothing. */
+const rowKids = [...qa("#scopeHost .t")[0].children].map(n => n.className.split(" ")[0]);
+check(rowKids.indexOf("ops") < rowKids.indexOf("txt"),
+      "and the controls come before the text in the DOM, or the float would not affect it");
 
 /* Touch: the controls cannot live behind :hover alone. */
 check(/@media \(hover:none\)\{\.t \.ops\{visibility:visible\}\}/.test(flat),
@@ -1299,10 +1311,10 @@ check(/\.wg \.dc\{min-height:34px/.test(phoneCss),
       "calendar days are 34px tall rather than 21px, so they can be hit with a thumb");
 check(/\.op\{width:34px;height:32px/.test(phoneCss),
       "the row controls are thumb-sized rather than 20px");
-check(/\.t\{flex-wrap:wrap/.test(phoneCss),
-      "and they wrap onto their own line instead of fighting the task text for a 343px row");
-check(/\.t \.txt\{flex:1 1 100%/.test(phoneCss),
-      "which gives the task text the full width of the card");
+check(/\.t\{display:flex;flex-direction:column/.test(phoneCss),
+      "on a phone the row is a column, since a float would leave 60px for the first line");
+check(/\.t \.txt\{order:1;float:none/.test(phoneCss),
+      "text first, controls under it, via flex order so the desktop source order is untouched");
 check(/\.cadd\{height:38px/.test(phoneCss) && /\.addgo\{width:38px;height:38px/.test(phoneCss),
       "the add field and its button are both 38px, comfortably tappable");
 /* Measured on the live site after the first pass: these four were still under
