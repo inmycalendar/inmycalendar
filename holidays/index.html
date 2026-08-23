@@ -3,10 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Public holidays by country, 2026 to 2031 - inmycalendar</title>
-<meta name="description" content="Public holiday dates for 246 countries and territories, from 2026 to 2031. National and regional holidays, free, with a year-at-a-glance calendar to plan around them.">
-<meta property="og:title" content="Public holidays by country, 2026 to 2031">
-<meta property="og:description" content="Public holiday dates for 246 countries and territories, from 2026 to 2031. National and regional holidays, free, with a year-at-a-glance calendar to plan around them.">
+<title>Public holidays by country - inmycalendar</title>
+<meta name="description" content="Public holiday dates for 246 countries and territories, 2025 to 2030. National and regional holidays, free, with a year-at-a-glance calendar to plan around them.">
+<meta property="og:title" content="Public holidays by country">
+<meta property="og:description" content="Public holiday dates for 246 countries and territories, 2025 to 2030. National and regional holidays, free, with a year-at-a-glance calendar to plan around them.">
+<meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/holidays/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,12 +15,24 @@
 <link rel="icon" href="../assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
 <link rel="canonical" href="https://inmycalendar.com/holidays/">
-<link rel="stylesheet" href="../assets/site.css?v=38">
+<link rel="stylesheet" href="../assets/site.css?v=39">
 <style>
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
+table{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px;font-family:var(--sans)}
+thead th{text-align:left;font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--soft);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--rule)}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--rule2)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.reg td{color:var(--soft)}
 .ctrylist{columns:4 170px;column-gap:18px;font-family:var(--sans);font-size:13.5px;margin-top:8px}
 .ctrylist a{display:block;padding:2px 0;text-decoration:none;color:var(--ink);break-inside:avoid}
 .ctrylist a:hover{text-decoration:underline}
-</style>
+.yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
+  border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
+.yearnav a:hover{background:var(--accentBg)}
+.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}</style>
+
 </head>
 <body>
 <header class="bar">
@@ -27,7 +40,7 @@
   <a class="brand" href="../index.html"><svg width="22" height="22" viewBox="0 0 128 128" aria-hidden="true"><rect width="128" height="128" rx="26" fill="#18181b"/><rect x="24" y="32" width="80" height="66" rx="10" fill="#fff"/><rect x="24" y="32" width="80" height="18" rx="10" fill="#d4d4d8"/><text x="64" y="90" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="600" font-size="40" fill="#18181b">imc</text></svg><span class="wordmark">in<b>my</b>calendar</span></a>
   <div class="appzone"></div>
   <nav class="sitenav">
-    <a href="../index.html#board">Kanban Board</a>
+    <a href="../index.html#board"><span class="navlong">Kanban Board</span><span class="navshort">Board</span></a>
     <a href="../index.html#calendar">Calendar</a>
     <span class="gap"></span>
     <a class="page" href="../about.html">About</a><a class="page" href="../guide.html">Guide</a><a class="page" href="index.html">Holidays</a><a class="page" href="../contact.html">Contact</a><a class="page" href="../privacy.html">Privacy</a>
@@ -37,9 +50,10 @@
 </header>
 
 <main class="wrap pagebody"><div class="body">
+
 <h1>Public holidays by country</h1>
-<div class="eyebrow">246 countries and territories &middot; 2026 to 2031</div>
-<p>Pick a country for its public holiday dates, or open any of them on a year-at-a-glance calendar to plan leave, travel and deadlines around them. Free, and no sign-up needed.</p>
+<div class="eyebrow">246 countries and territories &middot; 2025 to 2030</div>
+<p>Pick a country for its public holiday dates, year by year, national and regional. Every one can be opened on a year-at-a-glance calendar to plan leave, travel and deadlines around. Free, and no sign-up needed.</p>
 <div class="ctrylist">
 <a href="AF.html">Afghanistan</a>
 <a href="AL.html">Albania</a>
@@ -297,7 +311,7 @@
   </div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../assets/site.js?v=38"></script>
-<script src="../assets/auth.js?v=38"></script>
+<script src="../assets/site.js?v=39"></script>
+<script src="../assets/auth.js?v=39"></script>
 </body>
 </html>

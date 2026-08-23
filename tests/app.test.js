@@ -1557,8 +1557,11 @@ check(/<title>Public holidays in Japan[^<]*<\/title>/.test(jp), "and in its titl
 check(/rel="canonical" href="https:\/\/inmycalendar\.com\/holidays\/JP\.html"/.test(jp),
       "with a canonical URL, so it cannot compete with itself");
 /* Real content, not a stub. */
-const rowCount = (jp.match(/<tr><td>/g) || []).length;
-check(rowCount > 30, "it carries actual holiday dates in a table (" + rowCount + " rows), not just a link to the app");
+const rowCount = (jp.match(/<tr[^>]*><td>/g) || []).length;
+check(rowCount > 10, "the country hub carries the current year in full (" + rowCount + " rows), not just links");
+/* A hub has to link down, or the year pages get no authority from it. */
+check(/href="JP-2027\.html"/.test(jp) && /href="JP-2029\.html"/.test(jp),
+      "and links to each year page beneath it");
 check(/New Year's Day/.test(jp), "with real holiday names");
 check(/Vernal Equinox Day/.test(jp), "including ones specific to that country, so the page is not boilerplate");
 /* JSON.stringify with an indent puts a space after the colon; matching the
@@ -1581,8 +1584,24 @@ const usPage = fs.readFileSync(path.join(HOLDIR, "US.html"), "utf8");
 check(/>Regional</.test(usPage), "regional holidays are listed, not just national ones");
 check((usPage.match(/>Regional</g) || []).length > 40,
       "and there are many for a federal country, which is the long tail worth ranking for");
-check((usPage.match(/<h2>Public holidays in United States in \d{4}<\/h2>/g) || []).length === 6,
-      "six years are covered, since each year is another phrase someone types");
+/* THE POINT OF THE REWRITE. A page titled exactly "Public holidays in India
+   2027" beats a section inside one titled "2026 to 2031", because that is the
+   phrase people type. So: one page per country per year. */
+const yearPage = fs.readFileSync(path.join(HOLDIR, "IN-2027.html"), "utf8");
+check(/<title>Public holidays in India 2027 - inmycalendar<\/title>/.test(yearPage),
+      "a year page's title is the exact phrase someone searches for");
+check(/<h1>Public holidays in India 2027<\/h1>/.test(yearPage), "and its h1 matches the title");
+check(/rel="canonical" href="https:\/\/inmycalendar\.com\/holidays\/IN-2027\.html"/.test(yearPage),
+      "with its own canonical URL, so it does not compete with the hub above it");
+check((yearPage.match(/<tr[^>]*><td>/g) || []).length > 20, "carrying that whole year of dates");
+check(/href="IN-2026\.html"|href="IN-2028\.html"/.test(yearPage),
+      "and linking to the neighbouring years, so a crawler can walk the whole set");
+check(/fall on a weekday and \d+ at a weekend/.test(yearPage),
+      "plus a line specific to that exact year, so the page is not boilerplate");
+const yearFiles = holPages.filter(f => /^[A-Z]{2}-\d{4}\.html$/.test(f));
+check(yearFiles.length > 1000, "there is a page per country per year (" + yearFiles.length + " of them)");
+check(/holidays\/IN-2027\.html/.test(readFile("sitemap.xml")),
+      "and the sitemap lists them, or none of it is discoverable");
 
 /* Two different countries must not produce the same page. */
 const fr = fs.readFileSync(path.join(HOLDIR, "FR.html"), "utf8");
