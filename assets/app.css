@@ -202,11 +202,24 @@ main{padding:16px 0 0}
 /* Three lines, then clip. One line hid all but the first few words; unlimited
    lines would let a single task eat the lane. Three fits about 150 characters,
    which covers a real sentence-length task.
-   The cap is max-height rather than -webkit-line-clamp because line-clamp
-   needs display:-webkit-box, and a -webkit-box does not flow around a float -
-   which is the whole point of this layout. 3 x the line box, exactly. */
-.t .txt{display:block;font-size:12.5px;line-height:1.35;cursor:text;
-  max-height:calc(1.35em * 3);overflow:hidden;overflow-wrap:anywhere}
+
+   Two traps here, both of which silently produced the OLD broken layout where
+   every line was narrowed instead of just the first, and both of which were
+   caught by measuring the live page rather than by reading the CSS:
+
+   1. NOT -webkit-line-clamp. It needs display:-webkit-box, and a -webkit-box
+      does not flow around a float at all.
+   2. overflow:CLIP, never overflow:hidden. overflow:hidden establishes a block
+      formatting context, and a block formatting context refuses to overlap a
+      float - it shrinks its whole box to sit beside it. That narrowed every
+      line to 113px of a 307px card. overflow:clip does not create one, so the
+      line boxes flow around the float exactly as intended.
+
+   line-height 1.6 gives a 20px line box, which must stay >= the floated
+   controls' height or the float spills into line two and narrows that as
+   well. See .op below: the two numbers are a pair. */
+.t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;
+  max-height:calc(1.6em * 3);overflow:clip;overflow-wrap:anywhere}
 .t.s-done .txt{text-decoration:line-through;color:var(--soft)}
 /* Floated right and BEFORE the text in the source, or the first line would not
    shorten around it. visibility:hidden still reserves the space, so the text
@@ -217,7 +230,11 @@ main{padding:16px 0 0}
    unreachable on a phone. Anything that reports no hover gets them always on. */
 @media (hover:none){.t .ops{visibility:visible}}
 .t.dragging{opacity:.4}
-.op{background:var(--card);border:1px solid var(--rule);width:20px;height:19px;border-radius:5px;
+/* height pairs with .t .txt line-height above: the floated controls must fit
+   inside ONE line box (17px + 2px border = 19px, against a 20px line box) or
+   they spill into line two and narrow it, which is the bug this layout exists
+   to fix. Change one of these two numbers and you must change the other. */
+.op{background:var(--card);border:1px solid var(--rule);width:20px;height:17px;border-radius:5px;
   font-size:10.5px;line-height:1;padding:0;color:var(--soft)}
 .op:hover:not(:disabled){background:var(--card2);color:var(--ink)}
 .op:disabled{opacity:.3;cursor:not-allowed}

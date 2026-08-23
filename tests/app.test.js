@@ -1233,8 +1233,15 @@ check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === emptyBefore,
    float, so ONLY the first line shortens around them and lines two and three
    run the full width of the card. A flex row narrowed every line equally,
    which is what left line two stopping short of the right edge. */
-check(/\.t \.txt\{[^}]*max-height:calc\(1\.35em \* 3\)/.test(flat),
+check(/\.t \.txt\{[^}]*max-height:calc\(1\.6em \* 3\)/.test(flat),
       "task text is capped at three lines, not one");
+/* overflow:hidden makes a block formatting context, and a BFC refuses to
+   overlap a float - it sits beside it, narrowing EVERY line to the leftover
+   width. That was the original bug. overflow:clip creates no BFC. */
+check(/\.t \.txt\{[^}]*overflow:clip/.test(flat),
+      "the clip is overflow:clip, since overflow:hidden would box the text beside the float");
+check(!/\.t \.txt\{[^}]*overflow:hidden/.test(flat),
+      "and overflow:hidden is specifically not used on the task text");
 check(!/\.t \.txt\{[^}]*-webkit-line-clamp/.test(flat),
       "the cap is max-height, because a -webkit-box will not flow around a float");
 check(!/\.t \.txt\{[^}]*white-space:nowrap/.test(flat),
