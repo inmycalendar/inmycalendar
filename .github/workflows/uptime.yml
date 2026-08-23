@@ -130,32 +130,16 @@ jobs:
       - name: Every asset served matches the one committed
         run: |
           set -u
-          # WHY THIS EXISTS
-          # The build tag lives in the HTML, so comparing it catches an HTML
-          # that did not deploy - and nothing else. The icons were stale on the
-          # server for an unknown length of time while every other check passed:
-          # the deploy was updating text files and silently NOT replacing
-          # existing images. Nothing anywhere would have reported that.
-          #
-          # A fresh checkout on this runner is byte-identical to what Hostinger
-          # checks out (both LF), so a plain hash comparison is valid here in a
-          # way it is not on a Windows working copy.
-          bad=0
-          for f in $(git ls-files assets downloads manifest.webmanifest robots.txt \
-                     | grep -vE '^assets/holidays/'); do
-            code=$(curl -sS -L --max-time 25 -o live.tmp -w "%{http_code}" \
-                     "https://inmycalendar.com/$f" || echo "000")
-            if [ "$code" != "200" ]; then
-              echo "MISSING  $f -> HTTP $code"
-              bad=1
-            elif [ "$(sha256sum < "$f" | cut -d' ' -f1)" != "$(sha256sum < live.tmp | cut -d' ' -f1)" ]; then
-              echo "STALE    $f -> the server is serving different bytes from main"
-              bad=1
-            fi
-            rm -f live.tmp
-          done
-          if [ "$bad" = "0" ]; then echo "ok    every asset matches main"; fi
-          echo "asset_fail=$bad" >> "$GITHUB_ENV"
+          # The build tag check above only proves the HTML deployed. This
+          # checks the assets themselves. See .github/scripts/check-assets.js
+          # for why images are compared by dimensions rather than by hash - the
+          # host re-encodes them, and a hash comparison reports every image as
+          # stale for ever.
+          if node .github/scripts/check-assets.js; then
+            echo "asset_fail=0" >> "$GITHUB_ENV"
+          else
+            echo "asset_fail=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Fail the run if anything above broke
         run: |
