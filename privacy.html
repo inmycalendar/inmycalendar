@@ -5,14 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google-site-verification" content="gRRv6fKWN6oDjRM4Cr7qIJGNQwQ-DdCstT81NpCegRU">
 <title>Privacy - inmycalendar</title>
-<meta name="description" content="inmycalendar collects nothing. No accounts, no analytics, no server - your data stays in your browser.">
+<meta name="description" content="What inmycalendar stores and what it never stores. No analytics, no advertising, no tracking cookies. Sign-in is optional, and you can delete your account yourself at any time.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" href="assets/favicon.ico?v=45" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=45">
+<link rel="icon" href="assets/favicon.ico?v=46" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=46">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=46">
+<link rel="manifest" href="manifest.webmanifest?v=46">
+<meta name="theme-color" content="#18181b">
 <link rel="canonical" href="https://inmycalendar.com/privacy.html">
-<link rel="stylesheet" href="assets/site.css?v=45">
+<link rel="stylesheet" href="assets/site.css?v=46">
 </head>
 <body>
 <header class="bar">
@@ -46,7 +49,8 @@
 <p>Signing in is optional. Its only purpose is to sync your board across your devices.</p>
 <p>Sign-in is handled by Supabase, using whichever provider you choose - Google, Microsoft, GitHub, or a one-time link sent to your email. We receive your email address and a user ID from that provider. We never see or store your password.</p>
 <p>Once signed in, your tasks, day notes, day colours, countdowns and settings are stored in a database hosted in the EU (Frankfurt) so they can reach your other devices. That data is yours: it is readable only by your own account, enforced by the database itself, and it is not sold, shared or used for advertising.</p>
-<p>You can sign out at any time, and you can ask for your account and its data to be deleted by emailing <a href="mailto:hello@inmycalendar.com">hello@inmycalendar.com</a>.</p>
+<p>You can sign out at any time. You can also delete your account yourself, without asking anyone: click your initials in the top right, open <strong>Danger zone</strong>, and confirm. That removes your account and every task, day note, countdown and setting attached to it, immediately and on every device. It cannot be undone and there is no copy kept, so use <strong>Backup</strong> first if you might want one. If anything goes wrong, email <a href="mailto:hello@inmycalendar.com">hello@inmycalendar.com</a>.</p>
+<p>Crash reports are the one exception, and they are un-linked rather than deleted: the account they came from is erased from them, leaving a record that carries no name, no address and nothing you typed. Those disappear on their own within 30 days.</p>
 
 <h2>Backups you make yourself</h2>
 <p><strong>Backup</strong> and <strong>Export tasks</strong> write a file to your own device. What happens to it after that is up to you; it is not uploaded anywhere.</p>
@@ -66,13 +70,13 @@
 <footer>
   <div class="wrap">
     <a href="index.html#board">Kanban Board</a><a href="index.html#calendar">Calendar</a>
-    <a href="about.html">About</a><a href="guide.html">Guide</a><a href="holidays/index.html">Holidays</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
+    <a href="about.html">About</a><a href="guide.html">Guide</a><a href="holidays/index.html">Holidays</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="assets/errors.js?v=45"></script>
+<script src="assets/errors.js?v=46"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/site.js?v=45"></script>
-<script src="assets/auth.js?v=45"></script>
+<script src="assets/site.js?v=46"></script>
+<script src="assets/auth.js?v=46"></script>
 </body>
 </html>

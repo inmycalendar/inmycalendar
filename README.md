@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm ci           # only needed to run the tests
-npm test         # expect: 729 passed, 0 failed
+npm test         # expect: 804 passed, 0 failed
 ```
 
 The tests need **Node 22.22.2 or newer** - jsdom 30 refuses to run on anything
@@ -61,6 +61,11 @@ tools/
 guide.html          how to use it + what a Kanban board is (main SEO page)
 contact.html        contact + roadmap
 privacy.html        privacy policy
+terms.html          terms of use. The load-bearing part is the holiday-data
+                    disclaimer: 247 countries compiled from public sources, wrong
+                    often enough that nobody should book travel on it
+manifest.webmanifest  makes it installable to a home screen. Icon sizes here are
+                    checked against the real PNG headers by the tests
 assets/
   site.css          design tokens, ribbon, footer, content-page type - shared by all four pages
   app.css           board, calendar, rail, modal - loaded only by the app
@@ -73,7 +78,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       729 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       804 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -267,7 +272,7 @@ collide with the semantic colours.
 npm test
 ```
 
-729 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+804 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -424,6 +429,46 @@ defaults to a **dry run**, which reports who would be emailed and sends nothing.
 
 GitHub disables scheduled workflows after 60 days without a commit, and the fire time drifts
 under load. Treat it as "some time after 06:00 UTC".
+
+## Uptime and deploy drift
+
+`.github/workflows/uptime.yml` runs every 30 minutes. It checks the app, the guide, the holiday
+index, a country-year page, the sitemap, the manifest and `robots.txt`; that PostgREST and both
+Edge Functions answer; and that **`delete-account` still returns 401 to an unauthenticated
+delete request** - a live check of the security property, not just of availability.
+
+The half nobody thinks to build is the last step: **it compares the build tag on the live page
+against the one in `index.html` on `main`**. Hostinger pulls from `main` automatically, and when
+that pull fails the site stays up serving the *previous* version. Every "is it up" check passes
+while the fix you pushed an hour ago is not actually live. Comparing versions is what catches it.
+
+This is a canary, not a monitor. GitHub's scheduler drifts, has a five-minute floor, and
+switches itself off after 60 days without a commit, so it will not catch a short outage and it
+will not wake you up. If uptime ever matters commercially, put UptimeRobot or similar in front
+of it. You find out when the job fails and GitHub emails you.
+
+## Deleting an account
+
+`delete-account` (Supabase Edge Function). The privacy policy used to answer "delete my data"
+with "email hello@inmycalendar.com", which is a promise about somebody remembering rather than a
+mechanism.
+
+**The account deleted is the one the JWT belongs to, and the user id is never read from the
+request body.** That is the entire security model: a caller cannot name a victim, only present a
+token, and the token names them. Confirmed by sending `{"confirm":"DELETE","user_id":"..."}`
+with no token - it returns 401 and the id in the body is ignored.
+
+`verify_jwt` is **off at the gateway**, and that is deliberate rather than an oversight. The
+function is called from a browser on another origin, so it has to answer a CORS preflight, and
+the gateway's JWT check rejects the `OPTIONS` request before any code runs. The token is
+verified inside the function instead, in the first few lines.
+
+The browser asks twice - a click to reveal, then the word `DELETE` typed - because there is no
+undo and no backup to restore from. On success it also calls `imcStore.clearLocal()`, or the
+next person to open that tab still sees everything.
+
+Crash reports are un-linked rather than deleted (`ON DELETE SET NULL`): the account disappears
+from them, the diagnostic survives its 30 days carrying no name, address or content.
 
 ## Deployment
 

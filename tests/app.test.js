@@ -33,7 +33,10 @@ const appCss  = readFile("assets/app.css");
 const css  = siteCss + appCss;
 const flat = css.replace(/\s*\n\s*/g, "");
 const js   = readFile("assets/app.js");
-const PAGES = ["index.html","about.html","guide.html","contact.html","privacy.html"];
+/* Every hand-written page. terms.html belongs here, not on a list of its own:
+   whatever is true of the others - one logo, the reporter loading first, a
+   cache tag on every icon - has to be true of it too, or it drifts. */
+const PAGES = ["index.html","about.html","guide.html","contact.html","privacy.html","terms.html"];
 
 const errors = [];
 const vc = new VirtualConsole()
@@ -1923,6 +1926,110 @@ check(/matchMedia\([^)]*max-width:640px[^)]*\)/.test(authSrc),
    call is actually conditional on it. */
 check(/if\s*\(\s*!\s*narrow\s*&&\s*mail\.focus\s*\)/.test(authSrc),
       "and the email box is focused only when the screen is NOT narrow");
+}
+
+console.log("\n=== C50. Terms, the web app manifest, and deleting an account ===");
+{
+/* ---- terms of use ------------------------------------------------------ */
+check(fs.existsSync(path.join(ROOT,"terms.html")), "there is a terms page");
+const terms = readFile("terms.html");
+check(/<link rel="canonical" href="https:\/\/inmycalendar\.com\/terms\.html">/.test(terms),
+      "it declares its own canonical URL, so it is not read as a copy of another page");
+
+/* The holiday dates are the part of this site somebody could actually be
+   harmed by relying on: 247 countries, compiled from public sources, and
+   wrong often enough to matter. The disclaimer is the point of the page. */
+check(/for information only/i.test(terms) && /Do not use these dates/i.test(terms),
+      "it warns that the holiday dates are not a legal record");
+check(/as-is and as-available/i.test(terms),
+      "and that a free tool run by one person carries no uptime promise");
+
+/* A terms page nothing links to is a page nobody reads. It goes in the footer
+   rather than the ribbon: the ribbon already wraps on a phone, and adding to
+   it is exactly how the overlap bug came back twice. */
+PAGES.forEach(f => {
+  const src = readFile(f);
+  const footer = src.slice(src.indexOf("<footer"));
+  check(footer.indexOf('href="terms.html"') >= 0, f + ": links to the terms from its footer");
+  check(!/<nav class="sitenav">[\s\S]*?terms\.html[\s\S]*?<\/nav>/.test(src),
+        f + ": and does not add a seventh item to the ribbon");
+});
+const hol = readFile("holidays/IN-2027.html");
+check(hol.indexOf('href="../terms.html"') >= 0,
+      "the generated holiday pages link to it too, with the right relative path");
+check(readFile("sitemap.xml").indexOf("https://inmycalendar.com/terms.html") >= 0,
+      "and it is in the sitemap, or it exists but is never crawled");
+
+/* ---- the web app manifest ---------------------------------------------- */
+check(fs.existsSync(path.join(ROOT,"manifest.webmanifest")), "there is a web app manifest");
+const man = JSON.parse(readFile("manifest.webmanifest"));
+check(!!man.name && !!man.short_name, "it names the app both long and short");
+check(man.start_url === "/" && man.display === "standalone",
+      "it opens at the board as a standalone app, not in a browser tab");
+check(man.theme_color === "#18181b" && man.background_color === "#f6f7f9",
+      "its colours are declared, so an installed app does not flash white");
+
+/* A manifest that names an icon size the file does not have is the commonest
+   way an install ends up with a blank or stretched tile. Read the real PNG
+   headers rather than trusting the manifest. */
+man.icons.forEach(ic => {
+  const p = path.join(ROOT, ic.src);
+  check(fs.existsSync(p), "manifest icon exists on disk: " + ic.src);
+  if (!fs.existsSync(p)) return;
+  const b = fs.readFileSync(p);
+  const w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+  check(ic.sizes === w + "x" + h,
+        ic.src + " really is " + ic.sizes + " (header says " + w + "x" + h + ")");
+});
+check(man.icons.some(i => (i.purpose || "").indexOf("maskable") >= 0),
+      "one icon is maskable, or Android crops the corners off the tile");
+
+/* The manifest only applies once installed; the meta tag applies on the first
+   visit. Both, on every page, including the generated ones. */
+PAGES.forEach(f => {
+  const src = readFile(f);
+  check(/<link rel="manifest" href="manifest\.webmanifest\?v=\d+">/.test(src),
+        f + ": links the manifest with a cache tag");
+  check(/<meta name="theme-color" content="#18181b">/.test(src),
+        f + ": sets theme-color, so the browser chrome matches the header");
+  check(src.indexOf("apple-touch-icon") >= 0,
+        f + ": has an apple-touch-icon, or an iOS home screen tile comes out blank");
+});
+check(/<link rel="manifest" href="\.\.\/manifest\.webmanifest\?v=\d+">/.test(hol),
+      "a generated holiday page links the manifest one directory up");
+
+/* ---- deleting your own account ----------------------------------------- */
+const au = readFile("assets/auth.js");
+check(/Danger zone/.test(au), "the account panel has a danger zone");
+check(/functions\/v1\/delete-account/.test(au), "which calls the delete-account function");
+
+/* Two steps, and the second will not arm until the word is typed. There is no
+   undo and no backup to restore from, and Sign out sits directly above it. */
+check(/toUpperCase\(\)\s*!==\s*"DELETE"/.test(au),
+      "the delete button stays disabled until DELETE is typed");
+check(/confirm:\s*"DELETE"/.test(au),
+      "and the request carries that confirmation, so a stray call deletes nothing");
+
+/* THE SECURITY PROPERTY. The account to delete is taken from the session
+   token by the server. The browser must never send a user id, or the shape of
+   the request invites someone to try naming a different one. */
+const delCall = au.slice(au.indexOf("delete-account"), au.indexOf("delete-account") + 900);
+check(delCall.indexOf("user_id") < 0 && delCall.indexOf("user.id") < 0,
+      "the browser never sends a user id - the server takes it from the token");
+check(/Authorization["']?\s*:\s*"Bearer "/.test(au),
+      "it sends the session token, which is what identifies the account");
+
+/* Deleting on the server but leaving the copy in this browser would mean the
+   next person to open the tab still sees everything. */
+check(/imcStore\.clearLocal\(\)/.test(au),
+      "a successful deletion clears this device too, not just the server");
+
+/* The privacy policy used to answer 'delete my data' with 'email us'. */
+const priv2 = readFile("privacy.html");
+check(/delete your account yourself/.test(priv2),
+      "the privacy policy points at the self-serve deletion");
+check(!/ask for your account and its data to be deleted by emailing/.test(priv2),
+      "and no longer says the only route is emailing a human");
 }
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

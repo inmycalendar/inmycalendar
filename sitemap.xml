@@ -31,6 +31,11 @@
     <priority>0.3</priority>
   </url>
   <url>
+    <loc>https://inmycalendar.com/terms.html</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
     <loc>https://inmycalendar.com/holidays/AF.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
