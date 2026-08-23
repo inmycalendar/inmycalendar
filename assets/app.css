@@ -481,7 +481,39 @@ main{padding:16px 0 0}
   }
   #tLabel,#tDate,#tUnit{min-height:38px}
   /* a checkbox does not trigger the zoom, but 10.5px is still too small to hit */
-  #holReg{width:20px;height:20px}
+  /* 16px on the checkbox too. It is the last input that still triggered the
+     iOS zoom - width and height were set on a previous pass but not the font
+     size, and it is the font size Safari looks at. Measured, not assumed. */
+  #holReg{width:20px;height:20px;font-size:16px}
+
+  /* ---- READABILITY -----------------------------------------------------
+     Measured on a real 375px viewport: 421 pieces of text were rendering
+     below 11px, some at 9px. That is the single most common complaint about
+     this app on a phone and it is not a layout bug, it is simply too small
+     to read. Desktop keeps the compact sizes; the phone gets legible ones. */
+  .sitenav a{font-size:12px}
+  .fld>span{font-size:11px}
+  .fld>span em{font-size:10.5px}
+  .chk{font-size:12.5px}
+  .rbox>h3{font-size:11.5px}
+  .rhint{font-size:11.5px}
+  .hkey{font-size:11px}
+  .wg .dh{font-size:10.5px}
+  .wg .yh .mo{font-size:11px}
+  .wg .yh .sub{font-size:10.5px}
+  .tkl,.tkc{font-size:12.5px}
+  .cat input{font-size:13px}
+  .databox .btn{font-size:12px;padding:7px 8px}
+  footer{font-size:12.5px}
+
+  /* ---- VERTICAL SPACE --------------------------------------------------
+     The board began 215px down the page: a quarter of the screen used before
+     any content. The ribbon has to wrap on a phone, but it does not have to
+     be padded like a desktop while it does. */
+  .bar .wrap{gap:7px;padding-top:5px;padding-bottom:5px}
+  main{padding-top:8px}
+  .shell{gap:10px}
+  .gridbox{margin-top:10px !important}
   .cadd{height:38px}
   .addgo{width:38px;height:38px;font-size:19px}
   .sel{min-height:38px;padding-right:26px}

@@ -1411,8 +1411,20 @@ check(/\.cadd\{height:38px/.test(phoneCss) && /\.addgo\{width:38px;height:38px/.
    the fix, and this asserts they stay named. */
 check(/#tLabel,#tDate,#tUnit\{min-height:38px\}/.test(phoneCss),
       "the countdown fields are named explicitly, or they keep zooming the page");
-check(/#holReg\{width:20px;height:20px\}/.test(phoneCss),
-      "the regional-holidays checkbox is big enough to hit with a thumb");
+check(/#holReg\{width:20px;height:20px;font-size:16px\}/.test(phoneCss),
+      "the regional-holidays checkbox is big enough to hit AND 16px, since Safari looks at the font size");
+/* Measured on a real 375px viewport: 421 pieces of text rendered below 11px,
+   some at 9px. Not a layout bug - simply too small to read on a phone, which
+   is the commonest complaint about this app on mobile. Desktop keeps the
+   compact sizes; the phone gets legible ones. */
+check(/\.sitenav a\{font-size:12px\}/.test(phoneCss), "nav text is legible on a phone, not 10.5px");
+check(/\.fld>span\{font-size:11px\}/.test(phoneCss), "and so are the setting labels");
+check(/\.wg \.dh\{font-size:10\.5px\}/.test(phoneCss), "and the day-of-week headers, which were 9px");
+/* The board began 215px down the page: a quarter of the screen gone before any
+   content. The ribbon must wrap on a phone but need not be padded like one. */
+check(/\.bar \.wrap\{gap:7px;padding-top:5px;padding-bottom:5px\}/.test(phoneCss),
+      "the ribbon is tighter on a phone, so the board starts higher up the screen");
+check(/main\{padding-top:8px\}/.test(phoneCss), "and the page above it wastes less room");
 
 
 console.log("\n=== C41. The sync seam ===");
