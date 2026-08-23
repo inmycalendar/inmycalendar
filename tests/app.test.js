@@ -1437,41 +1437,43 @@ check(/assets\/sync\.js\?v=\d+/.test(readFile("index.html")), "index.html loads 
 check(!/assets\/sync\.js/.test(readFile("guide.html")), "the content pages do not load it, having nothing to sync");
 
 
-console.log("\n=== C43. Task actions live behind one button ===");
-/* Seven controls took 152px of a 307px card, leaving the first line of a task
-   about twenty characters. One button costs ~20px instead. */
+console.log("\n=== C43. Task controls stay in the open ===");
+/* A ⋯ menu was tried and reverted: one extra tap to reach Rename, on controls
+   used constantly, was the wrong trade. The three-line text layout absorbs the
+   width they cost. */
 toBoard();
 dom.window.eval('setScope("day"); setDate(iso(today()));');
-add(0, "menu behaviour probe");
-const mRow = [...qa("#scopeHost .t")].find(n => /menu behaviour probe/.test(n.textContent));
-check(!!mRow, "there is a task row to drive");
-const moreBtn = [...mRow.querySelectorAll(".op")].find(b => b.title === "Task actions");
-check(!!moreBtn, "each row has a single actions button rather than seven controls in the open");
-check(!mRow.classList.contains("opsopen"), "the controls start collapsed");
-click(moreBtn);
-check(mRow.classList.contains("opsopen"), "clicking it opens the controls");
-const openOps = [...mRow.querySelectorAll(".ops .op")].map(b => b.title);
+add(0, "controls in the open probe");
+const ctlRow = [...qa("#scopeHost .t")].find(n => /controls in the open probe/.test(n.textContent));
+check(!!ctlRow, "there is a task row to inspect");
+const ctlTitles = [...ctlRow.querySelectorAll(".ops .op")].map(b => b.title);
 ["Rename","Move up","Move down","Move left","Move right","Move to another day","Delete"]
-  .forEach(t => check(openOps.indexOf(t) > -1, "  " + t + " is still reachable once open"));
-click(moreBtn);
-check(!mRow.classList.contains("opsopen"), "clicking again closes it");
+  .forEach(t => check(ctlTitles.indexOf(t) > -1, "  " + t + " is available without opening anything"));
+check(!ctlRow.querySelector(".op.more"), "there is no three-dot button any more");
+check(!/opsopen/.test(js), "and no leftover open/close machinery in the code");
+check(/\.t \.ops\{float:right;display:flex/.test(flat),
+      "the controls are shown, and still floated so only line one shortens around them");
 
-/* Only one row open at a time, or the board turns into a wall of buttons. */
-add(0, "second menu probe");
-const menuRows = [...qa("#scopeHost .t")];
-const rowA = menuRows.find(n => /menu behaviour probe/.test(n.textContent));
-const rowB = menuRows.find(n => /second menu probe/.test(n.textContent));
-click([...rowA.querySelectorAll(".op")].find(b => b.title === "Task actions"));
-click([...rowB.querySelectorAll(".op")].find(b => b.title === "Task actions"));
-check(!rowA.classList.contains("opsopen") && rowB.classList.contains("opsopen"),
-      "opening one row closes any other, so only one set of controls shows at a time");
-click(d.body);
-check(!qa(".t.opsopen").length, "clicking away from the row closes it");
+/* THE SQUASHING BUG. .lane is a flex column with a max-height, and a flex item
+   shrinks by default, so filling the column compressed every task to one line
+   with its text clipped mid-word. The lane must scroll instead. This is the
+   single line that stops it, and it looks like tidiness. */
+check(/\.t\{display:block;flex:none/.test(flat),
+      "a task never shrinks to make room for another - the column scrolls instead");
 
-check(/\.t \.ops\{float:right;display:none/.test(flat),
-      "the seven controls take no width until opened, which is the point");
-check(/\.t \.more\{float:right/.test(flat),
-      "and the one button that remains is still a float, so line one flows around it");
+/* NOTE: jsdom does not lay out, so getBoundingClientRect() is all zeroes here.
+   A test comparing rendered heights would pass whatever the CSS said, which is
+   worse than no test because it reads like proof. The CSS assertion above is
+   the real check; the rendered heights are measured in a browser against the
+   live site instead. What CAN be checked here is that the rows survive. */
+dom.window.eval('setScope("day"); setDate(iso(today()));');
+add(0, "this is a deliberately long task written to occupy three full lines so the column has something tall in it");
+for (let i = 0; i < 12; i++) add(0, "filler " + i);
+const tallAfter = qa("#scopeHost .t").find(n => n.textContent.indexOf("deliberately long task") > -1);
+check(!!tallAfter, "a long task survives the column filling up around it");
+check(qa("#scopeHost .t").length >= 13, "and every task is rendered, with the column left to scroll");
+check(/\.lane\{[^}]*overflow-y:auto/.test(flat), "which it can, because the lane scrolls");
+
 
 console.log("\n=== C44. Account settings hang off the initials ===");
 const auSrc = readFile("assets/auth.js");
