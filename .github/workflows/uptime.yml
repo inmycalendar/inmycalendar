@@ -1,0 +1,137 @@
+# Checks the live site is up, and that what is live matches what is committed.
+#
+# WHY THE SECOND HALF MATTERS MORE THAN THE FIRST
+# Hostinger pulls from main automatically. When that pull fails - a conflict, a
+# quota, a bad credential - nothing announces it. The site stays up serving the
+# PREVIOUS version, so every "is it up" check passes while the fix you pushed
+# an hour ago is not actually live. Comparing the build tag on the live page
+# against the one in this repository is what catches that.
+#
+# WHAT THIS IS NOT
+# GitHub's scheduler is not a real uptime monitor. It drifts under load, has a
+# five-minute floor, and switches itself off after 60 days without a commit. It
+# will not catch a two-minute outage and it will not page you at 3am. It is a
+# free, in-repo canary that catches sustained breakage and failed deploys. If
+# uptime ever matters commercially, put UptimeRobot or similar in front of it -
+# they poll every minute from several regions and actually notify.
+#
+# HOW YOU FIND OUT
+# The job fails, and GitHub emails the repository owner on a failed run.
+
+name: uptime
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"    # every 30 minutes
+  workflow_dispatch:
+
+concurrency:
+  group: uptime
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The site answers, and answers with the right page
+        run: |
+          set -u
+          fail=0
+
+          probe () {          # probe <url> <expected-substring> <description>
+            url="$1"; expect="$2"; what="$3"
+            code=$(curl -sS -L --max-time 25 -o body.tmp -w "%{http_code}" "$url" || echo "000")
+            if [ "$code" != "200" ]; then
+              echo "DOWN  $what -> HTTP $code  ($url)"
+              fail=1
+            elif ! grep -qF "$expect" body.tmp; then
+              echo "WRONG $what -> HTTP 200 but the page did not contain: $expect"
+              fail=1
+            else
+              echo "ok    $what"
+            fi
+            rm -f body.tmp
+          }
+
+          probe "https://inmycalendar.com/"                  "scopeHost"     "the app"
+          probe "https://inmycalendar.com/guide.html"         "<h1"           "the guide"
+          probe "https://inmycalendar.com/holidays/index.html" "Holidays"     "the holiday index"
+          probe "https://inmycalendar.com/holidays/IN-2027.html" "2027"       "a country-year page"
+          probe "https://inmycalendar.com/sitemap.xml"        "<urlset"       "the sitemap"
+          probe "https://inmycalendar.com/manifest.webmanifest" "short_name"  "the web app manifest"
+          probe "https://inmycalendar.com/robots.txt"         "Sitemap"       "robots.txt"
+
+          echo "site_fail=$fail" >> "$GITHUB_ENV"
+
+      - name: The database and the functions answer
+        run: |
+          set -u
+          fail=0
+          BASE="https://zkedkgzguhrrnsvetinl.supabase.co"
+
+          # The REST root. 200 or 401 both prove PostgREST is alive; only a
+          # timeout or a 5xx means the database is actually unreachable.
+          code=$(curl -sS --max-time 25 -o /dev/null -w "%{http_code}" "$BASE/rest/v1/" || echo "000")
+          case "$code" in
+            2*|401|404) echo "ok    the database is answering (HTTP $code)" ;;
+            *)          echo "DOWN  the database -> HTTP $code"; fail=1 ;;
+          esac
+
+          # A dry run sends nothing and needs no secret, so it is a safe probe
+          # that the email path still works end to end.
+          code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
+                   -X POST "$BASE/functions/v1/send-emails?dry=1" || echo "000")
+          if [ "$code" = "200" ]; then echo "ok    send-emails answers"
+          else echo "DOWN  send-emails -> HTTP $code"; fail=1; fi
+
+          # Deleting an account must refuse an unauthenticated caller. This is
+          # a live check of the security property, not just of availability:
+          # anything other than 401 here is a serious problem.
+          code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
+                   -X POST "$BASE/functions/v1/delete-account" \
+                   -H "Content-Type: application/json" -d '{"confirm":"DELETE"}' || echo "000")
+          if [ "$code" = "401" ]; then
+            echo "ok    delete-account refuses an unauthenticated caller (401)"
+          else
+            echo "ALARM delete-account answered HTTP $code to an unauthenticated"
+            echo "      delete request. It must answer 401. Investigate now."
+            fail=1
+          fi
+
+          echo "api_fail=$fail" >> "$GITHUB_ENV"
+
+      - name: What is live matches what is committed
+        run: |
+          set -u
+          # The build tag is bumped on every release, so it identifies the
+          # version actually being served.
+          live=$(curl -sS -L --max-time 25 "https://inmycalendar.com/" \
+                   | grep -o 'assets/app\.js?v=[0-9]*' | head -1 | grep -o '[0-9]*$' || true)
+          repo=$(grep -o 'assets/app\.js?v=[0-9]*' index.html | head -1 | grep -o '[0-9]*$' || true)
+
+          echo "live build tag: ${live:-unknown}"
+          echo "repo build tag: ${repo:-unknown}"
+
+          if [ -z "$live" ] || [ -z "$repo" ]; then
+            echo "Could not read a build tag from one of them - check the markup."
+            echo "deploy_fail=1" >> "$GITHUB_ENV"
+          elif [ "$live" != "$repo" ]; then
+            echo "The live site is serving v$live but main is at v$repo."
+            echo "The Hostinger auto-deploy has probably not run or has failed."
+            echo "hPanel -> Advanced -> Git -> check the deployment log."
+            echo "deploy_fail=1" >> "$GITHUB_ENV"
+          else
+            echo "ok    the deployed version matches main"
+            echo "deploy_fail=0" >> "$GITHUB_ENV"
+          fi
+
+      - name: Fail the run if anything above broke
+        run: |
+          bad=0
+          [ "${site_fail:-0}"   = "1" ] && { echo "- the site has a problem";            bad=1; }
+          [ "${api_fail:-0}"    = "1" ] && { echo "- the database or a function has a problem"; bad=1; }
+          [ "${deploy_fail:-0}" = "1" ] && { echo "- the deployed version is not main";  bad=1; }
+          if [ "$bad" = "1" ]; then exit 1; fi
+          echo "Everything answered, and the live site matches main."

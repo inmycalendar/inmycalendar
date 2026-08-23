@@ -243,6 +243,92 @@ window.imcAuth = { user:null, client:null, ready:false };
     out.addEventListener("click", function(){ menu.remove(); signOut(null); });
     menu.appendChild(out);
 
+    /* -----------------------------------------------------------------
+       Deleting the account. The privacy policy used to answer "delete my
+       data" with "email hello@inmycalendar.com", which is a promise about
+       somebody remembering rather than a mechanism. This is the mechanism.
+
+       It is two steps on purpose. The first click only reveals the second,
+       which will not arm until the word DELETE is typed, because there is
+       no undo and no backup to restore from afterwards.
+       ----------------------------------------------------------------- */
+    menu.appendChild(el("div","amsep","Danger zone"));
+
+    var delOpen = el("button","amrow deleterow","Delete account");
+    menu.appendChild(delOpen);
+
+    var delBox = el("div","delbox");
+    delBox.style.display = "none";
+    delBox.appendChild(el("div","amnote",
+      "This deletes your account and everything on it - tasks, day notes, " +
+      "countdowns and settings - on every device. It cannot be undone, and " +
+      "there is no copy to restore from. Export or Backup first if you want one."));
+
+    var delType = document.createElement("input");
+    delType.type = "text";
+    delType.className = "aminput";
+    delType.placeholder = "Type DELETE to confirm";
+    delType.setAttribute("aria-label", "Type DELETE to confirm");
+
+    var delGo = el("button","amsend deletego","Delete my account");
+    delGo.disabled = true;
+    var delNote = el("div","amnote","");
+
+    delType.addEventListener("input", function(){
+      delGo.disabled = delType.value.trim().toUpperCase() !== "DELETE";
+    });
+
+    delOpen.addEventListener("click", function(){
+      var showing = delBox.style.display !== "none";
+      delBox.style.display = showing ? "none" : "block";
+      delOpen.textContent = showing ? "Delete account" : "Never mind, keep my account";
+      if (!showing && delType.focus) delType.focus();
+    });
+
+    delGo.addEventListener("click", function(){
+      if (delType.value.trim().toUpperCase() !== "DELETE") return;
+      delGo.disabled = true; delGo.textContent = "Deleting…"; delNote.textContent = "";
+
+      /* The server takes the account to delete from the session token, never
+         from anything sent in the body, so this cannot be pointed at anyone
+         else even by editing the request. */
+      sb.auth.getSession().then(function(r){
+        var token = r && r.data && r.data.session && r.data.session.access_token;
+        if (!token) throw new Error("You appear to be signed out already.");
+        return fetch(IMC_SUPABASE_URL + "/functions/v1/delete-account", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "apikey": IMC_SUPABASE_ANON_KEY,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ confirm: "DELETE" })
+        });
+      }).then(function(res){
+        return res.json().then(function(body){ return { ok: res.ok, body: body }; });
+      }).then(function(r){
+        if (!r.ok || !r.body || !r.body.deleted){
+          throw new Error((r.body && r.body.error) || "Could not delete the account.");
+        }
+        /* Gone on the server. Clear this device too, so closing the tab does
+           not leave a copy of everything sitting in local storage. */
+        try { if (window.imcStore) window.imcStore.clearLocal(); } catch (e){}
+        try { sb.auth.signOut(); } catch (e){}
+        menu.remove();
+        window.alert("Your account and all of its data have been deleted.");
+        window.location.reload();
+      })["catch"](function(e){
+        delGo.disabled = false; delGo.textContent = "Delete my account";
+        delNote.textContent = (e && e.message) ? e.message
+          : "Could not delete the account. Email hello@inmycalendar.com.";
+      });
+    });
+
+    delBox.appendChild(delType);
+    delBox.appendChild(delGo);
+    delBox.appendChild(delNote);
+    menu.appendChild(delBox);
+
     slot.appendChild(menu);
     if (hasStore && menu.querySelector(".aminput")) menu.querySelector(".aminput").focus();
   }

@@ -33,7 +33,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "45";                        /* cache tag, keep in step with the pages */
+const V    = "46";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
@@ -105,6 +105,9 @@ function shell({ title, desc, canonical, ld, body }){
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon.ico?v=${V}" sizes="any">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png?v=${V}">
+<link rel="manifest" href="../manifest.webmanifest?v=${V}">
+<meta name="theme-color" content="#18181b">
 <link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="../assets/site.css?v=${V}">
 <style>${STYLE}</style>
@@ -131,7 +134,7 @@ ${body}
 <footer>
   <div class="wrap">
     <a href="../index.html#board">Kanban Board</a><a href="../index.html#calendar">Calendar</a>
-    <a href="../about.html">About</a><a href="../guide.html">Guide</a><a href="index.html">Holidays</a><a href="../contact.html">Contact</a><a href="../privacy.html">Privacy</a>
+    <a href="../about.html">About</a><a href="../guide.html">Guide</a><a href="index.html">Holidays</a><a href="../contact.html">Contact</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
@@ -289,7 +292,8 @@ const core = [
   ["https://inmycalendar.com/guide.html", "monthly", "0.9"],
   ["https://inmycalendar.com/holidays/", "monthly", "0.9"],
   ["https://inmycalendar.com/contact.html", "yearly", "0.3"],
-  ["https://inmycalendar.com/privacy.html", "yearly", "0.3"]
+  ["https://inmycalendar.com/privacy.html", "yearly", "0.3"],
+  ["https://inmycalendar.com/terms.html", "yearly", "0.3"]
 ];
 const urls = core.map(([loc, cf, pr]) =>
     `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${cf}</changefreq>\n    <priority>${pr}</priority>\n  </url>`)
