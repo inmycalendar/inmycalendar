@@ -73,17 +73,6 @@ input,select,textarea{font:inherit;color:inherit}
 .bar{position:sticky;top:0;z-index:60;background:var(--card);border-bottom:1px solid var(--rule)}
 .bar .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   min-height:var(--hBar);padding-top:7px;padding-bottom:7px}
-/* Above the phone breakpoint the ribbon must stay on ONE line. It wraps by
-   default so a narrow screen can reflow, but on a desktop that wrapping put
-   the account badge and Sign out on a second row, costing a whole row of
-   vertical space and dropping the settings panel where half of it fell off
-   the left edge. Everything shrinks instead; nothing is allowed to wrap. */
-@media (min-width:901px){
-  .bar .wrap{flex-wrap:nowrap}
-  .appzone{min-width:0;flex:1 1 auto;flex-wrap:nowrap;overflow:hidden}
-  .sitenav{flex:0 1 auto;min-width:0;flex-wrap:nowrap}
-  .authslot{flex:none}
-}
 .brand{display:inline-flex;align-items:center;gap:8px;font-family:var(--disp);font-size:15px;
   letter-spacing:.07em;white-space:nowrap;color:var(--ink);text-decoration:none;flex:none}
 .brand b{font-weight:500;color:var(--soft)}
@@ -96,6 +85,25 @@ input,select,textarea{font:inherit;color:inherit}
 .sitenav a:hover{background:var(--accentBg);color:var(--ink)}
 .sitenav a.on{background:var(--accentBg);color:var(--ink);font-weight:500}
 .sitenav .gap{width:1px;height:15px;background:var(--rule);margin:0 7px;flex:none}
+
+/* Above the phone breakpoint the ribbon must stay on ONE line. It wraps by
+   default so a narrow screen can reflow, but on a desktop that wrapping put
+   the account badge and Sign out on a second row, costing a whole row of
+   vertical space and dropping the settings panel where half of it fell off
+   the left edge. Everything shrinks instead; nothing wraps.
+
+   THIS BLOCK MUST STAY BELOW the .appzone and .sitenav rules above. A media
+   query carries no extra specificity, so when it sat higher in the file the
+   plain .appzone{flex-wrap:wrap} underneath simply won and the whole thing
+   did nothing. Position in the file is the only reason it applies. */
+@media (min-width:901px){
+  .bar .wrap{flex-wrap:nowrap}
+  .appzone{flex-wrap:nowrap;min-width:0;flex:1 1 auto}
+  .sitenav{flex-wrap:nowrap;flex:0 1 auto;min-width:0}
+  .authslot{flex:none}
+  /* the date label is the one thing worth losing first when space runs out */
+  .meta{flex:0 1 auto;min-width:0}
+}
 
 /* ---------------- shared controls ---------------- */
 .btn{background:var(--card);border:1px solid var(--rule);color:var(--ink);padding:5px 11px;

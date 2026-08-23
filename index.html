@@ -22,8 +22,8 @@
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=33">
-<link rel="stylesheet" href="assets/app.css?v=33">
+<link rel="stylesheet" href="assets/site.css?v=34">
+<link rel="stylesheet" href="assets/app.css?v=34">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -60,7 +60,7 @@
     <a href="#board" data-view="board">Kanban Board</a>
     <a href="#calendar" data-view="calendar">Calendar</a>
     <span class="gap"></span>
-    <a class="page" href="about.html">About</a><a class="page" href="guide.html">Guide</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
+    <a class="page" href="about.html">About</a><a class="page" href="guide.html">Guide</a><a class="page" href="holidays/index.html">Holidays</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
   </nav>
   <span class="authslot hidden" id="authSlot"></span>
  </div>
@@ -127,6 +127,18 @@
     <div class="rbox">
       <h3>Calendar setup</h3>
       <div class="rbody">
+        <!-- Country first. It is the setting almost everyone changes, and the
+             only one that visibly does something the moment it is set. Week
+             start and the week-1 rule are preferences most people never touch,
+             so they sat above the one control that mattered. -->
+        <label class="fld"><span>Public holidays <em>select your country</em></span>
+          <select id="ctrySel" class="sel"></select>
+        </label>
+        <label class="chk"><input type="checkbox" id="holReg"> Regional holidays too</label>
+        <div class="hkey">
+          <span><i class="sw nat"></i>National</span>
+          <span><i class="sw reg"></i>Regional</span>
+        </div>
         <label class="fld"><span>Week starts on</span>
           <select id="wsSel" class="sel">
             <option value="0">Sunday</option><option value="1">Monday</option>
@@ -141,14 +153,6 @@
             <option value="jan1">The week containing 1 January</option>
           </select>
         </label>
-        <label class="fld"><span>Public holidays <em>select your country</em></span>
-          <select id="ctrySel" class="sel"></select>
-        </label>
-        <label class="chk"><input type="checkbox" id="holReg"> Regional holidays too</label>
-        <div class="hkey">
-          <span><i class="sw nat"></i>National</span>
-          <span><i class="sw reg"></i>Regional</span>
-        </div>
       </div>
     </div>
 
@@ -189,7 +193,7 @@
 <footer>
   <div class="wrap">
     <a href="index.html#board">Kanban Board</a><a href="index.html#calendar">Calendar</a>
-    <a href="about.html">About</a><a href="guide.html">Guide</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
+    <a href="about.html">About</a><a href="guide.html">Guide</a><a href="holidays/index.html">Holidays</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
     <div class="fdata">
       <button class="btn" id="expCsv">Export tasks</button>
       <button class="btn" id="expJson">Backup</button>
@@ -238,8 +242,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=33"></script>
-<script src="assets/auth.js?v=33"></script>
-<script src="assets/sync.js?v=33"></script>
+<script src="assets/app.js?v=34"></script>
+<script src="assets/auth.js?v=34"></script>
+<script src="assets/sync.js?v=34"></script>
 </body>
 </html>

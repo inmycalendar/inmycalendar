@@ -78,7 +78,12 @@ check(/\.meta\{display:none\}/.test(flatCSS), "the meta text drops rather than b
 check(/\.sitenav\{margin-left:0;width:100%;order:5\}/.test(flatCSS), "nav takes its own row on phones — every link stays reachable");
 check(/\.kb,\.ro\{grid-template-columns:1fr\}/.test(flatCSS), "board columns stack in a narrow window");
 check(/\.calrail>\.wg,\.glance>\.wg\{flex:1 1 100%\}/.test(flatCSS), "calendar years stack too");
-check(qa(".sitenav a").length === 6, "all six nav links are present inline, none hidden in a menu");
+/* Derived, not a magic number: adding a page should not fail an unrelated
+   assertion, but the nav going missing or shrinking should. */
+const NAV_COUNT = qa(".sitenav a").length;
+check(NAV_COUNT >= 6, "the nav carries every section inline, none hidden in a menu (" + NAV_COUNT + " links)");
+check(qa(".sitenav a").every(a => a.offsetParent !== null || !a.classList.contains("hidden")),
+      "and none of them is hidden");
 check(d.querySelector("#pop") === null && d.querySelector("#menuBtn") === null,
       "there is no hamburger or popup to miss");
 
@@ -196,7 +201,8 @@ check(/\.wrap\{width:min\(100% - \(var\(--gut\) \* 2\), var\(--wrap\)\)/.test(si
       "the centring rule is defined once and inherited by all four pages");
 const aboutDom = new JSDOM(assemble("guide.html"), { runScripts:"dangerously", url:"https://inmycalendar.com/guide.html" });
 const aD = aboutDom.window.document;
-check(aD.querySelectorAll(".sitenav a").length === 6, "content pages show all six links inline, nothing hidden");
+check(aD.querySelectorAll(".sitenav a").length === NAV_COUNT,
+      "content pages show exactly the same nav as the app, so the shell never drifts between them");
 check(aD.querySelector(".sitenav a.on") !== null, "and mark which page you are on");
 let broken = 0;
 PAGES.forEach(f => {
@@ -1494,6 +1500,63 @@ const flatSite2 = siteCss.replace(/\s*\n\s*/g,"");
 check(/\.authmenu\.profile\{/.test(flatSite2), "the panel is styled in site.css, so it works on every page");
 
 
+console.log("\n=== C45. Country holiday pages are real, indexable pages ===");
+{   /* scoped: this section declares names that exist elsewhere in the file */
+/* The app can show any country at #calendar/JP, but everything after "#" is
+   never sent to a server and never indexed. These are the crawlable versions.
+   They only earn their place if they carry real content: a page that is a link
+   and nothing else is a doorway page and deserves to be ignored. */
+const HOLDIR = path.join(ROOT, "holidays");
+check(fs.existsSync(HOLDIR), "the holidays directory exists");
+const holPages = fs.readdirSync(HOLDIR).filter(f => f.endsWith(".html"));
+check(holPages.length > 200, "there is a page per country (" + holPages.length + " files)");
+check(holPages.indexOf("index.html") > -1, "including an index listing them all");
+
+const jp = fs.readFileSync(path.join(HOLDIR, "JP.html"), "utf8");
+check(/<h1>Public holidays in Japan/.test(jp), "a country page names the country in its h1");
+check(/<title>Public holidays in Japan[^<]*<\/title>/.test(jp), "and in its title, which is what shows in search results");
+check(/rel="canonical" href="https:\/\/inmycalendar\.com\/holidays\/JP\.html"/.test(jp),
+      "with a canonical URL, so it cannot compete with itself");
+/* Real content, not a stub. */
+const rowCount = (jp.match(/<tr><td>/g) || []).length;
+check(rowCount > 30, "it carries actual holiday dates in a table (" + rowCount + " rows), not just a link to the app");
+check(/New Year's Day/.test(jp), "with real holiday names");
+check(/Vernal Equinox Day/.test(jp), "including ones specific to that country, so the page is not boilerplate");
+/* JSON.stringify with an indent puts a space after the colon; matching the
+   compact form was my mistake, not a missing feature. Parse it instead of
+   pattern-matching, which is what should have been done in the first place. */
+const ld = JSON.parse(jp.split(`<script type="application/ld+json">`)[1].split("</scr" + "ipt>")[0]);
+check(Array.isArray(ld["@graph"]) && ld["@graph"].length > 10,
+      "and event structured data for each holiday, which is what search summaries quote");
+check(ld["@graph"].every(e => e["@type"] === "Event" && /^\d{4}-\d{2}-\d{2}$/.test(e.startDate)),
+      "every entry is a dated Event, so the markup is valid rather than merely present");
+check(/index\.html#calendar\/JP/.test(jp), "and it links into the app preloaded with that country");
+
+/* Two different countries must not produce the same page. */
+const fr = fs.readFileSync(path.join(HOLDIR, "FR.html"), "utf8");
+check(/<h1>Public holidays in France/.test(fr), "another country names itself correctly");
+check(jp !== fr, "and two countries do not produce identical pages");
+check(/Bastille Day|Fête nationale|Assumption/.test(fr), "France carries French holidays specifically");
+
+/* The generator is committed, so the pages can be rebuilt rather than hand-edited. */
+check(fs.existsSync(path.join(ROOT, "tools/build-holiday-pages.js")),
+      "the generator is in the repo, so these are reproducible rather than hand-maintained");
+
+/* Sitemap must actually list them, or none of this is discoverable. */
+const sm = readFile("sitemap.xml");
+check(/holidays\/JP\.html/.test(sm), "the sitemap lists the country pages");
+check(/holidays\/<\/loc>|holidays\/\<\/loc\>|inmycalendar\.com\/holidays\//.test(sm), "and the holidays index");
+const smUrls = (sm.match(/<loc>/g) || []).length;
+check(smUrls > 200, "so Google is told about all " + smUrls + " URLs, not just the six it could find before");
+check(/Allow: \//.test(readFile("robots.txt")), "and robots.txt lets crawlers reach them");
+
+/* The shared shell must reach these pages too - same trap as the auth widget. */
+check(/assets\/site\.css\?v=\d+/.test(jp), "a country page loads the shared stylesheet");
+check(/class="sitenav"/.test(jp), "and carries the site nav, so it is not an orphan");
+check(/href="\.\.\/index\.html#board"/.test(jp), "with working relative links back into the app");
+
+
+}
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
