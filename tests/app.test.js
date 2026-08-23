@@ -242,7 +242,7 @@ check(readFile(".gitignore").includes("node_modules"), ".gitignore keeps node_mo
 console.log("\n########  C3. THIS ROUND: FAVICON, REDESIGN, SETTINGS, DEFAULTS  ########");
 
 console.log("\n=== C3a. Favicon + metadata ===");
-["assets/favicon.svg","assets/favicon.ico","assets/apple-touch-icon.png","assets/icon-192.png","assets/icon-512.png"].forEach(f =>
+["assets/favicon.svg","assets/favicon.ico","assets/apple-touch-icon-v2.png","assets/icon-192-v2.png","assets/icon-512-v2.png"].forEach(f =>
   check(fs.existsSync(path.join(ROOT,f)), f + " exists"));
 const headHtml = readFile("index.html");
 check(/<link rel="icon"[^>]*favicon\.svg/.test(headHtml), "index links the SVG favicon");
@@ -1983,6 +1983,29 @@ man.icons.forEach(ic => {
 });
 check(man.icons.some(i => (i.purpose || "").indexOf("maskable") >= 0),
       "one icon is maskable, or Android crops the corners off the tile");
+
+/* Apache has no built-in type for .webmanifest, so it went out as text/plain,
+   which a browser enforcing the spec refuses to install from - no icons, no
+   install prompt, and nothing on the page saying why. */
+check(fs.existsSync(path.join(ROOT,".htaccess")), "there is an .htaccess for the host");
+const ht = readFile(".htaccess");
+check(/AddType\s+application\/manifest\+json\s+\.webmanifest/.test(ht),
+      "which gives the manifest its proper content type instead of text/plain");
+check(/ExpiresByType\s+text\/html\s+"access plus 0 seconds"/.test(ht),
+      "and stops the HTML being cached hard, so a deploy is visible immediately");
+
+/* THE STALE-IMAGE BUG. The server was serving icons that did not match the
+   repo: the deploy updated text files but never replaced existing images, and
+   a random cache-busting query still returned the old bytes from the origin.
+   New filenames deploy correctly, so the artwork is versioned in its NAME.
+   Referring to an unversioned icon again would silently reintroduce it. */
+["icon-192.png", "icon-512.png", "apple-touch-icon.png"].forEach(old => {
+  PAGES.concat(["manifest.webmanifest"]).forEach(f => {
+    const src = readFile(f);
+    check(src.indexOf("/" + old) < 0 && src.indexOf('"' + old) < 0,
+          f + ": does not reference the unversioned " + old);
+  });
+});
 
 /* The manifest only applies once installed; the meta tag applies on the first
    visit. Both, on every page, including the generated ones. */

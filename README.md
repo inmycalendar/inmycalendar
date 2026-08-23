@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm ci           # only needed to run the tests
-npm test         # expect: 805 passed, 0 failed
+npm test         # expect: 829 passed, 0 failed
 ```
 
 The tests need **Node 22.22.2 or newer** - jsdom 30 refuses to run on anything
@@ -75,10 +75,10 @@ assets/
   site.js           marks the current page in the nav on content pages
   errors.js         crash reporting. MUST be the first script on every page - it only
                     sees errors thrown after it loads. Write-only to the database
-  favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
+  favicon.svg .ico apple-touch-icon-v2.png icon-192-v2.png icon-512-v2.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       805 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       829 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -272,7 +272,7 @@ collide with the semantic colours.
 npm test
 ```
 
-805 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+829 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
