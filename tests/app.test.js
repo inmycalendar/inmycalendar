@@ -32,7 +32,7 @@ const appCss  = readFile("assets/app.css");
 const css  = siteCss + appCss;
 const flat = css.replace(/\s*\n\s*/g, "");
 const js   = readFile("assets/app.js");
-const PAGES = ["index.html","guide.html","contact.html","privacy.html"];
+const PAGES = ["index.html","about.html","guide.html","contact.html","privacy.html"];
 
 const errors = [];
 const vc = new VirtualConsole()
@@ -78,7 +78,7 @@ check(/\.meta\{display:none\}/.test(flatCSS), "the meta text drops rather than b
 check(/\.sitenav\{margin-left:0;width:100%;order:5\}/.test(flatCSS), "nav takes its own row on phones — every link stays reachable");
 check(/\.kb,\.ro\{grid-template-columns:1fr\}/.test(flatCSS), "board columns stack in a narrow window");
 check(/\.calrail>\.wg,\.glance>\.wg\{flex:1 1 100%\}/.test(flatCSS), "calendar years stack too");
-check(qa(".sitenav a").length === 5, "all five nav links are present inline, none hidden in a menu");
+check(qa(".sitenav a").length === 6, "all six nav links are present inline, none hidden in a menu");
 check(d.querySelector("#pop") === null && d.querySelector("#menuBtn") === null,
       "there is no hamburger or popup to miss");
 
@@ -196,7 +196,7 @@ check(/\.wrap\{width:min\(100% - \(var\(--gut\) \* 2\), var\(--wrap\)\)/.test(si
       "the centring rule is defined once and inherited by all four pages");
 const aboutDom = new JSDOM(assemble("guide.html"), { runScripts:"dangerously", url:"https://inmycalendar.com/guide.html" });
 const aD = aboutDom.window.document;
-check(aD.querySelectorAll(".sitenav a").length === 5, "content pages show all five links inline, nothing hidden");
+check(aD.querySelectorAll(".sitenav a").length === 6, "content pages show all six links inline, nothing hidden");
 check(aD.querySelector(".sitenav a.on") !== null, "and mark which page you are on");
 let broken = 0;
 PAGES.forEach(f => {
@@ -550,7 +550,19 @@ check(gBody.indexOf("How to use it") < gBody.indexOf("What a Kanban board is"),
 check(/<h1>Guide<\/h1>/.test(g), "and is titled Guide, not About");
 check(!/What's coming/.test(g) && /What&rsquo;s coming next/.test(readFile("contact.html")),
       "the roadmap moved to Contact");
-check(!fs.existsSync(path.join(ROOT,"about.html")), "about.html is gone");
+/* about.html was once the how-to page and was renamed Guide, and this line
+   used to assert it stayed gone. A NEW about.html now exists with a different
+   job: Guide is how to use the app, About is what it is and why it works this
+   way, which is the page a search engine or an AI summary quotes. The original
+   decision - that the how-to page is called Guide - still holds. */
+check(fs.existsSync(path.join(ROOT,"about.html")), "about.html exists again, for what-and-why rather than how-to");
+const aboutBody = readFile("about.html");
+check(/<h1>About inmycalendar<\/h1>/.test(aboutBody), "and is titled About, not Guide");
+check(!/<h1>About/.test(g), "the Guide is still the Guide, not renamed back");
+check(/"@type":"FAQPage"/.test(aboutBody),
+      "About carries FAQ structured data, which is what gets quoted in search summaries");
+check(/247 countries/.test(aboutBody) && /Kanban board/.test(aboutBody),
+      "and states the things people actually search for");
 check(/AI-BRIEF\.md/.test(readFile(".gitignore")),
       "AI-BRIEF.md is gitignored too - it carries personal goals and must never be published");
 
@@ -693,7 +705,7 @@ check(/^HANDOVER\.md$/m.test(readFile(".gitignore")),
 /* The terms are read from the gitignored file rather than written here.
    An earlier version of this test listed them literally - which published the
    very words it was meant to protect, in a public repo. */
-const PUBLISHED = ["index.html","guide.html","contact.html","privacy.html",
+const PUBLISHED = ["index.html","about.html","guide.html","contact.html","privacy.html",
                    "README.md","package.json",".gitignore","tests/app.test.js"];
 const hvPath = path.join(ROOT, "HANDOVER.md");
 if (fs.existsSync(hvPath)){
