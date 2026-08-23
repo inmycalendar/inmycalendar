@@ -442,10 +442,31 @@ against the one in `index.html` on `main`**. Hostinger pulls from `main` automat
 that pull fails the site stays up serving the *previous* version. Every "is it up" check passes
 while the fix you pushed an hour ago is not actually live. Comparing versions is what catches it.
 
+It also runs `.github/scripts/check-assets.js`, which compares every deployed asset against the
+committed one. **Two things make a naive version of that check lie, and both cost time before
+they were understood:**
+
+- **The host re-encodes images.** A PNG served from inmycalendar.com is not the PNG in this
+  repo - it comes back with an added `eXIf` chunk and a recompressed `IDAT`, several kilobytes
+  larger. Comparing bytes reports *every image as stale, for ever*. That false alarm was
+  initially mistaken for a broken deploy, and the icons were renamed to work around a bug that
+  did not exist. Decoding the pixels proved the artwork was identical - byte for byte on an 8x8
+  brightness grid. Images are therefore checked by their **dimensions**, which catches a missing
+  file, a truncated upload or the wrong image at a given name.
+- **Line endings.** Git checks this repo out CRLF on Windows and LF on the Linux server, so
+  comparing a Windows working copy against the site calls every text file stale. The script
+  normalises newlines before hashing. If you ever compare by hand, compare the *committed blob*
+  (`git show HEAD:path`), never the working file.
+
 This is a canary, not a monitor. GitHub's scheduler drifts, has a five-minute floor, and
 switches itself off after 60 days without a commit, so it will not catch a short outage and it
 will not wake you up. If uptime ever matters commercially, put UptimeRobot or similar in front
 of it. You find out when the job fails and GitHub emails you.
+
+**Asset filenames carry a version** (`icon-192-v2.png`). That began as a workaround for the
+misdiagnosis above, but it is kept because `.htaccess` caches images for a year: with a long
+cache, a name that changes when the contents change is the only reliable way to ship new
+artwork. A test fails if an unversioned icon name comes back.
 
 ## Deleting an account
 
