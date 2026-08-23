@@ -1883,6 +1883,48 @@ check(/never contains your tasks/.test(priv),
       "and states what a report never carries");
 }
 
+console.log("\n=== C49. Sign-in providers are reachable on a phone ===");
+{
+/* Measured on a real 375x812 viewport, the sign-in menu computed top:-121.55px.
+   Continue with Google sat at -111, Microsoft at -63, and GitHub was clipped in
+   half. The menu was not overflowing, so there was nothing to scroll to reach
+   them: OAuth sign-in was impossible on a phone and the only usable option was
+   the email box, which is exactly what the bug report showed.
+
+   The cause was position:fixed with BOTH top and bottom left auto. With no
+   anchor a fixed box falls back to its static position - where it would have
+   sat inside the ribbon - and that computed negative. jsdom has no layout
+   engine and reports 0 for every rectangle, so this can only be pinned by
+   asserting on the rule itself rather than by measuring. */
+const mobileMenu = (flat.match(/\.authmenu\{[^}]*\}/g) || [])
+                     .find(r => r.indexOf("position:fixed") >= 0);
+check(!!mobileMenu, "there is a phone-specific rule for the sign-in menu");
+check(!!mobileMenu && mobileMenu.indexOf("top:auto") < 0,
+      "it does not leave top:auto, which anchors the menu to nothing and pushed it off-screen");
+check(!!mobileMenu && /top:\s*\d/.test(mobileMenu),
+      "it pins the menu to a real distance from the top of the screen");
+check(!!mobileMenu && mobileMenu.indexOf("overflow-y:auto") >= 0,
+      "and lets the menu scroll internally, so an open keyboard cannot cut off the providers");
+check(!!mobileMenu && mobileMenu.indexOf("dvh") >= 0,
+      "sized in dvh, so a mobile browser's shrinking viewport is accounted for");
+
+/* All three providers must actually be built, not merely styled. */
+const authSrc = readFile("assets/auth.js");
+[["google","Google"],["azure","Microsoft"],["github","GitHub"]].forEach(([id,name]) =>
+  check(authSrc.indexOf('id:"' + id + '"') >= 0, "the " + name + " sign-in button is offered"));
+
+/* Opening the menu used to focus the email box, which on a phone raises the
+   keyboard instantly and presents typing an address as the main action, while
+   the three one-tap provider buttons sit above it. */
+check(/matchMedia\([^)]*max-width:640px[^)]*\)/.test(authSrc),
+      "auth.js asks whether the screen is narrow");
+/* Checking only that matchMedia appears NEAR mail.focus is not enough: removing
+   the guard while leaving the variable behind still passed. Assert the focus
+   call is actually conditional on it. */
+check(/if\s*\(\s*!\s*narrow\s*&&\s*mail\.focus\s*\)/.test(authSrc),
+      "and the email box is focused only when the screen is NOT narrow");
+}
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");

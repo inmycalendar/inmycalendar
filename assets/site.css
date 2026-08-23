@@ -221,9 +221,19 @@ footer a:hover{color:var(--ink)}
 
 /* On a phone the ribbon wraps, so the slot can end up near the left edge and a
    250px menu anchored to its right edge runs off the screen. Pin it to the
-   viewport instead of to the button. */
+   viewport instead of to the button.
+
+   top MUST be a real length, never auto. position:fixed with BOTH top and
+   bottom auto falls back to the box's STATIC position - where it would have
+   sat inside the ribbon - which measured -121.55px on a 375x812 screen. That
+   put Continue with Google and Continue with Microsoft entirely above the top
+   of the screen and clipped GitHub in half, and since the menu was not
+   overflowing there was nothing to scroll to reach them: OAuth sign-in was
+   impossible on a phone. dvh rather than vh so that the on-screen keyboard
+   shrinking the viewport leaves the menu scrollable instead of cut off. */
 @media (max-width:640px){
-  .authmenu{position:fixed;left:12px;right:12px;top:auto;width:auto;max-height:70vh;overflow-y:auto}
+  .authmenu{position:fixed;left:12px;right:12px;top:12px;bottom:auto;width:auto;
+            max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow-y:auto}
   .amrow,.amsend{min-height:44px;font-size:15px}
   .aminput{font-size:16px;min-height:44px}
   .authslot .btn{min-height:36px}
