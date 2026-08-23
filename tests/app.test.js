@@ -1723,6 +1723,36 @@ check(!/<v>#(VALUE|NAME|DIV\/0|NUM)!<\/v>/.test(allSheetXml),
 }
 
 
+console.log("\n=== C47. One logo, not two ===");
+{
+/* The site header does NOT use favicon.svg. It carries its own copy of the
+   artwork inline, duplicated across five pages AND the holiday-page
+   generator. So changing favicon.svg alone left the header showing the old
+   dark plate on every page - the "shared element fixed in one file only" trap
+   the README records, hit for a third time.
+
+   These pin the copies together by their distinctive geometry, so the next
+   change to one without the other fails here rather than shipping. */
+const fav = readFile("assets/favicon.svg");
+check(!/rect width="128" height="128" rx="26"/.test(fav),
+      "the favicon has no dark background plate");
+check(/stroke="#18181b" stroke-width="6"/.test(fav),
+      "it is an outlined calendar, drawn with a thin stroke so it is not a dark blob when small");
+PAGES.forEach(f => {
+  const src = readFile(f);
+  check(!/rect width="128" height="128" rx="26" fill="#18181b"/.test(src),
+        f + ": header logo has no dark plate either");
+  check(/stroke-width="6"/.test(src) && /rx="16"/.test(src),
+        f + ": header logo matches the favicon artwork");
+});
+const gen = readFile("tools/build-holiday-pages.js");
+check(!/rect width="128" height="128" rx="26" fill="#18181b"/.test(gen),
+      "and the generated holiday pages carry the new logo, not the old one");
+check(/stroke-width="6"/.test(readFile("holidays/IN-2027.html")),
+      "which is visible in a page it actually produced");
+}
+
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
