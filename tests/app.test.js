@@ -1563,6 +1563,16 @@ check(/--hYear:30px/.test(flat) && /top:var\(--hYear\)/.test(flat.replace(/\s+/g
       "sticky offsets are fixed CSS custom properties, not JS-measured");
 check((flat.match(/minmax\(0,1fr\)/g)||[]).length >= 3, "grids use minmax(0,1fr)");
 check(!/\.calbox\{[^}]*overflow:hidden/.test(flat), "no overflow:hidden above sticky headers");
+/* .calbox was checked and .wg was not, and .wg is where the overflow:hidden
+   actually sat - directly around the sticky headers. An ancestor with
+   overflow:hidden becomes the containing block for a sticky child, and since
+   .wg does not itself scroll the headers had no range and scrolled away with
+   the grid. Same trap as before, one element further in. */
+check(!/\.wg\{[^}]*overflow:hidden/.test(flat),
+      "and none on the week grid itself, which is what actually killed them");
+check(/\.wg \.yh\{[^}]*position:sticky/.test(flat), "the year header is sticky");
+check(/\.wg \.dh\{[^}]*position:sticky/.test(flat), "and so is the day-of-week row");
+check(/\.calbox\{overflow:auto/.test(flat), "with the calendar box as the thing that scrolls");
 check(js.lastIndexOf("init()") > js.lastIndexOf("function init"), "init() is the last statement");
 const saved = {}; ["tasks","notes","track","cfg"].forEach(k => saved[k] = w.localStorage.getItem("imc."+k));
 const e2 = [];
