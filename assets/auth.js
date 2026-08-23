@@ -309,7 +309,13 @@ window.imcAuth = { user:null, client:null, ready:false };
 
     menu.appendChild(mail); menu.appendChild(send); menu.appendChild(note);
     slot.appendChild(menu);
-    if (mail.focus) mail.focus();
+
+    /* Focusing the email box is a convenience on a desktop and a problem on a
+       phone: it raises the keyboard the instant the menu opens, shrinking the
+       viewport and presenting "type your address" as the main action while the
+       three one-tap provider buttons sit above it. Let the person choose. */
+    var narrow = window.matchMedia && window.matchMedia("(max-width:640px)").matches;
+    if (!narrow && mail.focus) mail.focus();
   }
 
   document.addEventListener("click", function(){
