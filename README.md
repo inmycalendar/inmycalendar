@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 502 passed, 0 failed
+npm test         # expect: 516 passed, 0 failed
 ```
 
 ---
@@ -54,7 +54,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       502 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       516 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -217,7 +217,7 @@ collide with the semantic colours.
 npm test
 ```
 
-502 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+516 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -267,6 +267,12 @@ bugs that static review missed.
   second line with the text.
 - **An Enter-only input is unusable on a phone.** Mobile keyboards often show "go" or
   nothing useful, so every add field needs a visible button doing the same job.
+- **iOS Safari force-zooms on any input under 16px.** Every field in the app was
+  smaller, so the first tap on a phone pinched the layout and left the user zoomed in.
+  16px on the phone breakpoint is not a design choice, it is the threshold.
+- **Never run a blind find/replace, and that includes JavaScript.** Renaming a variable
+  by replacing `.test(mob)` across the test file also hit an unrelated `mob` in an
+  earlier section and broke the suite. Rename by line, or by a token unique to the scope.
 - **Never run a blind find/replace across HTML.**
 - **A media query that changes `display` does not reset the other properties.** `.shell` is a grid
   with `align-items:start`; the mobile override switched it to `flex-direction:column` but `start`

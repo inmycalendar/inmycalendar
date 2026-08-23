@@ -74,17 +74,24 @@ window.imcAuth = { user:null, client:null, ready:false };
       return;
     }
 
-    /* Google and Microsoft both hand back a display name. A single letter
-       told the user nothing and looked like a placeholder; the first name is
-       what every other app shows. Email is the fallback when a provider gives
-       no name at all, which is the case for a magic link. */
+    /* Initials, not a first name. A first name has no length limit, so it is
+       either cut off mid-word or the pill grows until it shoves Sign out off a
+       narrow ribbon. Two letters always fit and never lie. The full name and
+       the email live in the tooltip.
+       Google and Microsoft both hand back a display name; a magic link does
+       not, so the email's first letter is the fallback. */
     var email = (user.email || "").toLowerCase();
     var meta = user.user_metadata || {};
     var full = (meta.full_name || meta.name || meta.preferred_username || "").trim();
-    var label = full ? full.split(/s+/)[0] : (email.split("@")[0] || "Account");
-    if (label.length > 14) label = label.slice(0,13) + "…";
+    var label;
+    if (full){
+      var parts = full.split(/\s+/).filter(function(p){ return !!p; });
+      label = (parts[0].charAt(0) + (parts.length > 1 ? parts[parts.length-1].charAt(0) : "")).toUpperCase();
+    } else {
+      label = (email.charAt(0) || "?").toUpperCase();
+    }
     var who = el("span","who", label);
-    who.title = (full ? full + " - " : "") + email;
+    who.title = (full ? full + "\n" : "") + email;
     var outBtn = el("button","btn signout","Sign out");
     outBtn.addEventListener("click", function(){
       outBtn.disabled = true;

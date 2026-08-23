@@ -941,16 +941,7 @@ function setView(v){
   var links = document.querySelectorAll(".sitenav a[data-view]");
   for (var i=0;i<links.length;i++)
     links[i].classList.toggle("on", links[i].getAttribute("data-view") === v);
-  /* Never overwrite an auth response. Sign-in returns its token in the URL
-     fragment, and this line used to replace the whole fragment with "#board"
-     before auth.js had loaded and read it. Every sign-in therefore succeeded
-     on the server and silently failed in the browser: the Supabase logs show
-     five successful Google logins on a day the button never changed. The view
-     hash is cosmetic; the token is not, so the token wins. */
-  var curHash = window.location.hash || "";
-  if (curHash.indexOf("access_token") < 0 && curHash.indexOf("error_description") < 0){
-    try { history.replaceState(null, "", "#" + v); } catch (e){}
-  }
+  viewHash(v);
   if (b) renderBoard(); else renderCalendar();
 }
 function setScope(s){ cfg.scope = s; commit("cfg"); segOn(el.scopeSeg,"scope",s); renderBoard(); }
@@ -958,9 +949,21 @@ function setDate(ds){
   if (!parseISO(ds)) return;
   sel = ds; cfg.lastDate = ds; commit("cfg"); renderBoard();
 }
+function knownCountry(code){
+  for (var i=0;i<COUNTRIES.length;i++) if (COUNTRIES[i][0] === code) return true;
+  return false;
+}
 function setCountry(code){
   cfg.country = code || ""; commit("cfg");
   loadHolidays(cfg.country);
+  if (cfg.view === "calendar") viewHash("calendar");
+}
+/* The address bar mirrors what is on screen, so copying it shares that view. */
+function viewHash(v){
+  var suffix = (v === "calendar" && cfg.country) ? "/" + cfg.country : "";
+  var curHash = window.location.hash || "";
+  if (curHash.indexOf("access_token") >= 0 || curHash.indexOf("error_description") >= 0) return;
+  try { history.replaceState(null, "", "#" + v + suffix); } catch (e){}
 }
 function setWeekStart(v){
   v = parseInt(v,10); if (isNaN(v) || v < 0 || v > 6) v = 0;
@@ -1309,8 +1312,15 @@ function init(){
   /* The Kanban Board is the landing page. A returning visitor whose last view
      was the Calendar should still arrive on the board - the board is what the
      app is for. An explicit #calendar link still opens the calendar. */
+  /* #calendar/JP opens the calendar already showing Japan's holidays, so a
+     link can be shared without a covering note saying "now pick your country
+     from the dropdown". The country is the only part of the view worth putting
+     in a link: everything else is personal data that lives on the device. */
   var h = (window.location.hash || "").replace("#","");
-  var view = (h === "board" || h === "calendar") ? h : "board";
+  var hashParts = h.split("/");
+  var view = (hashParts[0] === "board" || hashParts[0] === "calendar") ? hashParts[0] : "board";
+  var hashCountry = (hashParts[1] || "").toUpperCase();
+  if (/^[A-Z]{2}$/.test(hashCountry) && knownCountry(hashCountry)) cfg.country = hashCountry;
 
   cacheEls();
   el.wsSel.value = String(cfg.weekStart);

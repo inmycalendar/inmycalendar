@@ -724,7 +724,11 @@ check(!/\b\d{10,}\b/.test(PUBLISHED.filter(f => f !== "package.json").map(readFi
       "no phone number is committed");
 
 console.log("\n=== C16. The Kanban Board is the landing page ===");
-check(/var view = \(h === "board" \|\| h === "calendar"\) \? h : "board";/.test(js),
+/* This used to assert the exact source line, which broke the moment the line
+   was refactored even though the behaviour was unchanged. Drive the app
+   instead: what matters is where a visitor lands, not how it is written. */
+const noHash = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true });
+check(!noHash.window.document.getElementById("boardView").classList.contains("hidden"),
       "a visitor with no hash always lands on the board, whatever they viewed last");
 const landed = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true,
   beforeParse(win){ win.localStorage.setItem("imc.cfg", JSON.stringify({ view:"calendar" })); }});
@@ -1246,6 +1250,61 @@ check(![...anyRow.querySelectorAll(".op")].some(b => /Repeat|Every day|Every wee
       "the repeat control has been removed from the row");
 check(!/materialiseRepeats|setRepeat|repeatMatches/.test(js),
       "and its machinery is gone too, so nothing keeps generating tasks with no way to stop it");
+
+
+console.log("\n=== C39. A calendar link carries its country ===");
+/* Sharing "Japan has these holidays" used to mean sending a generic link plus
+   a covering note telling the person to find the country dropdown. The country
+   is the only part of the view worth putting in a link; everything else is
+   personal and stays on the device. */
+function bootHash(hash){
+  const errs = [];
+  const dm = new JSDOM(html, { url:"https://inmycalendar.com/" + hash, runScripts:"dangerously",
+    pretendToBeVisual:true,
+    virtualConsole: new VirtualConsole().on("jsdomError", e => errs.push(String(e.detail||e))) });
+  return { win: dm.window, doc: dm.window.document, errs };
+}
+
+const jp = bootHash("#calendar/JP");
+check(jp.errs.length === 0, "a country link boots cleanly" + (jp.errs.length ? " -> " + jp.errs.join("|") : ""));
+check(!jp.doc.getElementById("calView").classList.contains("hidden"),
+      "#calendar/JP opens the calendar");
+check(jp.doc.getElementById("ctrySel").value === "JP",
+      "and the country picker is already set to Japan, with no covering note needed");
+
+const lower = bootHash("#calendar/jp");
+check(lower.doc.getElementById("ctrySel").value === "JP",
+      "a lowercase country code in a link works too, because people type links by hand");
+
+const bogus = bootHash("#calendar/ZZZZ");
+check(bogus.errs.length === 0, "an invalid country code does not break the page");
+check(!bogus.doc.getElementById("calView").classList.contains("hidden"),
+      "it just opens the calendar with whatever country was already set");
+
+const plain = bootHash("#calendar");
+check(!plain.doc.getElementById("calView").classList.contains("hidden"),
+      "a plain #calendar link still works exactly as before");
+
+check(/function viewHash\(/.test(js),
+      "one function owns the address bar, so the view and the URL cannot drift apart");
+
+console.log("\n=== C40. The phone pass ===");
+/* An Apple design reviewer's summary of the previous build was that the mobile
+   version would lose users. These are the three faults that made it feel
+   broken rather than merely cramped. */
+const phoneCss = flat.split("@media (max-width:640px)").pop();
+check(/font-size:16px/.test(phoneCss),
+      "inputs are 16px on a phone, the exact threshold below which iOS zooms the page on focus");
+check(/\.wg \.dc\{min-height:34px/.test(phoneCss),
+      "calendar days are 34px tall rather than 21px, so they can be hit with a thumb");
+check(/\.op\{width:34px;height:32px/.test(phoneCss),
+      "the row controls are thumb-sized rather than 20px");
+check(/\.t\{flex-wrap:wrap/.test(phoneCss),
+      "and they wrap onto their own line instead of fighting the task text for a 343px row");
+check(/\.t \.txt\{flex:1 1 100%/.test(phoneCss),
+      "which gives the task text the full width of the card");
+check(/\.cadd\{height:38px/.test(phoneCss) && /\.addgo\{width:38px;height:38px/.test(phoneCss),
+      "the add field and its button are both 38px, comfortably tappable");
 
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

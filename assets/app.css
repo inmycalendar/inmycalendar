@@ -48,9 +48,9 @@
 /* Was a 26px circle holding one letter, which read as a placeholder rather
    than as "you are signed in". It now carries the first name, so it has to be
    a pill that grows with the text instead of a fixed circle. */
-.authslot .who{max-width:120px;height:26px;border-radius:13px;background:var(--accentBg);color:var(--ink);
-  display:inline-flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;
-  padding:0 10px;border:1px solid var(--rule);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.authslot .who{width:28px;height:28px;border-radius:50%;background:var(--accentBg);color:var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+  letter-spacing:.02em;border:1px solid var(--rule);flex:none;cursor:default}
 
 .authslot{position:relative}
 .authmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;width:250px;background:var(--card);
@@ -426,5 +426,57 @@ main{padding:16px 0 0}
   .ad-anchor{display:flex}
   .t .grip{display:none}
   .t .ops{visibility:visible}
+}
+/* ===========================================================================
+   PHONE PASS
+
+   Three separate faults, all of which made the app feel broken on a phone
+   rather than merely cramped:
+
+   1. iOS Safari force-zooms the page whenever you focus an input whose text is
+      under 16px. EVERY field here was smaller, so tapping anything lurched the
+      layout and left the user pinched in. This is the single most damaging one
+      because it happens on the very first tap.
+   2. Tap targets. Calendar days measured 26x21. Apple and Google both put the
+      minimum at 44x44. Missing the day you aimed at was the normal case.
+   3. Seven controls at 20px wide competed with the task text for a 343px row.
+      They now sit on their own line under the text, at a size a thumb can hit.
+   =========================================================================== */
+@media (max-width:640px){
+  /* 16px is not a design choice, it is the exact threshold below which iOS
+     zooms. Anything smaller here and the page lurches on first tap. */
+  .cadd,.sel,.dpick,.tinput,.sinput,#bnote,#mNote,
+  input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+    font-size:16px
+  }
+  .cadd{height:38px}
+  .addgo{width:38px;height:38px;font-size:19px}
+  .sel{min-height:38px;padding-right:26px}
+
+  /* thumb-sized calendar days */
+  .wg .dc{min-height:34px;font-size:11px}
+  .wg.c .dc{min-height:30px;font-size:10.5px}
+  .wg .wk{min-height:34px;font-size:10px}
+  .wg .dh{min-height:22px}
+
+  /* The row controls get their own line. Trying to fit seven buttons and the
+     task text on one 343px line gives neither of them enough room. */
+  .t{flex-wrap:wrap;row-gap:6px;padding:7px 9px}
+  .t .txt{flex:1 1 100%;font-size:14px;line-height:1.4}
+  .t .ops{width:100%;justify-content:flex-start;gap:8px;margin-top:0}
+  .op{width:34px;height:32px;font-size:13px}
+  .t .edit{flex:1 1 100%;font-size:16px;padding:6px 8px}
+
+  /* everything else a thumb has to hit */
+  .nub,.iso,.seg button,.sitenav a,.authslot .btn{min-height:36px}
+  .seg button{padding-left:12px;padding-right:12px}
+  .swatch,.sw{min-width:32px;min-height:32px}
+  .amrow,.amsend{min-height:42px;font-size:15px}
+  .aminput{font-size:16px;min-height:42px}
+  .op.x{margin-left:auto}
+
+  /* the day note was 12.5px, which is small to read and small to type into */
+  #bnote,#mNote{font-size:16px;line-height:1.45}
+  .none{font-size:13px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important}}
