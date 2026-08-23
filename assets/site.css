@@ -39,8 +39,20 @@
   --wrap:1320px; --gut:20px; --rail:200px;
   --hBar:52px;
   --wIso:96px; --wMeta:150px; --wYrs:88px;
-  /* exactly ten task rows before a column starts scrolling: 10*(28+4) - 4 + 10 */
-  --laneMax:326px;
+  /* How tall a column may grow before it scrolls.
+
+     This used to be a flat 326px, sized for exactly ten single-line tasks. Two
+     things were wrong with that. It ignored the screen: the same 326px on a
+     13-inch laptop and a 27-inch monitor wasted most of the larger one. And it
+     was described in TASKS, which stopped being meaningful once a task can run
+     to three lines - a column of long tasks and a column of short ones share
+     one height, so the tall ones simply show fewer. That is the correct
+     behaviour and it falls out of measuring in pixels rather than in rows.
+
+     32vh is about eight single-line tasks on a typical laptop and more on a
+     large monitor. The clamp stops it collapsing on a short window or running
+     away on a very tall one. */
+  --laneMax:clamp(180px, 32vh, 460px);
   --hYear:30px; --hDow:22px;
   --r:10px;
 }
@@ -107,6 +119,55 @@ footer a:hover{color:var(--ink)}
 .pagebody .card{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
   padding:14px 16px;margin:18px 0}
 .pagebody .card.warn{border-color:var(--doingE);background:var(--doingBg)}
+
+/* ===========================================================================
+   SIGN-IN WIDGET - lives here, in site.css, NOT in app.css.
+
+   It used to live in app.css, which only index.html loads. The widget itself
+   is injected by auth.js into every page, so on guide / contact / privacy it
+   rendered completely unstyled and the name badge sat on top of the Sign out
+   button. Exactly the "shared shell fixed in one file only" trap the README
+   warns about, shipped anyway because nothing asserted it across all four
+   pages. There is now a test that does.
+   =========================================================================== */
+.authslot{display:inline-flex;align-items:center;gap:7px;flex:none;margin-left:4px}
+.authslot .btn{padding:5px 12px;font-size:11px;font-family:var(--disp);letter-spacing:.06em;
+  text-transform:uppercase}
+.authslot .signin{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
+.authslot .signin:hover{background:var(--accent2);border-color:var(--accent2)}
+/* Was a 26px circle holding one letter, which read as a placeholder rather
+   than as "you are signed in". It now carries the first name, so it has to be
+   a pill that grows with the text instead of a fixed circle. */
+.authslot .who{width:28px;height:28px;border-radius:50%;background:var(--accentBg);color:var(--ink);
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+  letter-spacing:.02em;border:1px solid var(--rule);flex:none;cursor:default}
+
+.authslot{position:relative}
+.authmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;width:250px;background:var(--card);
+  border:1px solid var(--rule);border-radius:var(--r);box-shadow:0 12px 30px rgba(17,19,24,.14);
+  padding:10px;display:flex;flex-direction:column;gap:6px;text-align:left}
+.amrow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:9px 11px;
+  font-size:12.5px;color:var(--ink);text-align:left}
+.amrow:hover{background:var(--card2)}
+.amsep{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+  text-align:center;margin:4px 0 2px}
+.aminput{width:100%;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.aminput:focus{outline:none;border-color:var(--accent)}
+.amsend{background:var(--accent);border:1px solid var(--accent);color:var(--onAccent);
+  border-radius:8px;padding:8px 11px;font-size:12px}
+.amsend:hover{background:var(--accent2)}
+.amsend:disabled{opacity:.5}
+.amnote{font-size:11px;color:var(--soft);line-height:1.4;min-height:1px}
+
+/* On a phone the ribbon wraps, so the slot can end up near the left edge and a
+   250px menu anchored to its right edge runs off the screen. Pin it to the
+   viewport instead of to the button. */
+@media (max-width:640px){
+  .authmenu{position:fixed;left:12px;right:12px;top:auto;width:auto;max-height:70vh;overflow-y:auto}
+  .amrow,.amsend{min-height:44px;font-size:15px}
+  .aminput{font-size:16px;min-height:44px}
+  .authslot .btn{min-height:36px}
+}
 
 @media (max-width:640px){
   :root{--gut:12px}

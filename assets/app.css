@@ -40,34 +40,6 @@
    two things people actually need, so they sit in the open on one thin row. */
 /* week start moved into the ribbon; data actions moved to the foot of the rail.
    The old full-width controls strip cost ~44px of vertical space on every screen. */
-.authslot{display:inline-flex;align-items:center;gap:7px;flex:none;margin-left:4px}
-.authslot .btn{padding:5px 12px;font-size:11px;font-family:var(--disp);letter-spacing:.06em;
-  text-transform:uppercase}
-.authslot .signin{background:var(--accent);border-color:var(--accent);color:var(--onAccent)}
-.authslot .signin:hover{background:var(--accent2);border-color:var(--accent2)}
-/* Was a 26px circle holding one letter, which read as a placeholder rather
-   than as "you are signed in". It now carries the first name, so it has to be
-   a pill that grows with the text instead of a fixed circle. */
-.authslot .who{width:28px;height:28px;border-radius:50%;background:var(--accentBg);color:var(--ink);
-  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-  letter-spacing:.02em;border:1px solid var(--rule);flex:none;cursor:default}
-
-.authslot{position:relative}
-.authmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;width:250px;background:var(--card);
-  border:1px solid var(--rule);border-radius:var(--r);box-shadow:0 12px 30px rgba(17,19,24,.14);
-  padding:10px;display:flex;flex-direction:column;gap:6px;text-align:left}
-.amrow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:9px 11px;
-  font-size:12.5px;color:var(--ink);text-align:left}
-.amrow:hover{background:var(--card2)}
-.amsep{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
-  text-align:center;margin:4px 0 2px}
-.aminput{width:100%;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:12.5px}
-.aminput:focus{outline:none;border-color:var(--accent)}
-.amsend{background:var(--accent);border:1px solid var(--accent);color:var(--onAccent);
-  border-radius:8px;padding:8px 11px;font-size:12px}
-.amsend:hover{background:var(--accent2)}
-.amsend:disabled{opacity:.5}
-.amnote{font-size:11px;color:var(--soft);line-height:1.4;min-height:1px}
 
 .wkpick{display:inline-flex;align-items:center;gap:6px;flex:none}
 .wkpick .lbl{font-family:var(--disp);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--soft)}
@@ -239,11 +211,14 @@ main{padding:16px 0 0}
 .op:hover:not(:disabled){background:var(--card2);color:var(--ink)}
 .op:disabled{opacity:.3;cursor:not-allowed}
 .op.x:hover{background:#fdf3f3;color:var(--danger);border-color:#f0d5d5}
-/* The row is a block now, so the rename field needs a width rather than a flex
-   grow. overflow:hidden gives it a block formatting context, which keeps it
-   clear of the floated controls instead of sliding underneath them. */
-.t .edit{display:block;width:auto;overflow:hidden;font-size:12.5px;
+/* While editing, the floated controls are hidden so the field gets the whole
+   card. Sharing the row with them left the field about a third width, which is
+   unusable for a task that renders over three lines. */
+.t.editing .ops,.t.editing .grip{display:none}
+.t .edit{display:block;width:100%;box-sizing:border-box;font-family:inherit;
+  font-size:12.5px;line-height:1.6;resize:vertical;min-height:calc(1.6em * 3);
   border:1px solid var(--accent);border-radius:6px;padding:3px 6px;background:var(--card)}
+.t .edit:focus{outline:none;box-shadow:0 0 0 2px var(--accentBg)}
 
 /* read-only week / month */
 .ro{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}

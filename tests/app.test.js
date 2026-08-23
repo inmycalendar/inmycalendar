@@ -521,7 +521,12 @@ check(JSON.parse(w.localStorage.getItem("imc.tasks")).some(t => t.text === "Rena
       "the rename saves");
 
 const flatH = (siteCss + appCss).replace(/\s*\n\s*/g,"");
-check(/--laneMax:326px/.test(flatH), "one shared lane height is defined for exactly ten rows");
+/* Measured in pixels against the viewport, not in "ten rows". Once a task can
+   run to three lines, a row count stops meaning anything: a column of long
+   tasks and one of short tasks share a height, so the long one simply shows
+   fewer. A flat 326px also wasted most of a large monitor. */
+check(/--laneMax:clamp\(180px, ?32vh, ?460px\)/.test(flatH),
+      "the lane height scales with the screen, with a floor and a ceiling");
 check(/\.lane\{[^}]*max-height:var\(--laneMax\)/.test(flatH), "the kanban lane uses it");
 check(/\.rlist\{max-height:var\(--laneMax\)/.test(flatH),
       "and so do the week/month lists, so the calendar sits in the same place in every scope");
@@ -991,8 +996,25 @@ const withLib = html.replace(/<script src="https:[^"]*"><\/script>/g,
 const liveDom = new JSDOM(withLib, { url:"https://inmycalendar.com/", runScripts:"dangerously", pretendToBeVisual:true });
 const liveDoc = liveDom.window.document;
 check(liveDoc.getElementById("authSlot") !== null, "the account slot exists in the ribbon");
-check(/\.authslot \.signin\{background:var\(--accent\)/.test(appCss.replace(/\s*\n\s*/g,"")),
-      "and the Sign in button is styled as the primary action, so it is visible");
+/* These styles MUST live in site.css, not app.css. auth.js injects the widget
+   into every page, but only index.html loads app.css, so while these rules
+   lived there the badge and Sign out button rendered unstyled and overlapping
+   on guide, contact and privacy. Asserting it per page is the only version of
+   this check that would have caught it. */
+const flatSite = siteCss.replace(/\s*\n\s*/g,"");
+check(/\.authslot \.signin\{background:var\(--accent\)/.test(flatSite),
+      "the Sign in button is styled as the primary action");
+check(/\.authslot\{[^}]*display:inline-flex/.test(flatSite) && /\.authslot \.who\{/.test(flatSite),
+      "and the slot and name badge are laid out, so they cannot overlap Sign out");
+check(!/\.authslot \.who\{/.test(appCss),
+      "none of it is left in app.css, which three of the four pages never load");
+PAGES.forEach(p => {
+  const css = readFile(p).match(/<link rel="stylesheet" href="(assets\/[^"?]+)/g) || [];
+  const sheets = css.map(m => m.split('href="')[1]);
+  const merged = sheets.map(readFile).join("").replace(/\s*\n\s*/g,"");
+  check(/\.authslot \.who\{/.test(merged) && /\.authmenu\{/.test(merged),
+        p + " loads the stylesheet that positions the sign-in widget");
+});
 check(/id:"google"/.test(auKey), "Google is offered");
 check(/signInWithOtp/.test(auKey), "and email sign-in by link");
 

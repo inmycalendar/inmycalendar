@@ -556,19 +556,33 @@ function tilt(id){
   return ((((h % 1000)+1000)%1000)/1000*2 - 1).toFixed(2);
 }
 function inlineEdit(row, txt, task){
-  var inp = document.createElement("input");
-  inp.type = "text"; inp.className = "edit"; inp.value = task.text;
+  if (row.classList.contains("editing")) return;   /* already editing this one */
+  /* A textarea, not an input. A one-line input showed a sliver of a task that
+     renders over three lines, so editing a long task meant scrolling a field
+     you could not see. The row also gets .editing, which hides the floated
+     controls: otherwise the field sits BESIDE them at about a third width. */
+  var inp = document.createElement("textarea");
+  inp.className = "edit"; inp.value = task.text; inp.rows = 3;
+  inp.setAttribute("aria-label", "Rename task");
+  row.classList.add("editing");
   row.replaceChild(inp, txt);
   if (inp.focus) inp.focus();
+  if (inp.setSelectionRange) try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (e){}
+  var closed = false;
   function done(keep){
-    var v = inp.value.trim();
-    if (keep && v){ task.text = v; commit("tasks"); }
+    if (closed) return;
+    closed = true;
+    row.classList.remove("editing");
+    /* a task is one line of text; a pasted newline would otherwise survive
+       into the board and break the row height */
+    var v = inp.value.replace(/\s+/g, " ").trim();
+    if (keep && v){ task.text = v.slice(0,500); commit("tasks"); }
     refresh();
   }
   inp.addEventListener("blur", function(){ done(true); });
   inp.addEventListener("keydown", function(e){
-    if (e.key === "Enter") done(true);
-    if (e.key === "Escape") done(false);
+    if (e.key === "Enter"){ e.preventDefault(); done(true); }
+    if (e.key === "Escape"){ e.preventDefault(); done(false); }
   });
 }
 

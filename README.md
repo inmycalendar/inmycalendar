@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 547 passed, 0 failed
+npm test         # expect: 553 passed, 0 failed
 ```
 
 ---
@@ -55,7 +55,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       547 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       553 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -249,7 +249,7 @@ collide with the semantic colours.
 npm test
 ```
 
-547 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+553 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -310,6 +310,10 @@ bugs that static review missed.
   EVERY line narrowed to the leftover width, not just the first. `overflow:clip` creates
   no BFC and flows correctly. This looked identical in the source and only showed up when
   the rendered line widths were measured on the live page.
+- **Styles for anything `auth.js` injects belong in `site.css`, not `app.css`.** The sign-in
+  widget is added to all four pages but only `index.html` loads `app.css`, so on guide, contact
+  and privacy the name badge rendered unstyled and sat on top of Sign out. The suite now asserts
+  per page that the stylesheet carrying `.authslot` is actually loaded.
 - **Never run a blind find/replace across HTML.**
 - **A media query that changes `display` does not reset the other properties.** `.shell` is a grid
   with `align-items:start`; the mobile override switched it to `flex-direction:column` but `start`
