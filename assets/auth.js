@@ -188,9 +188,56 @@ window.imcAuth = { user:null, client:null, ready:false };
       menu.appendChild(syncBtn);
     }
 
-    menu.appendChild(el("div","amsep","Reminders"));
-    menu.appendChild(el("div","amnote",
-      "Not switched on yet. When it is, reminders will be opt-in from here and never sent unless you ask."));
+    /* Reminders. OFF unless the person deliberately turns them on, and the
+       wording says so, because unasked-for mail is how a young domain earns a
+       permanent place in spam filters. Stored in settings, so the preference
+       syncs with everything else and the server can read it. */
+    if (hasStore){
+      menu.appendChild(el("div","amsep","Reminders"));
+      var cfgNow = window.imcStore.read("cfg") || {};
+
+      var remRow = el("label","pfcheck");
+      var remOn = document.createElement("input");
+      remOn.type = "checkbox";
+      remOn.checked = !!cfgNow.reminderOn;
+      remRow.appendChild(remOn);
+      remRow.appendChild(el("span", null, "Email me a summary"));
+      menu.appendChild(remRow);
+
+      var freq = document.createElement("select");
+      freq.className = "sel pffreq";
+      [["daily","Every weekday morning"],
+       ["weekly","Monday mornings"],
+       ["monthly","First of the month"]].forEach(function(p){
+        var o = document.createElement("option");
+        o.value = p[0]; o.textContent = p[1];
+        if ((cfgNow.reminderFreq || "weekly") === p[0]) o.selected = true;
+        freq.appendChild(o);
+      });
+      freq.disabled = !remOn.checked;
+      menu.appendChild(freq);
+
+      var remNote = el("div","amnote",
+        remOn.checked ? "Sent to " + email + ". Turn it off here any time."
+                      : "Off. Nothing is sent unless you switch this on.");
+      menu.appendChild(remNote);
+
+      function saveRem(){
+        var c = window.imcStore.read("cfg") || {};
+        c.reminderOn = !!remOn.checked;
+        c.reminderFreq = freq.value;
+        try { window.commit("cfg"); } catch (e){}
+        freq.disabled = !remOn.checked;
+        remNote.textContent = remOn.checked
+          ? "Saved. Sent to " + email + ". Turn it off here any time."
+          : "Off. Nothing is sent unless you switch this on.";
+        /* push immediately: a person who just switched reminders OFF should
+           not have to wait for a debounce before that reaches the server. */
+        if (window.imcSync && window.imcSync.now) window.imcSync.now();
+      }
+      remOn.addEventListener("change", saveRem);
+      freq.addEventListener("change", saveRem);
+    }
 
     var out = el("button","amrow signoutrow","Sign out");
     out.addEventListener("click", function(){ menu.remove(); signOut(null); });
