@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 553 passed, 0 failed
+npm test         # expect: 578 passed, 0 failed
 ```
 
 ---
@@ -55,7 +55,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       553 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       578 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -249,7 +249,7 @@ collide with the semantic colours.
 npm test
 ```
 
-553 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+578 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 

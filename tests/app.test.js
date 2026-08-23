@@ -1425,6 +1425,61 @@ check(/assets\/sync\.js\?v=\d+/.test(readFile("index.html")), "index.html loads 
 check(!/assets\/sync\.js/.test(readFile("guide.html")), "the content pages do not load it, having nothing to sync");
 
 
+console.log("\n=== C43. Task actions live behind one button ===");
+/* Seven controls took 152px of a 307px card, leaving the first line of a task
+   about twenty characters. One button costs ~20px instead. */
+toBoard();
+dom.window.eval('setScope("day"); setDate(iso(today()));');
+add(0, "menu behaviour probe");
+const mRow = [...qa("#scopeHost .t")].find(n => /menu behaviour probe/.test(n.textContent));
+check(!!mRow, "there is a task row to drive");
+const moreBtn = [...mRow.querySelectorAll(".op")].find(b => b.title === "Task actions");
+check(!!moreBtn, "each row has a single actions button rather than seven controls in the open");
+check(!mRow.classList.contains("opsopen"), "the controls start collapsed");
+click(moreBtn);
+check(mRow.classList.contains("opsopen"), "clicking it opens the controls");
+const openOps = [...mRow.querySelectorAll(".ops .op")].map(b => b.title);
+["Rename","Move up","Move down","Move left","Move right","Move to another day","Delete"]
+  .forEach(t => check(openOps.indexOf(t) > -1, "  " + t + " is still reachable once open"));
+click(moreBtn);
+check(!mRow.classList.contains("opsopen"), "clicking again closes it");
+
+/* Only one row open at a time, or the board turns into a wall of buttons. */
+add(0, "second menu probe");
+const menuRows = [...qa("#scopeHost .t")];
+const rowA = menuRows.find(n => /menu behaviour probe/.test(n.textContent));
+const rowB = menuRows.find(n => /second menu probe/.test(n.textContent));
+click([...rowA.querySelectorAll(".op")].find(b => b.title === "Task actions"));
+click([...rowB.querySelectorAll(".op")].find(b => b.title === "Task actions"));
+check(!rowA.classList.contains("opsopen") && rowB.classList.contains("opsopen"),
+      "opening one row closes any other, so only one set of controls shows at a time");
+click(d.body);
+check(!qa(".t.opsopen").length, "clicking away from the row closes it");
+
+check(/\.t \.ops\{float:right;display:none/.test(flat),
+      "the seven controls take no width until opened, which is the point");
+check(/\.t \.more\{float:right/.test(flat),
+      "and the one button that remains is still a float, so line one flows around it");
+
+console.log("\n=== C44. Account settings hang off the initials ===");
+const auSrc = readFile("assets/auth.js");
+check(/function openProfile\(/.test(auSrc), "there is an account settings panel");
+check(/displayName/.test(auSrc), "with a display name the person chooses");
+check(/imcStore\.read\("cfg"\)/.test(auSrc),
+      "read from settings, so it travels with the account rather than living on one machine");
+check(/Sync now/.test(auSrc), "a way to force a sync");
+check(/changes\(\)\.length/.test(auSrc), "and it reports how much is still waiting to upload");
+/* Signing out clears the device, so unsent work must be flagged first. */
+check(/have\" \) \+ \" not reached your account yet|not reached your account yet/.test(auSrc),
+      "signing out with unsent changes warns before clearing the device");
+check(/window\.confirm/.test(auSrc), "and asks rather than assuming");
+check(/Not switched on yet/.test(auSrc),
+      "reminders say plainly that they are not live, rather than offering a switch that does nothing");
+/* The panel is styled in the shared sheet, like the rest of the widget. */
+const flatSite2 = siteCss.replace(/\s*\n\s*/g,"");
+check(/\.authmenu\.profile\{/.test(flatSite2), "the panel is styled in site.css, so it works on every page");
+
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");

@@ -90,15 +90,114 @@ window.imcAuth = { user:null, client:null, ready:false };
     } else {
       label = (email.charAt(0) || "?").toUpperCase();
     }
-    var who = el("span","who", label);
-    who.title = (full ? full + "\n" : "") + email;
+    /* A name the person chose beats one a provider guessed at. Stored in
+       settings, so it travels with the account rather than living on one
+       machine. Only the app page has a store; the content pages just show
+       whatever the provider gave. */
+    var chosen = "";
+    try { chosen = ((window.imcStore && window.imcStore.read("cfg")) || {}).displayName || ""; } catch (e){}
+    var shown = (chosen || full).trim();
+    if (shown){
+      var bits = shown.split(/\s+/).filter(function(p){ return !!p; });
+      label = (bits[0].charAt(0) + (bits.length > 1 ? bits[bits.length-1].charAt(0) : "")).toUpperCase();
+    }
+
+    var who = el("button","who", label);
+    who.type = "button";
+    who.title = (shown ? shown + "\n" : "") + email + "\nClick for your account settings";
+    who.setAttribute("aria-label", "Account settings for " + (shown || email));
+    who.addEventListener("click", function(e){ e.stopPropagation(); openProfile(who, user, shown, email); });
+
     var outBtn = el("button","btn signout","Sign out");
-    outBtn.addEventListener("click", function(){
-      outBtn.disabled = true;
-      sb.auth.signOut().then(function(){ paint(null); });
-    });
+    outBtn.addEventListener("click", function(){ signOut(outBtn); });
     slot.appendChild(who);
     slot.appendChild(outBtn);
+  }
+
+  function signOut(btn){
+    if (btn) btn.disabled = true;
+    /* Warn only when there is something to lose. Anything still in the journal
+       has not reached the server, and signing out clears this device. */
+    var unsent = 0;
+    try { unsent = (window.imcStore ? window.imcStore.changes().length : 0); } catch (e){}
+    if (unsent > 0){
+      var ok = window.confirm(
+        unsent + (unsent === 1 ? " change has" : " changes have") + " not reached your account yet, " +
+        "probably because you are offline.\n\nSigning out clears this device. Those changes would be lost.\n\n" +
+        "Sign out anyway?");
+      if (!ok){ if (btn) btn.disabled = false; return; }
+    }
+    sb.auth.signOut().then(function(){ paint(null); })
+      .catch(function(){ if (btn) btn.disabled = false; });
+  }
+
+  /* ---------------------------------------------------------------------
+     Account settings. It hangs off the initials rather than living on its
+     own page: it is four fields, and a whole page for four fields is a page
+     nobody visits. Same reasoning as "no settings gear" on the board.
+     --------------------------------------------------------------------- */
+  function openProfile(anchor, user, shown, email){
+    var old = document.getElementById("authMenu");
+    if (old){ old.remove(); return; }
+
+    var menu = el("div","authmenu profile");
+    menu.id = "authMenu";
+    menu.addEventListener("click", function(e){ e.stopPropagation(); });
+
+    menu.appendChild(el("div","amsep","Signed in as"));
+    var who = el("div","pfemail", email);
+    menu.appendChild(who);
+
+    var hasStore = !!(window.imcStore && window.imcStore.read);
+    if (hasStore){
+      menu.appendChild(el("label","pflabel","Display name"));
+      var nameIn = document.createElement("input");
+      nameIn.type = "text"; nameIn.className = "aminput"; nameIn.maxLength = 60;
+      nameIn.value = shown || "";
+      nameIn.placeholder = "How your name appears";
+      nameIn.setAttribute("aria-label","Display name");
+      var hint = el("div","amnote","Your initials come from this.");
+      function saveName(){
+        var v = nameIn.value.replace(/\s+/g," ").trim().slice(0,60);
+        var cfg = window.imcStore.read("cfg") || {};
+        if ((cfg.displayName || "") === v) return;
+        cfg.displayName = v;
+        try { window.commit("cfg"); } catch (e){}
+        hint.textContent = v ? "Saved. Initials updated." : "Cleared. Using the name from your provider.";
+        paint(user);
+      }
+      nameIn.addEventListener("blur", saveName);
+      nameIn.addEventListener("keydown", function(e){ if (e.key === "Enter"){ e.preventDefault(); saveName(); menu.remove(); } });
+      menu.appendChild(nameIn);
+      menu.appendChild(hint);
+
+      menu.appendChild(el("div","amsep","Sync"));
+      var pend = 0;
+      try { pend = window.imcStore.changes().length; } catch (e){}
+      menu.appendChild(el("div","amnote", pend ? (pend + " change" + (pend===1?"":"s") + " waiting to upload")
+                                               : "Everything on this device is on your account."));
+      var syncBtn = el("button","amsend","Sync now");
+      syncBtn.addEventListener("click", function(){
+        syncBtn.disabled = true; syncBtn.textContent = "Syncing…";
+        var p = (window.imcSync && window.imcSync.now) ? window.imcSync.now() : Promise.resolve(false);
+        p.then(function(ok){
+          syncBtn.textContent = ok ? "Synced" : "Could not reach your account";
+          setTimeout(function(){ syncBtn.disabled = false; syncBtn.textContent = "Sync now"; }, 1800);
+        });
+      });
+      menu.appendChild(syncBtn);
+    }
+
+    menu.appendChild(el("div","amsep","Reminders"));
+    menu.appendChild(el("div","amnote",
+      "Not switched on yet. When it is, reminders will be opt-in from here and never sent unless you ask."));
+
+    var out = el("button","amrow signoutrow","Sign out");
+    out.addEventListener("click", function(){ menu.remove(); signOut(null); });
+    menu.appendChild(out);
+
+    slot.appendChild(menu);
+    if (hasStore && menu.querySelector(".aminput")) menu.querySelector(".aminput").focus();
   }
 
 

@@ -539,8 +539,26 @@ function taskRow(task, st, idx, total){
   var x = opBtn("\u00d7","Delete", false, function(){ delTask(task.id); refresh(); });
   x.className = "op x";
   ops.appendChild(x);
+
+  /* Seven controls took 152px of a 307px card, so the first line of a task got
+     about twenty characters. Collapsing them behind one button gives that space
+     back: line one goes to roughly fifty characters. The cost is a second tap,
+     which is the right trade for a control used occasionally against text read
+     every time. */
+  var more = opBtn("\u22ef","Task actions", false, function(e){
+    var open = n.classList.toggle("opsopen");
+    if (open){
+      var others = document.querySelectorAll(".t.opsopen");
+      for (var i=0;i<others.length;i++) if (others[i] !== n) others[i].classList.remove("opsopen");
+    }
+    if (e && e.stopPropagation) e.stopPropagation();
+  });
+  more.className = "op more";
+  more.setAttribute("aria-expanded","false");
+
+  n.appendChild(more);
   n.appendChild(ops);
-  n.appendChild(txt);   /* after ops, so the text flows around the float */
+  n.appendChild(txt);   /* after the floats, so the text flows around them */
   return n;
 }
 function opBtn(label,title,disabled,fn){
@@ -1321,6 +1339,12 @@ function wire(){
   window.addEventListener("resize", function(){
     var n = narrow();
     if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
+  });
+  /* one row open at a time, and clicking away closes it */
+  document.addEventListener("click", function(e){
+    if (e.target && e.target.closest && e.target.closest(".t.opsopen")) return;
+    var open = document.querySelectorAll(".t.opsopen");
+    for (var i=0;i<open.length;i++) open[i].classList.remove("opsopen");
   });
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }

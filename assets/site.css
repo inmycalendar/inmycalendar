@@ -177,3 +177,13 @@ footer a:hover{color:var(--ink)}
   .sitenav .gap{margin:0 4px}
   .pagebody .body{font-size:14px}
 }
+
+/* account settings panel, hung off the initials */
+.authslot .who{cursor:pointer;font-family:inherit}
+.authslot .who:hover{border-color:var(--accent)}
+.authslot .who:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.authmenu.profile{width:270px}
+.pfemail{font-size:12px;color:var(--ink);word-break:break-all;margin:-2px 0 4px}
+.pflabel{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:2px}
+.signoutrow{margin-top:8px;text-align:center;font-weight:600}
+.signoutrow:hover{background:#fdf3f3;color:var(--danger);border-color:#f0d5d5}

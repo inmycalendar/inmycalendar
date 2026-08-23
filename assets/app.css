@@ -193,10 +193,14 @@ main{padding:16px 0 0}
 .t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;
   max-height:calc(1.6em * 3);overflow:clip;overflow-wrap:anywhere}
 .t.s-done .txt{text-decoration:line-through;color:var(--soft)}
-/* Floated right and BEFORE the text in the source, or the first line would not
-   shorten around it. visibility:hidden still reserves the space, so the text
-   does not reflow when the controls appear on hover. */
-.t .ops{float:right;display:flex;gap:2px;margin:1px 0 0 8px;visibility:hidden}
+/* The ⋯ button is the only thing floated in the resting state, so the first
+   line loses ~20px instead of ~152px. The full control row appears in place of
+   it once opened, and only then does it take the width. */
+.t .more{float:right;margin:0 0 0 8px;visibility:hidden}
+.t:hover .more,.t:focus-within .more,.t.opsopen .more{visibility:visible}
+.t.opsopen .more{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
+.t .ops{float:right;display:none;gap:2px;margin:0 0 0 8px}
+.t.opsopen .ops{display:flex}
 .t:hover .ops,.t:focus-within .ops{visibility:visible}
 /* A touch screen cannot hover, so hiding the controls behind :hover made them
    unreachable on a phone. Anything that reports no hover gets them always on. */
