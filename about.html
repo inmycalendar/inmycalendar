@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About inmycalendar - a Kanban board joined to a year calendar</title>
+<meta name="description" content="What inmycalendar is, who it is for, and why it works the way it does. A daily Kanban board joined to a week-by-week calendar of the years around it, with public holidays for 247 countries. Free, no sign-up needed.">
+<meta property="og:title" content="About inmycalendar">
+<meta property="og:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Free, no sign-up needed, and it works offline.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://inmycalendar.com/about.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="canonical" href="https://inmycalendar.com/about.html">
+<link rel="stylesheet" href="assets/site.css?v=31">
+<script type="application/ld+json">
+{
+ "@context":"https://schema.org",
+ "@type":"FAQPage",
+ "mainEntity":[
+  {"@type":"Question","name":"What is inmycalendar?",
+   "acceptedAnswer":{"@type":"Answer","text":"inmycalendar is a free planning tool that joins a daily Kanban board to a week-by-week calendar of the years around today. You plan one day in three columns - to do, in progress, done - while seeing several years laid out by week above it. It needs no sign-up and works offline."}},
+  {"@type":"Question","name":"Is inmycalendar free?",
+   "acceptedAnswer":{"@type":"Answer","text":"Yes. The whole app is free and needs no account. Signing in is optional and exists only to sync your board between devices."}},
+  {"@type":"Question","name":"Does inmycalendar work without an account?",
+   "acceptedAnswer":{"@type":"Answer","text":"Yes. Everything works signed out. Your tasks, notes and settings are saved in your own browser and nothing is transmitted anywhere unless you choose to sign in."}},
+  {"@type":"Question","name":"Which countries' public holidays does inmycalendar show?",
+   "acceptedAnswer":{"@type":"Answer","text":"247 countries and territories. You pick one country, and only that country's holiday file is loaded. Regional holidays are an optional extra so they do not bury the national ones."}},
+  {"@type":"Question","name":"What is a Kanban board?",
+   "acceptedAnswer":{"@type":"Answer","text":"A Kanban board is a way of seeing work as cards moving through stages. In inmycalendar there are three stages: to do, in progress and done. A task's position within a column is its priority, so ordering the list is how you decide what matters."}}
+ ]
+}
+</script>
+</head>
+<body>
+<header class="bar">
+ <div class="wrap">
+  <a class="brand" href="index.html"><svg width="22" height="22" viewBox="0 0 128 128" aria-hidden="true"><rect width="128" height="128" rx="26" fill="#18181b"/><rect x="24" y="32" width="80" height="66" rx="10" fill="#fff"/><rect x="24" y="32" width="80" height="18" rx="10" fill="#d4d4d8"/><text x="64" y="90" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="600" font-size="40" fill="#18181b">imc</text></svg><span class="wordmark">in<b>my</b>calendar</span></a>
+  <div class="appzone"></div>
+  <nav class="sitenav">
+    <a href="index.html#board">Kanban Board</a>
+    <a href="index.html#calendar">Calendar</a>
+    <span class="gap"></span>
+    <a class="page" href="about.html">About</a><a class="page" href="guide.html">Guide</a><a class="page" href="contact.html">Contact</a><a class="page" href="privacy.html">Privacy</a>
+  </nav>
+  <span class="authslot hidden" id="authSlot"></span>
+ </div>
+</header>
+
+<main class="wrap pagebody"><div class="body">
+
+<h1>About inmycalendar</h1>
+<div class="eyebrow">What it is, who it is for, and why it works this way</div>
+
+<p><strong>inmycalendar is a daily Kanban board joined to a week-by-week calendar of the years around today.</strong> You plan one day in three columns, and above it you can see several years at once, laid out by week rather than by month. It is free, needs no sign-up, and keeps working with no internet connection.</p>
+
+<h2>The problem it solves</h2>
+<p>Most planning tools make you choose. A to-do app is good at today and blind to next March. A calendar app is good at next March and useless for ordering the six things you actually have to do before lunch. So people end up running both, and the two drift apart.</p>
+<p>inmycalendar puts them on one screen. The board answers "what am I doing now". The year grid answers "when is that, and what else is near it". Marking a week of leave in June and seeing how it sits against a deadline in July takes one glance, not two apps.</p>
+
+<h2>Who it is for</h2>
+<ul>
+  <li>People who plan in weeks rather than in months, which is how most working life is actually scheduled</li>
+  <li>Anyone tracking leave, travel, deadlines and days worked from home across a long horizon</li>
+  <li>People who work across countries and need public holidays visible without looking them up</li>
+  <li>Anyone who wants a planner that does not require an account before it will show them anything</li>
+</ul>
+
+<h2>What makes it different</h2>
+
+<h3>A year read by week, not by month</h3>
+<p>Month grids break the year into twelve disconnected boxes, and a plan that spans the end of one month into the next becomes hard to see. Laying the year out as a continuous run of weeks keeps that span visible. Weeks that straddle a year boundary are shown greyed rather than dropped, so 31 December never quietly disappears.</p>
+
+<h3>Four things can be true about one day</h3>
+<p>A single day might be a public holiday, marked as leave, be today, and have three tasks on it. Those use four independent visual channels - a fill, a bottom stripe, a ring, and a corner dot - so they can all appear at once and stay readable. It is also why the app's own chrome is near-black: a coloured interface would compete with the colours that carry meaning.</p>
+
+<h3>Public holidays for 247 countries</h3>
+<p>Pick a country and its public holidays appear on the calendar. Only that one country's data is ever loaded, so the feature costs almost nothing to use. Regional holidays are an optional extra, because in some countries they outnumber the national ones several times over and bury them.</p>
+
+<h3>It works signed out, and offline</h3>
+<p>There is no sign-up wall. Open the site and start typing. Everything is stored in your own browser, and nothing is transmitted anywhere unless you decide to sign in. Signing in is optional and does one thing: it syncs your board between your devices. See the <a href="privacy.html">privacy page</a> for exactly what is and is not collected in each case.</p>
+
+<h2>How it is built</h2>
+<p>Plain HTML, CSS and JavaScript. No framework, no build step, no bundler. That is a deliberate choice rather than a shortcut: it means the entire app can be opened, read and edited from any machine with a text editor, and it loads fast because there is very little to load.</p>
+<p>It is covered by a large automated test suite that drives a real browser document with synthetic clicks and keystrokes, rather than checking that the source looks right. The source code is public on <a href="https://github.com/suyash-keshri/inmycalendar" rel="noopener">GitHub</a>, including the reasoning behind every significant decision and a list of the bugs that cost the most time to find.</p>
+
+<h2>What it costs</h2>
+<p>Nothing. There is no paid tier today. Advertising is planned for a later version, and an ad-free option alongside it, at which point the <a href="privacy.html">privacy page</a> will be updated before anything changes.</p>
+
+<div class="card">
+  <h2 style="margin-top:0">Try it</h2>
+  <p style="margin:0 0 8px">No account, no email address, nothing to install.</p>
+  <p style="margin:0"><a href="index.html#board">Open the Kanban board</a> or <a href="guide.html">read the guide first</a>.</p>
+</div>
+
+</div></main>
+<footer>
+  <div class="wrap">
+    <a href="index.html#board">Kanban Board</a><a href="index.html#calendar">Calendar</a>
+    <a href="about.html">About</a><a href="guide.html">Guide</a><a href="contact.html">Contact</a><a href="privacy.html">Privacy</a>
+    <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
+  </div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/site.js?v=31"></script>
+<script src="assets/auth.js?v=31"></script>
+</body>
+</html>
