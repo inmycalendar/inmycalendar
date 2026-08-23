@@ -71,7 +71,16 @@ input,select,textarea{font:inherit;color:inherit}
 
 /* ---------------- ribbon: white, hairline, three fluid zones --------------- */
 .bar{position:sticky;top:0;z-index:60;background:var(--card);border-bottom:1px solid var(--rule)}
+/* The ribbon gets MORE width than the content column below it.
+   This was the actual bug behind "the top row keeps wrapping". .wrap caps
+   everything at 1320px, so on a 1900px monitor the ribbon still only had
+   1320px to work with, and the contents need about 1330 once the date meta is
+   showing. Every breakpoint I wrote keyed off viewport width, which was never
+   the number that mattered - the container cap was. Widening the bar alone
+   lets a large monitor actually be a large monitor, which is what was being
+   asked for, while the reading column below stays a comfortable 1320. */
 .bar .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  width:min(100% - (var(--gut) * 2), 1640px);
   min-height:var(--hBar);padding-top:7px;padding-bottom:7px}
 .brand{display:inline-flex;align-items:center;gap:8px;font-family:var(--disp);font-size:15px;
   letter-spacing:.07em;white-space:nowrap;color:var(--ink);text-decoration:none;flex:none}

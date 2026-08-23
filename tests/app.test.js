@@ -1561,6 +1561,19 @@ check(Array.isArray(ld["@graph"]) && ld["@graph"].length > 10,
 check(ld["@graph"].every(e => e["@type"] === "Event" && /^\d{4}-\d{2}-\d{2}$/.test(e.startDate)),
       "every entry is a dated Event, so the markup is valid rather than merely present");
 check(/index\.html#calendar\/JP/.test(jp), "and it links into the app preloaded with that country");
+/* The ribbon is shared, so sign-in has to work here too. It was missing when
+   these pages were first generated, the same class of bug as the widget styles
+   living in a stylesheet three of the pages never loaded. */
+check(/assets\/auth\.js\?v=\d+/.test(jp), "a country page can sign you in, like every other page");
+check(/supabase-js/.test(jp), "loading the library it needs to do that");
+/* Regional holidays earn their place: more countries have them than not, and
+   they are what someone in a particular state actually searches for. */
+const usPage = fs.readFileSync(path.join(HOLDIR, "US.html"), "utf8");
+check(/>Regional</.test(usPage), "regional holidays are listed, not just national ones");
+check((usPage.match(/>Regional</g) || []).length > 40,
+      "and there are many for a federal country, which is the long tail worth ranking for");
+check((usPage.match(/<h2>Public holidays in United States in \d{4}<\/h2>/g) || []).length === 6,
+      "six years are covered, since each year is another phrase someone types");
 
 /* Two different countries must not produce the same page. */
 const fr = fs.readFileSync(path.join(HOLDIR, "FR.html"), "utf8");
