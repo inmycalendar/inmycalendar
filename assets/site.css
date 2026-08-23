@@ -96,14 +96,40 @@ input,select,textarea{font:inherit;color:inherit}
    query carries no extra specificity, so when it sat higher in the file the
    plain .appzone{flex-wrap:wrap} underneath simply won and the whole thing
    did nothing. Position in the file is the only reason it applies. */
+/* ---- one ribbon line, WITHOUT overlapping -------------------------------
+   The first attempt set nowrap plus min-width:0 on these zones. min-width:0
+   lets a flex item shrink BELOW its own contents, so the contents did not
+   shrink with it - they spilled out and painted over the neighbour. "Month"
+   sat on top of "Kanban Board". Overlapping is strictly worse than wrapping,
+   which is what it replaced.
+
+   Nothing may shrink below its content now. Instead, at each width, the least
+   useful thing is removed until the rest genuinely fits:
+
+     < 1500px   the date meta goes ("Tue · Week 28"), worth 150 fixed pixels
+                and duplicated by the date field two controls to its left
+     < 1250px   the nav labels shorten, "Kanban Board" becomes "Board"
+     <  901px   the ribbon is allowed to wrap again, because on a small screen
+                two honest rows beat cramming
+
+   wrap stays the base everywhere, so if a future addition overflows the line
+   the ribbon grows a second row rather than overlapping. Ugly beats broken. */
 @media (min-width:901px){
   .bar .wrap{flex-wrap:nowrap}
-  .appzone{flex-wrap:nowrap;min-width:0;flex:1 1 auto}
-  .sitenav{flex-wrap:nowrap;flex:0 1 auto;min-width:0}
+  .appzone{flex-wrap:nowrap;flex:0 1 auto}
+  .sitenav{flex-wrap:nowrap;flex:0 0 auto}
   .authslot{flex:none}
-  /* the date label is the one thing worth losing first when space runs out */
-  .meta{flex:0 1 auto;min-width:0}
 }
+@media (max-width:1499px){
+  .meta{display:none}
+}
+@media (max-width:1249px){
+  .sitenav a{padding:6px 7px;letter-spacing:.05em}
+  .sitenav .gap{margin:0 3px}
+  .navlong{display:none}
+  .navshort{display:inline}
+}
+.navshort{display:none}
 
 /* ---------------- shared controls ---------------- */
 .btn{background:var(--card);border:1px solid var(--rule);color:var(--ink);padding:5px 11px;
