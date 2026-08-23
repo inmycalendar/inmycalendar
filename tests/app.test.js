@@ -1544,8 +1544,17 @@ check(/changes\(\)\.length/.test(auSrc), "and it reports how much is still waiti
 check(/have\" \) \+ \" not reached your account yet|not reached your account yet/.test(auSrc),
       "signing out with unsent changes warns before clearing the device");
 check(/window\.confirm/.test(auSrc), "and asks rather than assuming");
-check(/Not switched on yet/.test(auSrc),
-      "reminders say plainly that they are not live, rather than offering a switch that does nothing");
+/* Reminders are opt-in and default OFF. Unasked-for mail is how a young
+   sending domain earns a permanent place in spam filters, so the control has
+   to start off and say so. */
+check(/reminderOn/.test(auSrc), "there is a reminder opt-in stored with the account settings");
+check(/checked = !!cfgNow.reminderOn/.test(auSrc),
+      "and it reflects the saved preference rather than defaulting to on");
+check(/Off. Nothing is sent unless you switch this on./.test(auSrc),
+      "the wording states plainly that nothing is sent unless asked for");
+check(/reminderFreq/.test(auSrc), "with a frequency the person chooses");
+check(/imcSync.now/.test(auSrc),
+      "and switching it OFF pushes immediately rather than waiting for a debounce");
 /* The panel is styled in the shared sheet, like the rest of the widget. */
 const flatSite2 = siteCss.replace(/\s*\n\s*/g,"");
 check(/\.authmenu\.profile\{/.test(flatSite2), "the panel is styled in site.css, so it works on every page");
