@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { JSDOM, VirtualConsole } = require("jsdom");
+const zlib = require("zlib");
 
 /* ------------------------------------------------------------------
    jsdom does not fetch <link> or <script src> from disk, so we inline
@@ -1627,6 +1628,58 @@ check(/href="downloads\/inmycalendar-analytics\.xlsx" download/.test(idxHtml),
    real risk for a binary in a repo that normalises line endings. */
 const head = fs.readFileSync(XLSX).slice(0, 2).toString("latin1");
 check(head === "PK", "the file is a valid archive, so it survived being committed");
+/* An .xlsx is a zip of XML. Reading it here needs no dependency: walk the
+   central directory, inflate the sheet parts, and look at the formulas. This
+   exists because a workbook was shipped with 35 #REF! cells in it and nothing
+   in the suite noticed - the file was checked for existence and size only,
+   which a corrupted file passes just as easily as a working one. */
+function unzipEntries(buf){
+  const out = {};
+  /* end-of-central-directory record, scanned from the back */
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= 0 && i > buf.length - 66000; i--){
+    if (buf.readUInt32LE(i) === 0x06054b50){ eocd = i; break; }
+  }
+  if (eocd < 0) return out;
+  const count = buf.readUInt16LE(eocd + 10);
+  let p = buf.readUInt32LE(eocd + 16);
+  for (let n = 0; n < count; n++){
+    if (buf.readUInt32LE(p) !== 0x02014b50) break;
+    const method   = buf.readUInt16LE(p + 10);
+    const compSize = buf.readUInt32LE(p + 20);
+    const nameLen  = buf.readUInt16LE(p + 28);
+    const extraLen = buf.readUInt16LE(p + 30);
+    const cmtLen   = buf.readUInt16LE(p + 32);
+    const localOff = buf.readUInt32LE(p + 42);
+    const name     = buf.slice(p + 46, p + 46 + nameLen).toString("utf8");
+    /* local header, to find where the data actually begins */
+    const lNameLen  = buf.readUInt16LE(localOff + 26);
+    const lExtraLen = buf.readUInt16LE(localOff + 28);
+    const dataAt    = localOff + 30 + lNameLen + lExtraLen;
+    const raw       = buf.slice(dataAt, dataAt + compSize);
+    try {
+      out[name] = (method === 0 ? raw : zlib.inflateRawSync(raw)).toString("utf8");
+    } catch (e){ /* a part we cannot read is not a part we assert on */ }
+    p += 46 + nameLen + extraLen + cmtLen;
+  }
+  return out;
+}
+
+const wbBuf = fs.readFileSync(XLSX);
+const parts = unzipEntries(wbBuf);
+const sheetNames = Object.keys(parts).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+check(sheetNames.length >= 5, "the workbook contains its sheets (" + sheetNames.length + " found)");
+const allSheetXml = sheetNames.map(n => parts[n]).join("");
+const formulaCount = (allSheetXml.match(/<f>/g) || []).length;
+check(formulaCount > 5000, "and thousands of live formulas (" + formulaCount + "), not pasted values");
+/* THE ONE THAT MATTERS. Deleting a row that formulas point at rewrites them to
+   #REF! permanently, which is exactly how a broken workbook got shipped. */
+check(!/#REF!/.test(allSheetXml),
+      "and not one #REF! anywhere, which is what a deleted row leaves behind");
+check(!/<v>#(VALUE|NAME|DIV\/0|NUM)!<\/v>/.test(allSheetXml),
+      "nor any cached formula error");
+
+
 }
 
 

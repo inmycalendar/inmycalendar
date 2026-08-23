@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm install      # only needed to run the tests
-npm test         # expect: 640 passed, 0 failed
+npm test         # expect: 644 passed, 0 failed
 ```
 
 ---
@@ -62,7 +62,7 @@ assets/
   favicon.svg .ico apple-touch-icon.png icon-192.png icon-512.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       640 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       644 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -256,7 +256,7 @@ collide with the semantic colours.
 npm test
 ```
 
-640 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+644 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -331,6 +331,12 @@ bugs that static review missed.
   ribbon this put "Month" on top of "Kanban Board" at 1440px. Overlapping is strictly worse
   than the wrapping it replaced. Keep `flex-wrap:wrap` as the base and remove the least useful
   item at each breakpoint instead.
+- **Never verify an artifact by editing the artifact.** The analytics workbook was checked by
+  pasting sample data into the shipped file and then "tidying up" by deleting those rows.
+  Deleting a row that formulas reference rewrites them to `#REF!` permanently, so the file that
+  shipped was the one the verification had just corrupted - 35 broken cells. Verify a COPY
+  (`tools/verify-analytics-workbook.ps1`), and check the shipped file is clean BEFORE touching
+  anything. The suite now inflates the xlsx and fails on any `#REF!`.
 - **Never run a blind find/replace across HTML.**
 - **A media query that changes `display` does not reset the other properties.** `.shell` is a grid
   with `align-items:start`; the mobile override switched it to `flex-direction:column` but `start`
