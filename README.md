@@ -127,6 +127,39 @@ useful for cycle time.
 change, migrate them (see `OLD_SETS` in `init()`) or the developer testing on their own browser
 sees stale data and concludes the deploy failed.
 
+### Sync storage (Supabase Postgres)
+
+Four tables, all with RLS enabled in the same statement that created them.
+
+| Table | Key | Notes |
+|---|---|---|
+| `tasks` | `(user_id, id)` | `id` is the client's own `t...` string, so a row keeps its identity across devices |
+| `notes` | `(user_id, date)` | one row per day |
+| `track` | `(user_id, id)` | countdowns |
+| `settings` | `user_id` | one row per person, merged whole rather than field by field |
+
+**Every table carries `deleted boolean` and `updated_at timestamptz`.** Deletions set the flag;
+rows are never dropped. A dropped row is invisible to the other device, which re-sends the task
+and resurrects it.
+
+**`updated_at` is supplied by the client, not the server.** An edit made offline at 10:00 and
+pushed at 12:00 must still lose to an edit made at 11:00 on another device, and server-time-on-write
+gets that backwards. A trigger clamps any timestamp claiming to be more than a minute ahead of the
+server, so a device with a wrong clock cannot win every merge for ever.
+
+**Policies are per table per action**, four each. The `with check` clause matters as much as
+`using`: `using` alone stops you reading someone else's row but would still let you *write* a row
+stamped with their `user_id`.
+
+**RLS was verified by attacking it, not by reading it.** With one row belonging to each of two
+different accounts: each signed-in person saw exactly their own row and not the other's, a signed-out
+request saw nothing, and all three of forging a row into another account, editing another account's
+row, and deleting another account's row were refused. Re-run that probe after any policy change; a
+policy that is merely *present* is not a policy that *works*.
+
+The trigger function has `EXECUTE` revoked from `anon` and `authenticated`. Triggers run as the
+table owner regardless, so revoking costs nothing and closes a REST endpoint nobody should reach.
+
 ### Dates
 Week 1 is the week containing January 1st; the last week is the week containing December 31st.
 Edge weeks borrow days from the adjacent year and are rendered greyed, never dropped - an early
@@ -302,8 +335,7 @@ itself and the app carries on.
 
 ## Roadmap
 
-- [ ] Postgres tables + Row Level Security (every table gets RLS enabled in the same breath it
-      is created; with no policies defined the table is locked, which is the safe default)
+- [x] Postgres tables + Row Level Security - **done**, see "Sync storage" below
 - [ ] Sync. **Agreed conflict rule:** merge at task level, not day level. Different tasks on the
       same day both survive. The same task edited in two places - most recent edit wins.
       Deletions must be recorded as markers, not dropped rows, or deleted tasks resurrect from
