@@ -114,10 +114,16 @@ input,select,textarea{font:inherit;color:inherit}
 
    wrap stays the base everywhere, so if a future addition overflows the line
    the ribbon grows a second row rather than overlapping. Ugly beats broken. */
+/* NOTE: no flex-wrap:nowrap anywhere. An earlier attempt set it here, and
+   nowrap means that when the contents do not fit they OVERLAP instead of
+   moving down - which is exactly what happened, at every width below 1280px.
+   Wrapping is the safety net: if the breakpoints below ever fail to free up
+   enough room, the ribbon grows a second row, which is untidy but readable.
+   Overlapping text is neither. The breakpoints keep it to one line in
+   practice; wrap makes the failure mode survivable. */
 @media (min-width:901px){
-  .bar .wrap{flex-wrap:nowrap}
-  .appzone{flex-wrap:nowrap;flex:0 1 auto}
-  .sitenav{flex-wrap:nowrap;flex:0 0 auto}
+  .appzone{flex:0 1 auto}
+  .sitenav{flex:0 0 auto}
   .authslot{flex:none}
 }
 @media (max-width:1499px){

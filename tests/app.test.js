@@ -526,6 +526,12 @@ check(!/\.sitenav\{[^}]*min-width:0/.test(desktopBar),
       "and neither may the nav");
 check(/\.bar \.wrap\{[^}]*flex-wrap:wrap/.test(flat),
       "wrap stays the base, so an overflow grows a second row rather than overlapping");
+/* nowrap must not exist ANYWHERE on the ribbon. With it, contents that do not
+   fit overlap instead of moving down, which is what happened at every width
+   below 1280px. Wrapping is the safety net for a breakpoint that guesses low:
+   a second row is untidy, overlapping text is broken. */
+check(!/flex-wrap:nowrap/.test(flat.replace(/\/\*[\s\S]*?\*\//g, "")),
+      "and flex-wrap:nowrap appears in no actual rule, since it turns a tight fit into overlapping text");
 check(/@media \(max-width:1499px\)\{\.meta\{display:none\}\}/.test(flat),
       "the date meta is dropped first when space runs short, being 150 fixed pixels and duplicated nearby");
 check(/@media \(max-width:1249px\)\{[^@]*\.navlong\{display:none\}/.test(flat),

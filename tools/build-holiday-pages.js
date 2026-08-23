@@ -23,7 +23,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "35";                     /* cache tag, keep in step with the pages */
+const V    = "36";                     /* cache tag, keep in step with the pages */
 const YEARS = [2026, 2027, 2028];
 
 /* ---- country names, read from the app so the two can never disagree ------ */
