@@ -302,8 +302,18 @@ main{padding:16px 0 0}
 .glance{display:flex;align-items:flex-start;flex-wrap:wrap;gap:14px;padding:12px}
 .calrail>.wg,.glance>.wg{flex:1 1 300px;min-width:260px}
 
+/* NO overflow:hidden here. It was present to clip the rounded corners, and it
+   silently killed the sticky year and day-of-week headers inside: an ancestor
+   with overflow:hidden becomes the containing block for a sticky child, and
+   since .wg does not itself scroll, the headers had no range to stick over and
+   scrolled away with the grid. This is the exact trap the README records, hit
+   a second time. The corners are rounded on the header and footer rows
+   instead, which needs no clipping. */
 .wg{display:grid;grid-template-columns:26px repeat(7,minmax(0,1fr));
-  border:1px solid var(--rule2);border-radius:8px;overflow:hidden;background:var(--card)}
+  border:1px solid var(--rule2);border-radius:8px;background:var(--card)}
+.wg .yh{border-radius:7px 7px 0 0}
+.wg>*:nth-last-child(8){border-bottom-left-radius:7px}
+.wg>*:last-child{border-bottom-right-radius:7px}
 .wg .yh{grid-column:1/-1;min-height:var(--hYear);position:sticky;top:0;z-index:7;background:var(--card);
   color:var(--ink);font-family:var(--disp);font-weight:600;font-size:12.5px;letter-spacing:.02em;
   display:flex;align-items:baseline;gap:7px;padding:7px 11px 5px;border-bottom:1px solid var(--rule2)}
