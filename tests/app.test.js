@@ -1305,6 +1305,13 @@ check(/\.t \.txt\{flex:1 1 100%/.test(phoneCss),
       "which gives the task text the full width of the card");
 check(/\.cadd\{height:38px/.test(phoneCss) && /\.addgo\{width:38px;height:38px/.test(phoneCss),
       "the add field and its button are both 38px, comfortably tappable");
+/* Measured on the live site after the first pass: these four were still under
+   16px, because styling by id outranks a bare element selector. Naming them is
+   the fix, and this asserts they stay named. */
+check(/#tLabel,#tDate,#tUnit\{min-height:38px\}/.test(phoneCss),
+      "the countdown fields are named explicitly, or they keep zooming the page");
+check(/#holReg\{width:20px;height:20px\}/.test(phoneCss),
+      "the regional-holidays checkbox is big enough to hit with a thumb");
 
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

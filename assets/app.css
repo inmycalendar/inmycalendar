@@ -445,10 +445,16 @@ main{padding:16px 0 0}
 @media (max-width:640px){
   /* 16px is not a design choice, it is the exact threshold below which iOS
      zooms. Anything smaller here and the page lurches on first tap. */
-  .cadd,.sel,.dpick,.tinput,.sinput,#bnote,#mNote,
+  /* The countdown fields are styled by id, which outranks a bare element
+     selector, so they have to be named here or they stay at 11.5px and keep
+     zooming the page. Checked on the live site: these four were the survivors. */
+  .cadd,.sel,.dpick,.tinput,.sinput,#bnote,#mNote,#tLabel,#tDate,#tUnit,
   input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
     font-size:16px
   }
+  #tLabel,#tDate,#tUnit{min-height:38px}
+  /* a checkbox does not trigger the zoom, but 10.5px is still too small to hit */
+  #holReg{width:20px;height:20px}
   .cadd{height:38px}
   .addgo{width:38px;height:38px;font-size:19px}
   .sel{min-height:38px;padding-right:26px}
