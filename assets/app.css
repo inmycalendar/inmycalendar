@@ -164,7 +164,13 @@ main{padding:16px 0 0}
    two stopping short of the right edge for no reason. As a block with the
    controls floated right, only the first line is shortened; lines two and
    three run the full width of the card underneath them. */
-.t{display:block;min-width:0;min-height:28px;padding:4px 8px;
+/* flex:none is load-bearing, not tidiness. .lane is a flex column with a
+   max-height, and a flex item defaults to flex-shrink:1, so once the column
+   was full the browser compressed EVERY task to make them fit - a three-line
+   task got squashed to one line with its text clipped mid-word. The lane is
+   supposed to scroll instead. Without this line, adding a task silently
+   shrinks all the others. */
+.t{display:block;flex:none;min-width:0;min-height:28px;padding:4px 8px;
   border:1px solid var(--rule);border-radius:8px;background:var(--card)}
 .t::after{content:"";display:block;clear:both}
 .t.s-todo{background:var(--todoBg);border-color:var(--todoE)}
@@ -193,14 +199,14 @@ main{padding:16px 0 0}
 .t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;
   max-height:calc(1.6em * 3);overflow:clip;overflow-wrap:anywhere}
 .t.s-done .txt{text-decoration:line-through;color:var(--soft)}
-/* The ⋯ button is the only thing floated in the resting state, so the first
-   line loses ~20px instead of ~152px. The full control row appears in place of
-   it once opened, and only then does it take the width. */
-.t .more{float:right;margin:0 0 0 8px;visibility:hidden}
-.t:hover .more,.t:focus-within .more,.t.opsopen .more{visibility:visible}
-.t.opsopen .more{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
-.t .ops{float:right;display:none;gap:2px;margin:0 0 0 8px}
-.t.opsopen .ops{display:flex}
+/* Controls in the open, not behind a ⋯. Tried the menu, and one tap to reach
+   Rename on a control used constantly was the wrong trade. The cost is that
+   the first line of a task is ~113px instead of ~210px, which the three-line
+   layout below absorbs.
+   Floated right and BEFORE the text in the source, so only the first line
+   shortens around them. visibility rather than display, so the text does not
+   reflow when they appear on hover. */
+.t .ops{float:right;display:flex;gap:2px;margin:0 0 0 8px;visibility:hidden}
 .t:hover .ops,.t:focus-within .ops{visibility:visible}
 /* A touch screen cannot hover, so hiding the controls behind :hover made them
    unreachable on a phone. Anything that reports no hover gets them always on. */
