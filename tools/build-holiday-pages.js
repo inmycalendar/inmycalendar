@@ -23,8 +23,11 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "36";                     /* cache tag, keep in step with the pages */
-const YEARS = [2026, 2027, 2028];
+const V    = "37";                     /* cache tag, keep in step with the pages */
+/* Six years, not three. The data runs 2015-2045, and every extra year is
+   another search phrase someone actually types ("public holidays 2030").
+   Six is where the page is still readable; the app covers the rest. */
+const YEARS = [2026, 2027, 2028, 2029, 2030, 2031];
 
 /* ---- country names, read from the app so the two can never disagree ------ */
 const appJs = fs.readFileSync(path.join(ROOT, "assets/app.js"), "utf8");
@@ -70,9 +73,11 @@ function page(code, name, data){
   if (!perYear.length) return null;
 
   const nationalNow = perYear[0].rows.filter(r => !r.regional).length;
-  const title = `Public holidays in ${name} ${YEARS[0]}, ${YEARS[1]} and ${YEARS[2]}`;
-  const desc  = `Every public holiday in ${name} for ${YEARS[0]}, ${YEARS[1]} and ${YEARS[2]}, with dates and days of the week. ` +
-                `${nationalNow} national holidays in ${YEARS[0]}. Free, and you can plan around them on a year-at-a-glance calendar.`;
+  const title = `Public holidays in ${name} ${YEARS[0]} to ${YEARS[YEARS.length-1]}`;
+  const regionalNow = perYear[0].rows.filter(r => r.regional).length;
+  const desc  = `Every public holiday in ${name} from ${YEARS[0]} to ${YEARS[YEARS.length-1]}, with dates and days of the week. ` +
+                `${nationalNow} national${regionalNow ? " and " + regionalNow + " regional" : ""} holidays in ${YEARS[0]}. ` +
+                `Free, and you can plan around them on a year-at-a-glance calendar.`;
 
   const tables = perYear.map(({ year, rows }) => `
 <h2>Public holidays in ${esc(name)} in ${year}</h2>
@@ -145,9 +150,9 @@ ${JSON.stringify({ "@context":"https://schema.org", "@graph": events }, null, 1)
 <main class="wrap pagebody"><div class="body">
 
 <h1>${esc(title)}</h1>
-<div class="eyebrow"><a href="index.html">All countries</a> &middot; ${nationalNow} national holidays in ${YEARS[0]}</div>
+<div class="eyebrow"><a href="index.html">All countries</a> &middot; ${nationalNow} national${regionalNow ? " and " + regionalNow + " regional" : ""} holidays in ${YEARS[0]}</div>
 
-<p>Below are the public holidays in ${esc(name)} for ${YEARS[0]}, ${YEARS[1]} and ${YEARS[2]}. National holidays apply across the whole country; regional ones apply only in particular states or areas, so check locally before booking anything around them.</p>
+<p>Below are the public holidays in ${esc(name)} for every year from ${YEARS[0]} to ${YEARS[YEARS.length-1]}. National holidays apply across the whole country; regional ones apply only in particular states or areas, so check locally before booking anything around them.</p>
 
 <div class="card">
   <p style="margin:0"><strong>See these on a calendar.</strong> <a href="../index.html#calendar/${code}">Open the ${esc(name)} calendar</a> to see every one of these marked on a year-at-a-glance grid, alongside your own leave, travel and deadlines. Free, and no sign-up.</p>
@@ -169,7 +174,9 @@ ${tables}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/site.js?v=${V}"></script>
+<script src="../assets/auth.js?v=${V}"></script>
 </body>
 </html>
 `;
@@ -190,8 +197,8 @@ COUNTRIES.forEach(([code, name]) => {
 });
 
 /* ---- index page ----------------------------------------------------------- */
-const listTitle = `Public holidays by country, ${YEARS[0]} to ${YEARS[2]}`;
-const listDesc  = `Public holiday dates for ${built.length} countries and territories, for ${YEARS[0]}, ${YEARS[1]} and ${YEARS[2]}. Free, with a year-at-a-glance calendar to plan around them.`;
+const listTitle = `Public holidays by country, ${YEARS[0]} to ${YEARS[YEARS.length-1]}`;
+const listDesc  = `Public holiday dates for ${built.length} countries and territories, from ${YEARS[0]} to ${YEARS[YEARS.length-1]}. National and regional holidays, free, with a year-at-a-glance calendar to plan around them.`;
 const indexHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -232,7 +239,7 @@ const indexHtml = `<!DOCTYPE html>
 
 <main class="wrap pagebody"><div class="body">
 <h1>Public holidays by country</h1>
-<div class="eyebrow">${built.length} countries and territories &middot; ${YEARS[0]} to ${YEARS[2]}</div>
+<div class="eyebrow">${built.length} countries and territories &middot; ${YEARS[0]} to ${YEARS[YEARS.length-1]}</div>
 <p>Pick a country for its public holiday dates, or open any of them on a year-at-a-glance calendar to plan leave, travel and deadlines around them. Free, and no sign-up needed.</p>
 <div class="ctrylist">
 ${built.map(c => `<a href="${c.code}.html">${esc(c.name)}</a>`).join("\n")}
@@ -245,7 +252,9 @@ ${built.map(c => `<a href="${c.code}.html">${esc(c.name)}</a>`).join("\n")}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/site.js?v=${V}"></script>
+<script src="../assets/auth.js?v=${V}"></script>
 </body>
 </html>
 `;

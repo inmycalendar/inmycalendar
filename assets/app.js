@@ -663,6 +663,12 @@ function renderWeekGrid(o){
           if (hasCat) cell.className += " k" + rec.color;      /* whole cell takes the colour */
           if (day.getFullYear() !== week.year && !hasCat) cell.className += " out";
           if (ds === nowISO) cell.className += " now";
+          /* The day the board is showing. Same SHAPE as today (a ring, so it
+             composes with a category fill and a holiday stripe instead of
+             covering them) but grey rather than near-black, so it reads as
+             "where you are" without becoming a fifth colour channel. Skipped
+             when it IS today, which already has the stronger ring. */
+          else if (ds === sel) cell.className += " picked";
           var tc = tally[ds] ? tally[ds].length : 0;
           if (tc) cell.appendChild(mk("span","task"));
           if (rec && rec.note) cell.appendChild(mk("span","pen","\u270e"));
