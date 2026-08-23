@@ -1750,6 +1750,19 @@ check(!/rect width="128" height="128" rx="26" fill="#18181b"/.test(gen),
       "and the generated holiday pages carry the new logo, not the old one");
 check(/stroke-width="6"/.test(readFile("holidays/IN-2027.html")),
       "which is visible in a page it actually produced");
+
+/* THE REASON THE TAB ICON DID NOT UPDATE. Every stylesheet and script carried
+   ?v=N, but the icon links never did. The server was serving the new file -
+   verified byte-identical - and browsers simply never asked for it again,
+   because a favicon is cached far more aggressively than CSS and the URL had
+   not changed. Bumping the version is useless if the icons are not in it. */
+PAGES.forEach(f => {
+  const src = readFile(f);
+  const icons = src.match(/<link rel="[^"]*icon[^"]*"[^>]*>/g) || [];
+  check(icons.length >= 2, f + ": declares its icons");
+  check(icons.every(t => /href="[^"]*\?v=\d+"/.test(t)),
+        f + ": every icon link carries a cache tag, or the browser keeps the old one for ever");
+});
 }
 
 
