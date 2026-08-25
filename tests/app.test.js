@@ -2223,6 +2223,110 @@ $("mCancel").click();
 toBoard();
 }
 
+console.log("\n=== C52. Deleting can be taken back ===");
+{
+/* Deleting a task was instant, unconfirmed and permanent. On a phone the
+   delete button is one of SEVEN controls on a row at about 34px each, so
+   hitting it by accident is easy - and far likelier than anybody deliberately
+   pressing "Delete everything". A confirm on every delete would be worse than
+   the accident, because deleting is a normal thing to do many times a day. */
+check(!!$("undoBar") && !!$("undoGo"), "there is an undo bar with an undo button");
+
+toBoard();
+click([...$("scopeSeg").children][0]);          /* day scope, so tasks can be added */
+const ctrlZ = () => d.dispatchEvent(new w.KeyboardEvent("keydown",{key:"z",ctrlKey:true,bubbles:true}));
+const lane0 = () => col(0);
+const laneTexts = () => [...lane0().querySelectorAll(".t .txt")].map(n => n.textContent);
+const delRow = i => {
+  const rows = [...lane0().querySelectorAll(".t")];
+  click([...rows[i].querySelectorAll(".op")].find(b => b.title === "Delete"));
+};
+
+["Alpha","Bravo","Charlie","Delta"].forEach(t => add(0, t));
+const startList = laneTexts();
+check(startList.length >= 4, "four tasks to work with");
+
+/* Delete the SECOND one: restoring to the right SLOT is the part that can
+   silently go wrong, and appending to the bottom would quietly change what the
+   task means, because position is priority here. */
+delRow(1);
+check(laneTexts().indexOf("Bravo") < 0, "the task goes when deleted");
+check(!$("undoBar").classList.contains("hidden"), "and the undo bar appears");
+check(/Bravo/.test($("undoText").textContent),
+      "naming the task, so you know what you are getting back");
+
+click($("undoGo"));
+check(JSON.stringify(laneTexts()) === JSON.stringify(startList),
+      "undo puts it back in the same position, not at the bottom");
+check($("undoBar").classList.contains("hidden"), "and the bar goes away");
+
+/* The id has to survive, or sync treats the restored task as a new row and the
+   original stays deleted on the server. */
+{
+  const before = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Bravo").id;
+  delRow(1);
+  click($("undoGo"));
+  const after = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Bravo").id;
+  check(before === after, "the restored task keeps its id, so sync resurrects it rather than duplicating");
+}
+
+/* Several deletes come back one at a time, newest first. */
+delRow(0); delRow(0); delRow(0);
+const afterThree = laneTexts().length;
+click($("undoGo"));
+const step1 = laneTexts().length;
+ctrlZ(); const step2 = laneTexts().length;
+ctrlZ(); const step3 = laneTexts().length;
+check(step1 === afterThree + 1 && step2 === step1 + 1 && step3 === step2 + 1,
+      "three deletions undo one at a time rather than all at once");
+check(JSON.stringify(laneTexts()) === JSON.stringify(startList),
+      "and everything ends up where it started");
+
+/* Undo must never manufacture a duplicate. Restoring pushes a task back by id,
+   so undoing the same deletion twice, or undoing something already restored,
+   has to be a no-op rather than a second copy. Deliberately NOT written as
+   "the stack is empty": earlier sections of this file delete tasks too, so the
+   stack is shared, and draining it here would resurrect their tasks and break
+   them. Duplicates are the real risk anyway. */
+{
+  const ids = () => JSON.parse(w.localStorage.getItem("imc.tasks")).map(t => t.id);
+  ctrlZ(); ctrlZ(); ctrlZ();
+  const after = ids();
+  const dupes = after.filter((id, i) => after.indexOf(id) !== i);
+  check(dupes.length === 0, "repeated undo never produces a duplicate task");
+}
+
+/* Ctrl+Z belongs to the text field while you are typing in it. Stealing it
+   there would undo somebody's deletion instead of their last word. */
+{
+  delRow(0);
+  const n = laneTexts().length;
+  const f = lane0().querySelector(".cadd");
+  f.focus();
+  f.dispatchEvent(new w.KeyboardEvent("keydown",{key:"z",ctrlKey:true,bubbles:true}));
+  check(laneTexts().length === n, "Ctrl+Z while typing stays the browser's own undo");
+  click($("undoGo"));
+}
+
+/* Removing a countdown is the same accident with the same remedy: a small x,
+   no confirmation, and a date nobody remembers offhand. */
+{
+  $("tLabel").value = "Board review";
+  $("tDate").value = (cy + 1) + "-02-11";
+  click($("tAdd"));
+  const before = qa("#tkList .tk").length;
+  click(qa("#tkList .tk .x")[0]);
+  check(qa("#tkList .tk").length === before - 1, "a countdown can be removed");
+  check(/Board review|Removed/.test($("undoText").textContent), "which is also offered back");
+  click($("undoGo"));
+  check(qa("#tkList .tk").length === before, "and comes back");
+}
+
+/* The undo bar and the day-selection bar can be on screen together. */
+check(/\.toast\.above\{bottom:/.test(flat),
+      "the undo bar stacks above the day-selection bar rather than under it");
+}
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");

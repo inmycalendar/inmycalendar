@@ -444,8 +444,17 @@ function moveTaskToDate(id, newDate){
 function delTask(id){
   var t = byId(id); if (!t) return;
   var d = t.date, s = t.status;
+
+  /* Snapshot BEFORE the removal, and a deep copy: keeping a reference would
+     hand undo an object that later edits could still change. */
+  var snap = { task: JSON.parse(JSON.stringify(t)), order: t.order };
+
   tasks = tasks.filter(function(x){ return x.id !== id; });
   renumber(d,s); commit("tasks");
+
+  var short = String(t.text || "").replace(/\s+/g, " ").trim();
+  if (short.length > 42) short = short.slice(0, 42) + "…";
+  pushUndo("Deleted “" + short + "”", function(){ restoreTask(snap); });
 }
 
 /* ---------- KANBAN ---------- */
@@ -1042,8 +1051,17 @@ function renderTracked(){
       row.appendChild(sel2);
       var x = mk("button","x","\u00d7"); x.type = "button"; x.title = "Remove " + e.label;
       x.addEventListener("click", function(){
+        /* Same accident, same remedy: a small \u00d7 with no confirmation, and the
+           date behind it is often one nobody remembers offhand. */
+        var snap = JSON.parse(JSON.stringify(e));
+        var at = track.indexOf(e);
         track = track.filter(function(t){ return t.id !== e.id; });
         commit("track"); renderTracked();
+        pushUndo("Removed \u201c" + snap.label + "\u201d", function(){
+          if (track.some(function(t){ return t.id === snap.id; })) return;
+          track.splice(Math.max(0, Math.min(at, track.length)), 0, snap);
+          commit("track"); renderTracked();
+        });
       });
       row.appendChild(x);
       box.appendChild(row);
@@ -1081,6 +1099,77 @@ function addTracked(){
   commit("track");
   el.tLabel.value = ""; el.tDate.value = "";
   renderTracked();
+}
+
+/* ---------- undo ------------------------------------------------------------
+   Deleting a task was instant, unconfirmed and permanent. On a phone the delete
+   button is one of SEVEN controls on a row, each about 34px, so hitting it by
+   accident is easy - and far more likely than anyone deliberately pressing
+   "Delete everything". A confirmation on every delete would be worse than the
+   problem, because deleting is a normal thing to do many times a day. This is
+   the other answer: let it happen, and let it be taken back.
+
+   Deliberately generic. An entry is a label and a function that puts things
+   back, so anything destructive can push one; task delete and countdown delete
+   both do. The stack is in memory only - an undo you can still use after a
+   reload would be lying about what it can restore, because the deletion has by
+   then already reached the server.
+   --------------------------------------------------------------------------- */
+var undoStack = [];
+var undoTimer = null;
+var UNDO_WINDOW = 45000;   /* how long an entry stays usable via Ctrl+Z */
+var UNDO_SHOWN  = 9000;    /* how long the bar sits on screen */
+
+function pushUndo(label, restore){
+  var now = Date.now();
+  undoStack = undoStack.filter(function(u){ return now - u.at < UNDO_WINDOW; });
+  undoStack.push({ label:label, restore:restore, at:now });
+  if (undoStack.length > 20) undoStack.shift();
+  showUndo(label);
+}
+
+function showUndo(label){
+  if (!el.undoBar) return;
+  if (el.undoText) el.undoText.textContent = label;
+  el.undoBar.classList.remove("hidden");
+  /* Sit above the selection bar when both are up, rather than on top of it. */
+  el.undoBar.classList.toggle("above",
+    !!(el.selBar && !el.selBar.classList.contains("hidden")));
+  if (undoTimer) clearTimeout(undoTimer);
+  undoTimer = setTimeout(hideUndo, UNDO_SHOWN);
+}
+function hideUndo(){
+  if (undoTimer){ clearTimeout(undoTimer); undoTimer = null; }
+  if (el.undoBar) el.undoBar.classList.add("hidden");
+}
+
+function doUndo(){
+  var now = Date.now();
+  undoStack = undoStack.filter(function(u){ return now - u.at < UNDO_WINDOW; });
+  var u = undoStack.pop();
+  hideUndo();
+  if (!u) return false;
+  try { u.restore(); } catch (e){ return false; }
+  return true;
+}
+
+/* Puts a deleted task back where it was, not merely back. Its id is kept, so
+   sync treats this as the row returning rather than as a new task, and its
+   position in the column is restored - position IS priority here, so dropping
+   it at the bottom would quietly change what it means. */
+function restoreTask(snap){
+  if (byId(snap.task.id)) return;                 /* already back; undo twice is harmless */
+  var t = snap.task;
+  tasks.push(t);
+  var l = lane(t.date, t.status).filter(function(x){ return x.id !== t.id; });
+  var at = Math.max(0, Math.min(snap.order, l.length));
+  l.splice(at, 0, t);
+  for (var i=0;i<l.length;i++) l[i].order = i;
+  commit("tasks");
+  /* If it belonged to another day, go there - otherwise "Undo" appears to do
+     nothing at all. */
+  if (t.date !== sel){ setDate(t.date); }
+  else { refresh(); }
 }
 
 /* ---------- the four day colours, which are now yours to choose -------------
@@ -1466,7 +1555,8 @@ function cacheEls(){
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
     "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","bnoteCancel","bnoteX","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
     "ov","mDate","mWk","mClose","mDone","mCancel","mClear","sov","sInput","sOut","sClose","searchBtn","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor",
-    "selBar","selCount","selSw","selClear","selStart"];
+    "selBar","selCount","selSw","selClear","selStart",
+    "undoBar","undoText","undoGo","undoX"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
 function typing(e){
@@ -1533,6 +1623,10 @@ function wire(){
     el.impFile.value = "";
   });
   el.wipe.addEventListener("click", wipe);
+
+  /* --- undo --- */
+  if (el.undoGo) el.undoGo.addEventListener("click", doUndo);
+  if (el.undoX)  el.undoX.addEventListener("click", hideUndo);
 
   /* --- selecting several days --- */
   if (el.selStart) el.selStart.addEventListener("click", function(){ setSelMode(!selMode); });
@@ -1661,6 +1755,13 @@ function wire(){
        still closes whichever of those is open first. */
     if (e.key === "Escape" && (selCount() || selMode)){ clearDaySel(); setSelMode(false); return; }
     if (e.key === "/" && !typing(e)){ openSearch(); e.preventDefault(); return; }
+    /* Ctrl+Z / Cmd+Z, checked BEFORE the guard below that drops every
+       modified key. Not while typing: there it must stay the browser's own
+       undo for the text you are editing, which is what people expect. */
+    if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z") && !typing(e)){
+      if (doUndo()) e.preventDefault();
+      return;
+    }
     if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
     var k = e.key;
     if (k === "ArrowLeft"){ setDate(iso(addDays(parseISO(sel),-1))); e.preventDefault(); }

@@ -649,3 +649,35 @@ main{padding:16px 0 0}
   .selstart{min-height:32px}
   .catdot{width:26px;height:26px}
 }
+
+/* ---------------- undo ----------------
+   Deleting a task is instant, and the delete button is one of seven controls
+   on a row at about 34px each on a phone. A confirmation on every delete would
+   be worse than the accident it prevents, because deleting is something people
+   do many times a day. This is the alternative: let it happen, then offer it
+   back. Bottom-left rather than centred, so it does not sit under the thumb
+   that just pressed delete. */
+.toast{position:fixed;left:16px;bottom:16px;z-index:75;
+  display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:#fff;border-radius:10px;
+  padding:9px 10px 9px 14px;box-shadow:0 6px 24px rgba(0,0,0,.22);
+  max-width:calc(100vw - 32px);font-size:12.5px}
+.toast.hidden{display:none}
+/* When the day-selection bar is up, stack above it instead of overlapping. */
+.toast.above{bottom:76px}
+.toasttext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.toast .undogo{flex:none;background:transparent;border:1px solid rgba(255,255,255,.45);
+  color:#fff;font-family:var(--disp);font-size:10.5px;letter-spacing:.08em;
+  text-transform:uppercase;padding:4px 10px;border-radius:7px;cursor:pointer}
+.toast .undogo:hover{background:rgba(255,255,255,.14)}
+.toastx{flex:none;background:transparent;border:0;color:rgba(255,255,255,.6);
+  font-size:16px;line-height:1;padding:0 2px;cursor:pointer}
+.toastx:hover{color:#fff}
+
+@media (max-width:640px){
+  /* Full width, clear of the anchor ad slot, and thumb-sized. */
+  .toast{left:8px;right:8px;bottom:8px;max-width:none}
+  .toast.above{bottom:96px}
+  .toast .undogo{min-height:34px;padding:6px 14px}
+  .toastx{min-width:30px;min-height:30px}
+}
