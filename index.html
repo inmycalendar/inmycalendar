@@ -19,14 +19,14 @@
 <meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
 <meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512-v2.png">
-<link rel="icon" href="assets/favicon.ico?v=46" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=46">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=46">
-<link rel="manifest" href="manifest.webmanifest?v=46">
+<link rel="icon" href="assets/favicon.ico?v=47" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=47">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=47">
+<link rel="manifest" href="manifest.webmanifest?v=47">
 <meta name="theme-color" content="#18181b">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=46">
-<link rel="stylesheet" href="assets/app.css?v=46">
+<link rel="stylesheet" href="assets/site.css?v=47">
+<link rel="stylesheet" href="assets/app.css?v=47">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -109,7 +109,12 @@
     <section id="calView" class="hidden">
       <div class="gridbox">
         <div class="gtitle">
-          <h2>Week calendar</h2><span class="sp"></span>
+          <h2>Week calendar</h2>
+          <!-- On a desktop you drag, or ctrl-click, or shift-click. A phone has
+               none of those, so the mode needs a button. -->
+          <button class="btn selstart" id="selStart" type="button"
+                  title="Select several days, then colour them all at once">Select days</button>
+          <span class="sp"></span>
           <button class="yarr" id="cyPrev" aria-label="Earlier years">&#9664;</button>
           <span class="yrs" id="cyLabel"></span>
           <button class="yarr" id="cyNext" aria-label="Later years">&#9654;</button>
@@ -191,6 +196,15 @@
  </div>
 </main>
 
+<!-- Appears once days are selected on the calendar. Colouring a three-week
+     holiday used to mean opening the day popup 21 times; select the run, then
+     press a colour here once. -->
+<div class="selbar hidden" id="selBar" role="region" aria-label="Selected days">
+  <span class="selcount" id="selCount">Tap days to select</span>
+  <span class="selsw" id="selSw"></span>
+  <button class="btn" id="selClear" type="button">Clear</button>
+</div>
+
 <div class="ad ad-anchor hidden" id="adAnchor">ad slot - 320&times;50</div>
 
 <footer>
@@ -206,7 +220,7 @@
       <button class="btn" id="expJson">Backup</button>
       <button class="btn" id="impJson">Restore</button>
       <input type="file" id="impFile" accept="application/json,.json" class="hidden" aria-label="Choose a backup file to restore">
-      <button class="btn danger" id="wipe">Clear data</button>
+      <button class="btn danger" id="wipe" title="Deletes every task, day note and countdown - everywhere, not just this browser">Delete everything</button>
     </div>
     <div style="margin-top:8px">Your board is saved in this browser. <strong>Sign in to sync it across your devices.</strong></div>
   </div>
@@ -248,10 +262,10 @@
   </div>
 </div>
 
-<script src="assets/errors.js?v=46"></script>
+<script src="assets/errors.js?v=47"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=46"></script>
-<script src="assets/auth.js?v=46"></script>
-<script src="assets/sync.js?v=46"></script>
+<script src="assets/app.js?v=47"></script>
+<script src="assets/auth.js?v=47"></script>
+<script src="assets/sync.js?v=47"></script>
 </body>
 </html>
