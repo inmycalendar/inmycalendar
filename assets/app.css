@@ -62,7 +62,23 @@ main{padding:16px 0 0}
   overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
 .rail::-webkit-scrollbar{width:6px}
 .rail::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
-.rbox{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+/* flex:none is load-bearing, and its absence was a real bug twice.
+   .rail is a flex COLUMN with a max-height. Flex children shrink by default,
+   so once the rail's contents were taller than the viewport every panel was
+   squeezed - and because .rbox also clips with overflow:hidden, the squeezed
+   part vanished with no scrollbar and nothing to indicate it existed. The
+   symptom was "Add countdown disappears once I have a few countdowns":
+   measured, the panel was 307px tall holding 417px of content, and the 110px
+   cut off the bottom was exactly the add form. The same missing flex:none
+   squashed tasks in .lane earlier. Panels keep their natural height; the RAIL
+   scrolls. */
+.rbox{background:var(--card);border:1px solid var(--rule);border-radius:var(--r);
+  overflow:hidden;flex:none}
+/* Countdowns scroll inside their own panel once there are more than about
+   five, so a long list never pushes the add form out of reach again. */
+#tkList{max-height:206px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+#tkList::-webkit-scrollbar{width:6px}
+#tkList::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
 .rbox>h3{font-family:var(--disp);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   color:var(--soft);padding:10px 12px 2px;margin:0;font-weight:500}
 .rhint{font-size:10px;color:var(--faint);padding:0 12px 6px;font-style:italic;line-height:1.35}
@@ -91,6 +107,13 @@ main{padding:16px 0 0}
 .tkc{flex:1;min-width:0;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 .tkc.fut{color:var(--doing)}
 .tk select{background:transparent;border:0;font-size:10px;color:var(--faint);max-width:58px}
+/* The date a countdown is counting to. Small, but present: it was previously
+   only a tooltip, which meant "-85 days" with no way to know or fix the day. */
+.tkdate{display:flex;align-items:center;gap:6px;margin-top:3px}
+.tkd{background:transparent;border:1px solid var(--rule);border-radius:6px;
+  font:inherit;font-size:10.5px;color:var(--soft);padding:2px 4px;max-width:126px}
+.tkd:focus{outline:none;border-color:var(--accent);color:var(--ink)}
+.tkw{font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tk .x{background:transparent;border:0;color:var(--faint);padding:0 2px;font-size:13px;line-height:1}
 
 .tk .x:hover{color:var(--danger)}
@@ -140,9 +163,18 @@ main{padding:16px 0 0}
 .ch .n{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
 /* A phone keyboard has no reliable Enter, so the add field carries a visible
    button. The row is the flex parent; the input flexes, the button does not. */
-.addrow{display:flex;gap:6px;align-items:center;margin:0 10px 8px;min-width:0}
+/* align-items:flex-start, not center: the field grows downwards as you type
+   and the + button must stay level with its FIRST line rather than drifting to
+   the middle of a four-line box. */
+.addrow{display:flex;gap:6px;align-items:flex-start;margin:0 10px 8px;min-width:0}
+/* A textarea, not an input - see the comment in app.js. resize:none because
+   the field sizes itself; a drag handle in the corner of every column is
+   clutter that also fights the automatic height. min-height matches the old
+   input exactly so a single-line field looks unchanged. */
 .cadd{flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);
-  border-radius:7px;padding:5px 9px;font-size:12px;height:30px}
+  border-radius:7px;padding:5px 9px;font-size:12px;font-family:inherit;
+  min-height:30px;height:30px;max-height:150px;line-height:1.5;
+  resize:none;overflow-y:auto;display:block}
 .addgo{flex:none;width:30px;height:30px;border:1px solid var(--rule);border-radius:7px;
   background:var(--card);color:var(--soft);font-size:16px;line-height:1;padding:0;cursor:pointer}
 .addgo:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -196,7 +228,10 @@ main{padding:16px 0 0}
    line-height 1.6 gives a 20px line box, which must stay >= the floated
    controls' height or the float spills into line two and narrows that as
    well. See .op below: the two numbers are a pair. */
-.t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;
+/* pre-wrap, so a task written with Shift+Enter keeps its line breaks. It still
+   wraps normally and is still clipped at three lines - a card is a summary,
+   not the document. */
+.t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;white-space:pre-wrap;
   max-height:calc(1.6em * 3);overflow:clip;overflow-wrap:anywhere}
 .t.s-done .txt{text-decoration:line-through;color:var(--soft)}
 /* Controls in the open, not behind a ⋯. Tried the menu, and one tap to reach
@@ -340,10 +375,26 @@ main{padding:16px 0 0}
 .wg .dc.out{color:#c9ced6}
 /* four independent visual channels so nothing ever collides:
    fill = category · stripe = holiday · ring = today · dot = has tasks */
-.wg .dc.k0{background:#fde8e6;color:#9b2c20}
-.wg .dc.k1{background:#fdf0d9;color:#8a5a10}
-.wg .dc.k2{background:#e2f4e9;color:#1f6640}
-.wg .dc.k3{background:#e4edfd;color:#1e4694}
+/* Driven from JS so the four day colours can actually be changed. The values
+   below are the defaults and are also the fallback if the variables are ever
+   missing - a day must never render as unstyled white when it has been marked.
+   applyCatColours() in app.js sets --k0b/--k0f and friends from cfg.catColors,
+   deriving the pale fill and the readable text colour from the one hex the
+   person picked, so they choose a colour rather than a colour scheme. */
+/* A selected day. An inset ring rather than a background, so it reads clearly
+   ON TOP of a category fill, a holiday stripe and the today ring instead of
+   replacing any of them - you need to see what a day already is while you are
+   deciding to recolour it. */
+.wg .dc.selected{box-shadow:inset 0 0 0 2px var(--accent);border-radius:4px;
+  font-weight:700}
+/* Dragging across days should select them, not smear a text selection across
+   half the calendar. */
+.wg.picking,.wg.picking .dc{user-select:none;-webkit-user-select:none}
+
+.wg .dc.k0{background:var(--k0b,#fde8e6);color:var(--k0f,#9b2c20)}
+.wg .dc.k1{background:var(--k1b,#fdf0d9);color:var(--k1f,#8a5a10)}
+.wg .dc.k2{background:var(--k2b,#e2f4e9);color:var(--k2f,#1f6640)}
+.wg .dc.k3{background:var(--k3b,#e4edfd);color:var(--k3f,#1e4694)}
 .wg .dc.hol-nat::after,.wg .dc.hol-reg::after{content:"";position:absolute;left:4px;right:4px;
   bottom:2px;height:2px;border-radius:2px}
 .wg .dc.hol-nat::after{background:var(--holNat)}
@@ -514,7 +565,7 @@ main{padding:16px 0 0}
   main{padding-top:8px}
   .shell{gap:10px}
   .gridbox{margin-top:10px !important}
-  .cadd{height:38px}
+  .cadd{min-height:38px;height:38px}
   .addgo{width:38px;height:38px;font-size:19px}
   .sel{min-height:38px;padding-right:26px}
 
@@ -560,3 +611,41 @@ main{padding:16px 0 0}
 .syncst.ok{color:var(--done)}
 .syncst.warn{color:var(--doing)}
 @media (max-width:640px){.syncst{max-width:70px;font-size:9px}}
+
+/* ---------------- selecting several days ----------------
+   The bar that appears once days are selected on the calendar. Fixed to the
+   bottom of the viewport rather than placed in the layout: the selection is
+   made by dragging around the calendar, and the controls have to stay put and
+   stay reachable wherever that drag ended up. */
+.selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:70;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  background:var(--card);border:1px solid var(--rule);border-radius:12px;
+  padding:9px 14px;box-shadow:0 6px 24px rgba(0,0,0,.16);max-width:calc(100vw - 24px)}
+.selbar.hidden{display:none}
+.selcount{font-family:var(--disp);font-size:11px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--soft);white-space:nowrap}
+.selsw{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.selsw .dab{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.12);
+  cursor:pointer;padding:0}
+.selsw .dab:hover{transform:scale(1.12)}
+.selsw .btn{padding:3px 9px;font-size:10.5px}
+/* Not styled as a primary action: it sits in a title bar next to the year
+   arrows and should read as a tool, not as the thing to press. */
+.selstart{padding:3px 9px;font-size:10.5px;margin-left:8px}
+
+/* The colour picker in the Day colours panel. A native input[type=color], sized
+   to match the swatch it replaced, so the row looks unchanged until clicked. */
+.catdot{width:18px;height:18px;flex:none;padding:0;border:1px solid var(--rule);
+  border-radius:4px;background:transparent;cursor:pointer}
+.catdot::-webkit-color-swatch-wrapper{padding:1px}
+.catdot::-webkit-color-swatch{border:0;border-radius:3px}
+.catdot::-moz-color-swatch{border:0;border-radius:3px}
+
+@media (max-width:640px){
+  /* Above the anchor ad slot, and wide enough to hit with a thumb. */
+  .selbar{left:8px;right:8px;transform:none;bottom:8px;padding:10px}
+  .selsw .dab{width:34px;height:34px}
+  .selsw .btn{min-height:34px}
+  .selstart{min-height:32px}
+  .catdot{width:26px;height:26px}
+}

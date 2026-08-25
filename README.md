@@ -13,8 +13,8 @@ Live at **[inmycalendar.com](https://inmycalendar.com)** - free, no sign-up need
 
 ## What it does
 
-**Kanban Board** - three columns (to do / in progress / done) for the selected day. Each task
-is one line. Position within a column *is* its priority. Tasks can be reordered, moved between
+**Kanban Board** - three columns (to do / in progress / done) for the selected day. A task
+is usually one line, and Shift+Enter adds another. Position within a column *is* its priority. Tasks can be reordered, moved between
 columns, renamed, and moved to a different day. Week and Month scopes aggregate that stretch of
 time into read-only lists.
 
@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm ci           # only needed to run the tests
-npm test         # expect: 829 passed, 0 failed
+npm test         # expect: 865 passed, 0 failed
 ```
 
 The tests need **Node 22.22.2 or newer** - jsdom 30 refuses to run on anything
@@ -78,7 +78,7 @@ assets/
   favicon.svg .ico apple-touch-icon-v2.png icon-192-v2.png icon-512-v2.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       829 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       865 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -272,7 +272,7 @@ collide with the semantic colours.
 npm test
 ```
 
-829 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+865 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 

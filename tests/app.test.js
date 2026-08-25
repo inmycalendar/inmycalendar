@@ -264,10 +264,26 @@ check(labels[0] === "Milestone" && labels[2] === "Leave", "a first-time visitor 
 console.log("\n=== C3c. Categories clearly editable ===");
 check(/Click a name to rename it/.test(headHtml), "a 'click to rename' hint sits under the Colours header");
 check($("cats").querySelectorAll(".pen").length === 4, "each category row shows a pencil affordance");
-const catInput = $("cats").querySelector("input");
+/* Each row now holds TWO inputs - the colour and the name - so select by type
+   rather than taking the first one. A bare querySelector("input") silently
+   started returning the colour picker. */
+const catInput = $("cats").querySelector('input[type="text"]');
 check(catInput.title === "Click to rename", "each name field says 'Click to rename' on hover");
 catInput.value = "Renamed"; catInput.dispatchEvent(new w.Event("change",{bubbles:true}));
 check(JSON.parse(w.localStorage.getItem("imc.cfg")).catLabels[0] === "Renamed", "editing a name still saves");
+
+/* The colours themselves are choosable now, not just the labels. They were
+   four constants in the source, so "Leave" could be renamed to anything but
+   was always green. */
+const catDots = $("cats").querySelectorAll('input[type="color"]');
+check(catDots.length === 4, "every category has a colour picker, not just a name");
+catDots[0].value = "#ff00aa";
+catDots[0].dispatchEvent(new w.Event("input",{bubbles:true}));
+catDots[0].dispatchEvent(new w.Event("change",{bubbles:true}));
+check(JSON.parse(w.localStorage.getItem("imc.cfg")).catColors[0] === "#ff00aa",
+      "picking a colour saves it");
+check(w.document.documentElement.style.getPropertyValue("--k0b") !== "",
+      "and pushes it into the CSS variable the calendar cells actually read");
 
 console.log("\n=== C3d. Controls visible, and not eating vertical space ===");
 check($("gear") === null && $("pop") === null, "no settings gear, no hidden popup");
@@ -338,7 +354,11 @@ check(nowCell !== null && /^\d{2}-\d{2}$/.test(nowCell.textContent), "today rend
 toBoard();
 
 console.log("\n=== C3d4. Four independent colour channels never collide ===");
-check(/\.wg \.dc\.k0\{background:#fde8e6/.test(flatA), "categories use a cell FILL");
+/* Still a cell FILL, but now driven by a variable so the colour is choosable.
+   The literal stays as the fallback: a marked day must never render unstyled
+   if the variable is missing. */
+check(/\.wg \.dc\.k0\{background:var\(--k0b,#fde8e6\)/.test(flatA),
+      "categories use a cell FILL, from a variable with the old colour as fallback");
 check(/\.wg \.dc\.hol-nat::after\{background:var\(--holNat\)/.test(flatA), "national holidays use a STRIPE, not a fill");
 check(/\.wg \.dc\.hol-reg::after\{background:var\(--holReg\)/.test(flatA), "regional holidays use a different stripe colour");
 check(/\.wg \.dc \.task\{/.test(flatA), "days with tasks use a corner DOT");
@@ -1407,7 +1427,10 @@ check(/\.t\{display:flex;flex-direction:column/.test(phoneCss),
       "on a phone the row is a column, since a float would leave 60px for the first line");
 check(/\.t \.txt\{order:1;float:none/.test(phoneCss),
       "text first, controls under it, via flex order so the desktop source order is untouched");
-check(/\.cadd\{height:38px/.test(phoneCss) && /\.addgo\{width:38px;height:38px/.test(phoneCss),
+/* min-height as well as height: the add field is a textarea that grows as you
+   type, so height alone would be a ceiling rather than a floor. 38px is the
+   tap target it starts at. */
+check(/\.cadd\{min-height:38px;height:38px/.test(phoneCss) && /\.addgo\{width:38px;height:38px/.test(phoneCss),
       "the add field and its button are both 38px, comfortably tappable");
 /* Measured on the live site after the first pass: these four were still under
    16px, because styling by id outranks a bare element selector. Naming them is
@@ -2060,6 +2083,146 @@ check(!/ask for your account and its data to be deleted by emailing/.test(priv2)
       "and no longer says the only route is emailing a human");
 }
 
+console.log("\n=== C51. Selecting many days, and the three input bugs ===");
+{
+/* ---- the rail panels must not be squeezed ------------------------------- */
+/* .rail is a flex column with a max-height. Without flex:none its children
+   shrink, and .rbox clips with overflow:hidden, so the squeezed part vanishes
+   with no scrollbar and nothing saying it is there. Measured on a real page:
+   a 307px panel holding 417px of content, with the add-countdown form in the
+   110px that got cut off. Reported as "Add countdown disappears". */
+check(/\.rbox\{[^}]*flex:none/.test(flat),
+      "rail panels keep their natural height instead of being flex-squeezed");
+check(/#tkList\{[^}]*max-height:[^}]*overflow-y:auto/.test(flat),
+      "and a long countdown list scrolls inside its own panel");
+
+/* ---- a countdown shows, and can change, its date ------------------------ */
+/* "-85 days" with the date only in a tooltip is unusable: nobody can work out
+   which day that is, and a wrong date could only be fixed by deleting the
+   countdown and adding it again. */
+const appSrc = readFile("assets/app.js");
+check(/function longDate\(/.test(appSrc), "there is a human-readable date format");
+check(/type = "date"; di\.className = "tkd"/.test(appSrc),
+      "every countdown carries a real date field, not just a tooltip");
+
+toBoard();
+/* Add one here rather than relying on the countdowns another section creates
+   later - a test that depends on the order of the file breaks the first time
+   somebody moves a block. */
+$("tLabel").value = "Date field check";
+$("tDate").value = (cy + 1) + "-07-04";
+click($("tAdd"));
+const tkNow = qa("#tkList .tk");
+check(tkNow.length > 0, "there are countdowns to inspect");
+check(qa("#tkList .tkd").length === tkNow.length,
+      "each one shows its date on screen");
+check(qa("#tkList .tkw").length === tkNow.length &&
+      /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) /.test(qa("#tkList .tkw")[0].textContent),
+      "with the weekday spelled out, since 'is it a Friday' is most of why people look");
+{
+  const di = qa("#tkList .tkd")[0];
+  di.value = "2029-07-04";
+  di.dispatchEvent(new w.Event("change", { bubbles:true }));
+  const saved = JSON.parse(w.localStorage.getItem("imc.track"));
+  check(saved.some(t => t.date === "2029-07-04"), "and changing it saves");
+}
+
+/* ---- the add-task field ------------------------------------------------- */
+/* It was <input type="text">: a single line that scrolled sideways, so a long
+   task showed about six words. An input also cannot contain a newline, which
+   is the entire reason Shift+Enter appeared broken - there was no bug in the
+   handler, the element has no second line. */
+const addField = $("scopeHost").querySelector(".cadd");
+check(addField && addField.tagName === "TEXTAREA",
+      "the add field is a textarea, so it can wrap and can hold a line break");
+check(/e\.key === "Enter" && !e\.shiftKey/.test(appSrc),
+      "Enter adds the task, Shift+Enter does not");
+check(/function cleanTaskText/.test(appSrc),
+      "one function decides what a task's text may contain");
+
+{
+  /* Shift+Enter must not submit. */
+  const before = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+  addField.value = "half a thought";
+  addField.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",shiftKey:true,bubbles:true}));
+  check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === before,
+        "Shift+Enter keeps typing instead of adding the task");
+
+  /* A deliberate line break survives being stored. */
+  addField.value = "Ring John\n- confirm the numbers";
+  addField.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+  const all = JSON.parse(w.localStorage.getItem("imc.tasks"));
+  const saved = all[all.length-1];
+  check(saved.text.indexOf("\n") >= 0, "a task written over two lines keeps its line break");
+}
+check(/white-space:pre-wrap/.test(flat.match(/\.t \.txt\{[^}]*\}/)[0]),
+      "and the card renders that break rather than running the lines together");
+
+/* ---- selecting several days -------------------------------------------- */
+/* Marking three weeks of leave meant opening the day popup, clicking a colour
+   and closing it, twenty-one times. */
+toCal();
+const dcs = qa(".wg .dc[data-ds]");
+check(dcs.length > 0, "calendar days carry their date, so they can be selected");
+
+const clickWith = (node, opts) =>
+  node.dispatchEvent(new w.MouseEvent("click", Object.assign({bubbles:true}, opts)));
+
+/* ctrl-click picks out days that are not next to each other */
+clickWith(dcs[10], { ctrlKey:true });
+clickWith(dcs[20], { ctrlKey:true });
+check(/2 days selected/.test($("selCount").textContent),
+      "ctrl-click builds a selection out of scattered days");
+check(!$("selBar").classList.contains("hidden"), "and the action bar appears");
+check($("selSw").querySelectorAll(".dab").length === 4,
+      "offering every colour, applied to the whole selection at once");
+
+/* shift-click fills in the run between */
+clickWith(dcs[26], { shiftKey:true });
+check(/8 days selected/.test($("selCount").textContent),
+      "shift-click extends from the last day touched to this one");
+
+/* dragging is the fast path for a continuous run */
+$("selClear").click();
+dcs[7].dispatchEvent(new w.MouseEvent("mousedown",{bubbles:true,button:0}));
+for (let i=8;i<=27;i++) dcs[i].dispatchEvent(new w.MouseEvent("mouseenter",{bubbles:true}));
+d.dispatchEvent(new w.MouseEvent("mouseup",{bubbles:true}));
+clickWith(dcs[27], {});
+check(/21 days selected/.test($("selCount").textContent),
+      "dragging across three weeks selects all 21 days");
+check($("ov").classList.contains("hidden"),
+      "and the drag does not also open the day popup it passed over");
+
+/* one click then colours the lot */
+$("selSw").querySelectorAll(".dab")[2].click();
+{
+  const notes = JSON.parse(w.localStorage.getItem("imc.notes"));
+  const green = Object.keys(notes).filter(k => notes[k] && notes[k].color === 2);
+  check(green.length >= 21, "one click colours all of them - " + green.length + " days marked");
+  check($("selBar").classList.contains("hidden"), "and the selection is finished with");
+}
+
+/* the phone path: no ctrl key, no drag */
+$("selStart").click();
+check($("selStart").textContent === "Done selecting", "there is a mode for touch screens");
+clickWith(dcs[41], {});
+clickWith(dcs[42], {});
+check(/2 days selected/.test($("selCount").textContent),
+      "in which a plain tap selects rather than opening the day");
+check($("ov").classList.contains("hidden"),
+      "the day popup stays shut - checking the count alone let the first tap through");
+clickWith(dcs[42], {});
+check(/1 day selected/.test($("selCount").textContent), "and tapping again removes it");
+
+key("Escape");
+check($("selBar").classList.contains("hidden") && $("selStart").textContent === "Select days",
+      "Escape leaves the mode entirely");
+clickWith(dcs[44], {});
+check(!$("ov").classList.contains("hidden"), "after which a plain click opens the day again");
+$("mCancel").click();
+toBoard();
+}
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
@@ -2124,7 +2287,24 @@ key("t"); check($("isoOut").textContent === TODAY, "T = today");
 key("c"); check(!$("calView").classList.contains("hidden"), "C = calendar");
 key("b"); check(!$("boardView").classList.contains("hidden"), "B = board");
 key("n"); check(d.activeElement.className === "cadd", "N focuses an add field");
-check(!/offsetHeight|clientHeight/.test(js), "no JS layout measurement");
+/* Comments are stripped first. This check greps the source, and it failed on a
+   COMMENT that happened to explain why a height calculation adds the border -
+   the prose contained the very words being banned. In a codebase that comments
+   this heavily, a source grep that cannot tell code from prose will keep
+   raising false alarms.
+
+   The rule itself stands: layout is CSS's job, and the app should not be
+   measuring boxes to decide how to draw. The one exception is the add field,
+   which grows to fit what you are typing - reading scrollHeight is the only
+   way to do that, and there is no CSS equivalent that also caps the height and
+   then scrolls. So: allowed there, nowhere else. */
+const codeOnly = s => s.replace(/\/\*[\s\S]*?\*\//g, "")
+                       .replace(/(^|[^:])\/\/.*$/gm, "$1");
+const jsCode = codeOnly(js);
+check(!/offsetHeight|clientHeight/.test(jsCode), "no JS layout measurement");
+const grows = (jsCode.match(/scrollHeight/g) || []).length;
+check(grows === 1 && /inp\.scrollHeight/.test(jsCode),
+      "the only height read is the add field sizing itself to what you type");
 check(/--hYear:30px/.test(flat) && /top:var\(--hYear\)/.test(flat.replace(/\s+/g,"")),
       "sticky offsets are fixed CSS custom properties, not JS-measured");
 check((flat.match(/minmax\(0,1fr\)/g)||[]).length >= 3, "grids use minmax(0,1fr)");
@@ -2148,7 +2328,25 @@ const dom2 = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dang
 check(e2.length === 0, "reload clean" + (e2.length ? " -> " + e2.join("|") : ""));
 check(dom2.window.document.querySelectorAll("#tkList .tk").length === tkCount,
       "all " + tkCount + " countdowns survive a reload");
- click($("wipe"));
+/* Deleting everything now needs the word typed, and writes a backup first.
+   A single OK was guarding the most destructive control in the app, and the
+   old wording claimed it only affected "this browser" - untrue, because every
+   removed row syncs to the server as a deletion marker. */
+let wipeAsked = "";
+const clicksBefore = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+
+/* A wrong word must destroy nothing. */
+w.prompt = () => "yes";
+click($("wipe"));
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === clicksBefore,
+      "answering anything other than DELETE leaves every task alone");
+
+w.prompt = (msg) => { wipeAsked = msg; return "delete"; };
+click($("wipe"));
+check(/task/.test(wipeAsked) && /countdown/.test(wipeAsked),
+      "the prompt counts what is about to be destroyed rather than saying 'data'");
+check(/backup/i.test(wipeAsked),
+      "and promises the backup file it writes before deleting anything");
 check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === 0, "wipe clears tasks");
 
 /* ---------------------------------------------------------------------------
