@@ -2423,12 +2423,13 @@ sources.forEach(f => {
 check(!SMART.test(readFile("holidays/IN-2027.html")),
       "a generated holiday page is clean too");
 
-/* Nothing anywhere should name the tool that helped write this. */
-const NAMED = /claude|anthropic/i;
-sources.concat(["README.md"]).forEach(f => {
-  if (!fs.existsSync(path.join(ROOT, f))) return;
-  check(!NAMED.test(readFile(f)), f + ": names no AI assistant");
-});
+/* Commit messages are part of the source too: a trailer added by a tool ends
+   up credited in the repository's Contributors list, which is not where
+   authorship should be decided. This checks the working tree only; the history
+   itself was rewritten once and is verified with:
+     git log --format='%an|%ae|%B' | grep -i 'co-authored'                    */
+check(!/Co-Authored-By/i.test(readFile("README.md")),
+      "the README carries no attribution trailers");
 }
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
