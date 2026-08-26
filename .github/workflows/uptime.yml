@@ -34,6 +34,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # enough for the commit timestamp used below
 
       - name: The site answers, and answers with the right page
         run: |
@@ -114,14 +116,31 @@ jobs:
           echo "live build tag: ${live:-unknown}"
           echo "repo build tag: ${repo:-unknown}"
 
+          # How long ago was the last commit? A deploy takes a few minutes, so a
+          # check that lands in that window sees the OLD version and reports
+          # drift that is not drift. That produced a red run and a "Run failed"
+          # email for a deploy that was simply still in progress, which is the
+          # fastest way to teach someone to ignore these emails.
+          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+          echo "last commit was ${age}s ago"
+
           if [ -z "$live" ] || [ -z "$repo" ]; then
             echo "Could not read a build tag from one of them - check the markup."
             echo "deploy_fail=1" >> "$GITHUB_ENV"
           elif [ "$live" != "$repo" ]; then
-            echo "The live site is serving v$live but main is at v$repo."
-            echo "The Hostinger auto-deploy has probably not run or has failed."
-            echo "hPanel -> Advanced -> Git -> check the deployment log."
-            echo "deploy_fail=1" >> "$GITHUB_ENV"
+            if [ "$age" -lt 1200 ]; then
+              echo "The live site is serving v$live but main is at v$repo."
+              echo "main changed ${age}s ago, so the deploy is probably still"
+              echo "running. Not treating this as a failure; the next run in"
+              echo "30 minutes will catch it if it really did not deploy."
+              echo "deploy_fail=0" >> "$GITHUB_ENV"
+            else
+              echo "The live site is serving v$live but main is at v$repo,"
+              echo "and main last changed ${age}s ago - long enough that the"
+              echo "deploy should have finished."
+              echo "hPanel -> Advanced -> Git -> check the deployment log."
+              echo "deploy_fail=1" >> "$GITHUB_ENV"
+            fi
           else
             echo "ok    the deployed version matches main"
             echo "deploy_fail=0" >> "$GITHUB_ENV"
@@ -135,7 +154,15 @@ jobs:
           # for why images are compared by dimensions rather than by hash - the
           # host re-encodes them, and a hash comparison reports every image as
           # stale for ever.
+          age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
           if node .github/scripts/check-assets.js; then
+            echo "asset_fail=0" >> "$GITHUB_ENV"
+          elif [ "$age" -lt 1200 ]; then
+            # Same deploy window as the build-tag check above: for the few
+            # minutes Hostinger takes to pull, the committed files legitimately
+            # differ from the served ones. Reporting that is crying wolf.
+            echo "main changed ${age}s ago, so the deploy is probably still"
+            echo "running. Not treating this as a failure."
             echo "asset_fail=0" >> "$GITHUB_ENV"
           else
             echo "asset_fail=1" >> "$GITHUB_ENV"
