@@ -1,5 +1,5 @@
 /* ==========================================================================
-   inmycalendar — app.css
+   inmycalendar - app.css
    The app itself: date controls, controls strip, board, calendar, rail, modal.
    Loads AFTER site.css, so rules here win where the two overlap.
 
@@ -56,7 +56,7 @@ main{padding:16px 0 0}
 .shell{display:grid;grid-template-columns:minmax(0,1fr) var(--rail);gap:16px;align-items:start}
 .pane{min-width:0}
 .rail{min-width:0;display:flex;flex-direction:column;gap:12px;
-  /* the rail must not dictate page height — it stays within the main column's
+  /* the rail must not dictate page height - it stays within the main column's
      span and scrolls internally if a user adds a long list of countdowns */
   position:sticky;top:calc(var(--hBar) + 12px);max-height:calc(100vh - var(--hBar) - 24px);
   overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
@@ -166,7 +166,7 @@ main{padding:16px 0 0}
 .none{font-size:11px;color:var(--faint);font-style:italic;padding:3px 0}
 
 /* ---------------- kanban ----------------
-   Status colour is carried by a top rule and a dot, not a heavy filled bar —
+   Status colour is carried by a top rule and a dot, not a heavy filled bar -
    keeps the colour budget for categories and holidays. */
 .kb{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .col{min-width:0;display:flex;flex-direction:column;background:var(--card);
@@ -418,7 +418,7 @@ main{padding:16px 0 0}
   bottom:2px;height:2px;border-radius:2px}
 .wg .dc.hol-nat::after{background:var(--holNat)}
 .wg .dc.hol-reg::after{background:var(--holReg)}
-/* TODAY: a ring, never a fill — stays visible on white, on a category fill
+/* TODAY: a ring, never a fill - stays visible on white, on a category fill
    and on a holiday stripe alike. The old white-on-white pill was invisible. */
 .wg .dc.now{font-weight:700;color:var(--accent);
   box-shadow:inset 0 0 0 2px var(--accent);border-radius:6px}
@@ -481,7 +481,7 @@ main{padding:16px 0 0}
 .dab.on{box-shadow:0 0 0 2px var(--accent)}
 
 /* ==========================================================================
-   RESPONSIVE — the app reflows all the way down to a narrow side panel.
+   RESPONSIVE - the app reflows all the way down to a narrow side panel.
    ========================================================================== */
 @media (max-width:1100px){ :root{--rail:210px} }
 @media (max-width:900px){

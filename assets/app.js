@@ -454,7 +454,7 @@ function delTask(id){
 
   var short = String(t.text || "").replace(/\s+/g, " ").trim();
   if (short.length > 42) short = short.slice(0, 42) + "…";
-  pushUndo("Deleted “" + short + "”", function(){ restoreTask(snap); });
+  pushUndo("Deleted '" + short + "'", function(){ restoreTask(snap); });
 }
 
 /* ---------- KANBAN ---------- */
@@ -1044,7 +1044,7 @@ function renderTracked(){
       /* The name is narrow and ellipsises, so the tooltip has to carry the FULL
          name - showing the date here instead told you the one thing already on
          screen and hid the one thing that was cut off. */
-      lb.title = e.label + "  —  " + longDate(e.date) + "\nClick to rename";
+      lb.title = e.label + "  -  " + longDate(e.date) + "\nClick to rename";
       lb.setAttribute("aria-label","Rename countdown " + e.label);
       lb.addEventListener("change", function(){
         var v = lb.value.trim();
@@ -1103,7 +1103,7 @@ function renderTracked(){
         var at = track.indexOf(e);
         track = track.filter(function(t){ return t.id !== e.id; });
         commit("track"); renderTracked();
-        pushUndo("Removed \u201c" + snap.label + "\u201d", function(){
+        pushUndo("Removed '" + snap.label + "'", function(){
           if (track.some(function(t){ return t.id === snap.id; })) return;
           track.splice(Math.max(0, Math.min(at, track.length)), 0, snap);
           commit("track"); renderTracked();

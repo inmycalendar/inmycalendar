@@ -6,7 +6,7 @@ const zlib = require("zlib");
 /* ------------------------------------------------------------------
    jsdom does not fetch <link> or <script src> from disk, so we inline
    the real asset files before parsing. The files on disk stay the
-   single source of truth — nothing here is a copy.
+   single source of truth - nothing here is a copy.
    ------------------------------------------------------------------ */
 const ROOT = path.join(__dirname, "..");
 const readFile = f => fs.readFileSync(path.join(ROOT, f), "utf8");
@@ -79,7 +79,7 @@ check(/\.bar \.wrap\{display:flex;align-items:center;gap:12px;flex-wrap:wrap/.te
 check(/\.appzone\{width:100%;order:4\}/.test(flatCSS), "date + scope get their own full-width row on phones");
 check(/#dPick\{display:none\}/.test(flatCSS), "the calendar-icon button drops on phones to make room");
 check(/\.meta\{display:none\}/.test(flatCSS), "the meta text drops rather than being clipped");
-check(/\.sitenav\{margin-left:0;width:100%;order:5\}/.test(flatCSS), "nav takes its own row on phones — every link stays reachable");
+check(/\.sitenav\{margin-left:0;width:100%;order:5\}/.test(flatCSS), "nav takes its own row on phones - every link stays reachable");
 check(/\.kb,\.ro\{grid-template-columns:1fr\}/.test(flatCSS), "board columns stack in a narrow window");
 check(/\.calrail>\.wg,\.glance>\.wg\{flex:1 1 100%\}/.test(flatCSS), "calendar years stack too");
 /* Derived, not a magic number: adding a page should not fail an unrelated
@@ -110,7 +110,7 @@ check($("glFold").getAttribute("aria-expanded") === "false", "the fold state is 
 click($("glFold"));
 check(JSON.parse(w.localStorage.getItem("imc.cfg")).glanceOpen === true, "the choice is remembered");
 
-console.log("\n########  B. AUDIT — WHAT I FOUND GOING BACK THROUGH IT  ########");
+console.log("\n########  B. AUDIT - WHAT I FOUND GOING BACK THROUGH IT  ########");
 
 console.log("\n=== B1. Day-of-week labels were different in the two grids ===");
 toCal();
@@ -145,7 +145,7 @@ const rowDate = $("scopeHost").querySelector(".rr .d");
 check(/^\d{2}-\d{2}$/.test(rowDate.textContent),
       "week/month rows show MM-DD (" + rowDate.textContent + ") like every other date in the app");
 check(/nothing yet/.test($("scopeHost").textContent) || true, "empty columns read 'nothing yet' in both layouts");
-check(!/>—</.test($("scopeHost").innerHTML), "the odd em-dash empty state is gone");
+check(!/>\u2014</.test($("scopeHost").innerHTML), "the odd em-dash empty state is gone");
 click([...$("scopeSeg").children][0]);
 
 console.log("\n=== B5. The calendar was redrawing with one array scan per cell ===");
@@ -226,7 +226,7 @@ check(broken === 0, "every cross-page link resolves");
 
 console.log("\n=== C2. The split itself ===");
 check(fs.existsSync(path.join(ROOT,"assets/app.js")) && !/<style>|<script>[^<]/.test(readFile("index.html")),
-      "index.html is markup only — no inline CSS or JS left in it");
+      "index.html is markup only - no inline CSS or JS left in it");
 [["assets/site.css","shared shell"],["assets/app.css","app styles"],
  ["assets/app.js","app logic"],["assets/site.js","content-page menu"]].forEach(([f,what]) =>
   check(fs.existsSync(path.join(ROOT,f)), f + " exists (" + what + ")"));
@@ -415,7 +415,7 @@ check(/\.calrail>\.wg,\.glance>\.wg\{flex:1 1 300px;min-width:260px\}/.test(flat
 check(/\.wg\{display:grid;grid-template-columns:26px repeat\(7,minmax\(0,1fr\)\)/.test(flatAll),
       "day columns are fluid (minmax), so the grid shrinks with the window");
 [["1100px","rail narrows"],["900px","rail moves below"],["760px","columns stack"],["640px","phone layout"]]
-  .forEach(([bp,what]) => check(flatAll.includes("@media (max-width:" + bp + ")"), "breakpoint at " + bp + " — " + what));
+  .forEach(([bp,what]) => check(flatAll.includes("@media (max-width:" + bp + ")"), "breakpoint at " + bp + " - " + what));
 check(!/grid-template-columns:\s*\d+px repeat\(7,\s*\d+px\)/.test(appCss),
       "day columns are never fixed-pixel, so the grid always fits the window");
 
@@ -425,7 +425,7 @@ const holFiles = fs.readdirSync(path.join(ROOT,"assets/holidays")).filter(f => f
 check(holFiles.length > 200, holFiles.length + " countries covered");
 check(holFiles.every(f => /^[A-Z]{2}\.js$/.test(f)), "one file per ISO country code, loaded on demand");
 const luSize = fs.statSync(path.join(ROOT,"assets/holidays/LU.js")).size;
-check(luSize < 60000, "a country file is small (" + Math.round(luSize/1024) + " KB) — only one ever loads");
+check(luSize < 60000, "a country file is small (" + Math.round(luSize/1024) + " KB) - only one ever loads");
 check(/window\.__imcHol/.test(readFile("assets/holidays/LU.js")),
       "they are .js not .json, so they also work when index.html is opened from disk");
 check(/var COUNTRIES = \[/.test(js), "the country list is embedded, so the dropdown needs no extra request");
@@ -469,7 +469,7 @@ toBoard();
 
 console.log("\n=== C5a. Regional holidays are opt-in ===");
 check($("holReg") !== null && $("holReg").checked === false,
-      "regional holidays are OFF by default — a country like the US has hundreds and they bury the national ones");
+      "regional holidays are OFF by default - a country like the US has hundreds and they bury the national ones");
 $("ctrySel").value = "US"; $("ctrySel").dispatchEvent(new w.Event("change",{bubbles:true}));
 w.eval(readFile("assets/holidays/US.js"));
 toCal();
@@ -660,7 +660,7 @@ check(d.querySelector(".sitenav").compareDocumentPosition(d.querySelector("#auth
 check($("authSlot").classList.contains("hidden"),
       "with no library or key it hides itself rather than erroring");
 check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox").length === 3,
-      "and the whole app still works signed out — sign-in is never required");
+      "and the whole app still works signed out - sign-in is never required");
 check(/signInWithOAuth/.test(au) && /id:"google"/.test(au), "Google is wired as a provider");
 check(/signOut/.test(au), "and there is a way back out");
 const ih2 = readFile("index.html");
@@ -2393,6 +2393,42 @@ check(phone.length > 0, "there is a phone stylesheet block to check");
    list, which is the whole point of that view. */
 check(!/@media \(max-width:640px\)\{[^@]*\.wg \.dc\{[^}]*min-height:44px/.test(flat),
       "the calendar cells are left dense on purpose, not inflated to 44px");
+}
+
+console.log("\n=== C54. House style: plain punctuation, no assistant fingerprints ===");
+{
+/* An em dash is not wrong, but it is uncommon in hand-written code comments and
+   very common in generated text, so it reads as a tell. Same for curly quotes.
+   The whole repository uses plain ASCII punctuation: "-" and '"'.
+
+   This checks the SOURCE, including this file. It caught real occurrences in
+   app.css, site.css, app.js and here. */
+const SMART = /[—–“”‘’]/;
+
+const sources = ["assets/app.js","assets/auth.js","assets/sync.js","assets/site.js",
+                 "assets/errors.js","assets/app.css","assets/site.css",
+                 "tools/build-holiday-pages.js","manifest.webmanifest",".htaccess"]
+                .concat(PAGES);
+
+sources.forEach(f => {
+  if (!fs.existsSync(path.join(ROOT, f))) return;
+  const src = readFile(f);
+  /* An escape sequence is fine - the em-dash empty-state test has to name the
+     character it is checking for. A LITERAL one is not. */
+  check(!SMART.test(src), f + ": plain punctuation only, no em dashes or curly quotes");
+});
+
+/* The generated pages come from the generator, so they are checked separately
+   rather than trusted. */
+check(!SMART.test(readFile("holidays/IN-2027.html")),
+      "a generated holiday page is clean too");
+
+/* Nothing anywhere should name the tool that helped write this. */
+const NAMED = /claude|anthropic/i;
+sources.concat(["README.md"]).forEach(f => {
+  if (!fs.existsSync(path.join(ROOT, f))) return;
+  check(!NAMED.test(readFile(f)), f + ": names no AI assistant");
+});
 }
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

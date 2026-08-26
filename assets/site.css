@@ -1,10 +1,10 @@
 /* ==========================================================================
-   inmycalendar — site.css
+   inmycalendar - site.css
    Shared shell: design tokens, ribbon, controls strip, footer, content pages.
    Loaded FIRST on every page. app.css loads second and wins where they overlap.
 
    THEME: light / near-black. The chrome is deliberately neutral so that every
-   colour left on screen carries meaning — category fills, holiday stripes and
+   colour left on screen carries meaning - category fills, holiday stripes and
    kanban status colours. An accent hue here would collide with all three.
    ========================================================================== */
 :root{
@@ -31,7 +31,7 @@
   --doing:#d97706; --doingBg:#fffaf0; --doingE:#fae2c2;
   --done:#059669;  --doneBg:#ecfdf4;  --doneE:#c6efdd;
 
-  /* holiday markers — shown as a stripe, never a fill, so they never
+  /* holiday markers - shown as a stripe, never a fill, so they never
      collide with a user's category colour on the same day */
   --holNat:#dc2626;
   --holReg:#2563eb;
