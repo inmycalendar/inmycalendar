@@ -39,8 +39,15 @@ const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
 
 const appJs = fs.readFileSync(path.join(ROOT, "assets/app.js"), "utf8");
-const m = appJs.match(/var COUNTRIES = (\[.*?\]);\n/s);
-if (!m) throw new Error("COUNTRIES list not found in app.js");
+/* \r?\n, not \n. Git checks this repo out with CRLF on Windows and LF on
+   Linux, so a pattern anchored to a bare \n matches on the CI runner and fails
+   on a Windows machine - which is exactly what happened: the generator threw,
+   the holiday pages kept the previous build tag, and the only symptom was a
+   version-consistency test failing with no obvious connection to line endings. */
+const m = appJs.match(/var COUNTRIES = (\[[\s\S]*?\]);\r?\n/);
+if (!m) throw new Error(
+  "COUNTRIES list not found in assets/app.js.\n" +
+  "The declaration must read: var COUNTRIES = [ ... ];  on its own line.");
 const COUNTRIES = eval(m[1]);
 
 function loadHolidays(code){
