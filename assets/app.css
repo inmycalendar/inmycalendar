@@ -76,7 +76,13 @@ main{padding:16px 0 0}
   overflow:hidden;flex:none}
 /* Countdowns scroll inside their own panel once there are more than about
    five, so a long list never pushes the add form out of reach again. */
-#tkList{max-height:206px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}
+/* padding-right keeps the delete button clear of the scrollbar. Measured: the
+   scrollbar is 10px and the x ended one pixel from it, so aiming for a 20px
+   target at the very edge of a scrolling list hit the scrollbar instead - the
+   countdown could not be deleted once the list was long enough to scroll,
+   which is exactly when you want to delete one. */
+#tkList{max-height:290px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;
+  padding-right:10px}
 #tkList::-webkit-scrollbar{width:6px}
 #tkList::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
 .rbox>h3{font-family:var(--disp);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
@@ -92,31 +98,44 @@ main{padding:16px 0 0}
 .cat .pen{color:var(--faint);font-size:10px;flex:none;opacity:0;transition:opacity .12s}
 .cat:hover .pen{opacity:1}
 
-/* tracked dates */
+/* tracked dates
+   Two lines, not three: the date and the name on the first, how long to go on
+   the second. Three lines meant only two countdowns fitted before the list
+   started scrolling. */
 .tk{border-top:1px solid var(--rule2);padding:7px 0;font-size:11.5px}
 .tk:first-child{border-top:0}
-.tk.next{border-left:2px solid var(--accent);padding-left:8px;margin-left:-12px;padding-right:0}
+/* The "next up" marker is an INSET shadow, not a border with a negative
+   margin. The old rule pulled the row 12px left, out past the panel's padding,
+   where .rbox's overflow:hidden clipped it - measured at 3px of the label
+   gone, which is why the first letter of that one countdown looked chopped.
+   An inset shadow paints the same stripe without moving anything. */
+.tk.next{box-shadow:inset 2px 0 0 var(--accent);padding-left:8px}
+.tkhead{display:flex;align-items:center;gap:6px;min-width:0}
 /* an input styled as text - same pattern as the Day colours rename, which is
    reliable. An overlay editor that swapped nodes on click was not. */
-.tkl{display:block;width:100%;font-weight:700;color:var(--ink);font-size:11.5px;
+.tkl{flex:1;min-width:0;font-weight:700;color:var(--ink);font-size:11.5px;
   background:transparent;border:0;border-bottom:1px solid transparent;padding:1px 0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tkl:hover{border-bottom-color:var(--rule)}
 .tkl:focus{outline:none;border-bottom-color:var(--accent)}
-.tkr{display:flex;align-items:center;gap:4px;margin-top:2px}
+.tkr{display:flex;align-items:center;gap:4px;margin-top:1px}
 .tkc{flex:1;min-width:0;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 .tkc.fut{color:var(--doing)}
 .tk select{background:transparent;border:0;font-size:10px;color:var(--faint);max-width:58px}
-/* The date a countdown is counting to. Small, but present: it was previously
-   only a tooltip, which meant "-85 days" with no way to know or fix the day. */
-.tkdate{display:flex;align-items:center;gap:6px;margin-top:3px}
-.tkd{background:transparent;border:1px solid var(--rule);border-radius:6px;
-  font:inherit;font-size:10.5px;color:var(--soft);padding:2px 4px;max-width:126px}
-.tkd:focus{outline:none;border-color:var(--accent);color:var(--ink)}
-.tkw{font-size:10px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tk .x{background:transparent;border:0;color:var(--faint);padding:0 2px;font-size:13px;line-height:1}
 
-.tk .x:hover{color:var(--danger)}
+/* The date, as a compact button rather than a native date input. The native
+   control is ~110px wide with its own calendar icon, which in this rail left
+   almost no room for the name. The real input is still there, hidden behind
+   it, doing the picking. */
+.tkdw{position:relative;display:inline-flex;flex:none}
+.tkdate{background:var(--card2);border:1px solid var(--rule);border-radius:6px;
+  font-family:var(--mono);font-size:10.5px;color:var(--ink);padding:2px 5px;
+  line-height:1.35;white-space:nowrap}
+.tkdate:hover{border-color:var(--accent)}
+.tknat{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;pointer-events:none}
+.tk .x{flex:none;background:transparent;border:0;color:var(--faint);
+  padding:0;width:20px;height:20px;font-size:14px;line-height:1;border-radius:5px}
+.tk .x:hover{color:var(--danger);background:var(--card2)}
 .tform{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--rule2);
   margin-top:6px;padding-top:8px}
 .tform input[type=text],.tform select{width:100%;background:var(--card);border:1px solid var(--rule);
@@ -464,7 +483,7 @@ main{padding:16px 0 0}
 /* ==========================================================================
    RESPONSIVE — the app reflows all the way down to a narrow side panel.
    ========================================================================== */
-@media (max-width:1100px){ :root{--rail:180px} }
+@media (max-width:1100px){ :root{--rail:210px} }
 @media (max-width:900px){
   /* Single column, and the order is deliberate. Left alone, the rail lands
      AFTER the whole year grid, so a phone user scrolls past a calendar to
