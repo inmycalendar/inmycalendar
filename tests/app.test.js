@@ -1032,7 +1032,12 @@ $("tLabel").value = "Typo hree"; $("tDate").value = "2027-06-01"; click($("tAdd"
 const tkField = d.querySelector("#tkList input.tkl");
 check(tkField !== null, "a countdown's name is an editable field, not fixed text");
 check(tkField.value === "Typo hree", "showing the current name");
-check(/click to rename/.test(tkField.title), "and saying so on hover");
+check(/Click to rename/.test(tkField.title), "and saying so on hover");
+/* The name column is narrow and ellipsises, so the tooltip must carry the full
+   name. It used to show the date instead - the one thing already on screen -
+   and hid the one thing that had been cut off. */
+check(tkField.title.indexOf("Typo hree") === 0,
+      "the tooltip leads with the full name, which is the part that gets truncated");
 tkField.value = "Typo here fixed";
 tkField.dispatchEvent(new w.Event("change",{bubbles:true}));
 check(JSON.parse(w.localStorage.getItem("imc.track")).some(t => t.label === "Typo here fixed"),
@@ -2102,8 +2107,14 @@ check(/#tkList\{[^}]*max-height:[^}]*overflow-y:auto/.test(flat),
    countdown and adding it again. */
 const appSrc = readFile("assets/app.js");
 check(/function longDate\(/.test(appSrc), "there is a human-readable date format");
-check(/type = "date"; di\.className = "tkd"/.test(appSrc),
+check(/function shortDate\(/.test(appSrc), "and a compact one for the row itself");
+check(/dnat\.type = "date"/.test(appSrc),
       "every countdown carries a real date field, not just a tooltip");
+/* toLocaleDateString, not a hand-built order. A date shown in the wrong order
+   is not merely unhelpful, it is misread - 10/11 is two different days
+   depending on which country wrote it. */
+check(/toLocaleDateString/.test(appSrc),
+      "and shows it the way the reader's own machine writes dates");
 
 toBoard();
 /* Add one here rather than relying on the countdowns another section creates
@@ -2114,13 +2125,19 @@ $("tDate").value = (cy + 1) + "-07-04";
 click($("tAdd"));
 const tkNow = qa("#tkList .tk");
 check(tkNow.length > 0, "there are countdowns to inspect");
-check(qa("#tkList .tkd").length === tkNow.length,
+check(qa("#tkList .tkdate").length === tkNow.length,
       "each one shows its date on screen");
-check(qa("#tkList .tkw").length === tkNow.length &&
-      /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) /.test(qa("#tkList .tkw")[0].textContent),
-      "with the weekday spelled out, since 'is it a Friday' is most of why people look");
+check(/\d/.test(qa("#tkList .tkdate")[0].textContent),
+      "as a plain numeric date - short enough to sit beside the name");
+/* The weekday moved into the tooltip. It is worth having, but not worth a
+   third line: three lines per countdown meant only two fitted before the list
+   began scrolling. */
+check(/(Mon|Tue|Wed|Thu|Fri|Sat|Sun) /.test(qa("#tkList .tkdate")[0].title),
+      "with the weekday on hover, rather than costing a whole line");
 {
-  const di = qa("#tkList .tkd")[0];
+  /* The visible date is a button; the real date input sits behind it, hidden,
+     so the row can be narrow enough to leave room for the name. */
+  const di = qa("#tkList .tknat")[0];
   di.value = "2029-07-04";
   di.dispatchEvent(new w.Event("change", { bubbles:true }));
   const saved = JSON.parse(w.localStorage.getItem("imc.track"));

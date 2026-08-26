@@ -1011,6 +1011,22 @@ function longDate(ds){
   if (!d) return "";
   return DOW[d.getDay()] + " " + d.getDate() + " " + MON3[d.getMonth()] + " " + d.getFullYear();
 }
+/* The compact form shown on the countdown row itself: "10/17/2026" for someone
+   whose machine writes dates that way, "17/10/2026" for someone whose does
+   not. Deliberately not a fixed order - a date in the wrong order is worse
+   than useless, it is misread. Falls back to the ISO string if the browser has
+   no locale support. */
+function shortDate(ds){
+  var d = parseISO(ds);
+  if (!d) return "";
+  try {
+    if (d.toLocaleDateString){
+      var s = d.toLocaleDateString(undefined, { year:"numeric", month:"2-digit", day:"2-digit" });
+      if (s) return s;
+    }
+  } catch (e){}
+  return ds;
+}
 function renderTracked(){
   el.tkList.innerHTML = "";
   if (!track.length) return;   /* the form below is self-explanatory */
@@ -1025,7 +1041,10 @@ function renderTracked(){
       var box = mk("div","tk" + (soon && e.id === soon.id ? " next" : ""));
       var lb = document.createElement("input");
       lb.type = "text"; lb.className = "tkl"; lb.value = e.label;
-      lb.title = e.date + " - click to rename";
+      /* The name is narrow and ellipsises, so the tooltip has to carry the FULL
+         name - showing the date here instead told you the one thing already on
+         screen and hid the one thing that was cut off. */
+      lb.title = e.label + "  —  " + longDate(e.date) + "\nClick to rename";
       lb.setAttribute("aria-label","Rename countdown " + e.label);
       lb.addEventListener("change", function(){
         var v = lb.value.trim();
@@ -1036,7 +1055,34 @@ function renderTracked(){
         if (ev.key === "Enter") lb.blur();
         if (ev.key === "Escape"){ lb.value = e.label; lb.blur(); }
       });
-      box.appendChild(lb);
+      /* THE DATE, first on the row and compact.
+         A native date input is about 110px wide, which in a 240px rail leaves
+         almost nothing for the name. This is the same trick the ribbon's date
+         picker already uses: a small button showing the date, with a real date
+         input hidden behind it to do the picking. toLocaleDateString so it
+         reads the way the person's own machine writes dates - 10/17/2026 or
+         17/10/2026 - rather than being forced into one country's order. */
+      var head = mk("div","tkhead");
+      var dwrap = mk("span","tkdw");
+      var dbtn = mk("button","tkdate", shortDate(e.date));
+      dbtn.type = "button";
+      dbtn.title = longDate(e.date) + " - click to change";
+      dbtn.setAttribute("aria-label", "Date for " + e.label + ", " + longDate(e.date));
+      var dnat = document.createElement("input");
+      dnat.type = "date"; dnat.className = "tknat"; dnat.value = e.date;
+      dnat.tabIndex = -1; dnat.setAttribute("aria-hidden","true");
+      dbtn.addEventListener("click", function(){
+        if (dnat.showPicker){ try { dnat.showPicker(); return; } catch (err){} }
+        dnat.click();
+      });
+      dnat.addEventListener("change", function(){
+        if (!parseISO(dnat.value)){ dnat.value = e.date; return; }  /* refuse nonsense, keep what worked */
+        e.date = dnat.value; commit("track"); renderTracked();
+      });
+      dwrap.appendChild(dbtn); dwrap.appendChild(dnat);
+      head.appendChild(dwrap);
+      head.appendChild(lb);
+
       var row = mk("div","tkr");
       row.appendChild(mk("span","tkc" + (entryDays(e) < 0 ? " fut" : ""), countText(e)));
       var sel2 = document.createElement("select");
@@ -1063,27 +1109,13 @@ function renderTracked(){
           commit("track"); renderTracked();
         });
       });
+      /* The x sits with the count, not on the name row. It was tried up there
+         to get it clear of the scrollbar, but that is what the list's
+         padding-right is for, and on the top row it cost the name 26px of an
+         already tight line. */
       row.appendChild(x);
+      box.appendChild(head);
       box.appendChild(row);
-
-      /* THE DATE ITSELF, visible and editable.
-         It used to live only in a tooltip, so a countdown read "-85 days" with
-         no way to find out which day that actually is, and no way to correct it
-         if the date was wrong - the only remedy was delete and re-add. Nobody
-         can hold "85 days from today" in their head, which is the entire point
-         of a countdown. The weekday is shown too, because "is it a Friday?" is
-         most of why people check. */
-      var drow = mk("div","tkdate");
-      var di = document.createElement("input");
-      di.type = "date"; di.className = "tkd"; di.value = e.date;
-      di.setAttribute("aria-label", "Date for " + e.label);
-      var wd = mk("span","tkw", longDate(e.date));
-      di.addEventListener("change", function(){
-        if (!parseISO(di.value)){ di.value = e.date; return; }   /* refuse nonsense, keep what worked */
-        e.date = di.value; commit("track"); renderTracked();
-      });
-      drow.appendChild(di); drow.appendChild(wd);
-      box.appendChild(drow);
       el.tkList.appendChild(box);
     })(sorted[i]);
   }
