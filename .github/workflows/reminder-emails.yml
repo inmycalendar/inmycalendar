@@ -69,21 +69,36 @@ jobs:
             echo "live=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check the secret is present
+      - name: Is this repository configured to send yet?
+        id: configured
         if: steps.mode.outputs.live == 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          # NOT a failure when the secret is missing. This used to exit 1, which
+          # meant a red run and a "Run failed" email EVERY DAY on a repository
+          # that simply had not been finished being set up - training its owner
+          # to ignore exactly the notification that matters when something
+          # really does break. Not configured is a state, not a fault.
           if [ -z "$CRON_SECRET" ]; then
-            echo "CRON_SECRET is not set on this repository, so the function"
-            echo "would refuse the request with 403 and no mail would be sent."
-            echo "Add it under Settings -> Secrets and variables -> Actions."
-            exit 1
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "CRON_SECRET is not set on this repository, so nothing was sent."
+            echo ""
+            echo "To turn reminder emails on:"
+            echo "  Settings -> Secrets and variables -> Actions -> New repository secret"
+            echo "  Name:  CRON_SECRET"
+            echo "  Value: the same value set on the send-emails Edge Function"
+            echo ""
+            echo "This run is green on purpose. It will start sending as soon as"
+            echo "the secret exists, and a red run then means a real problem."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "CRON_SECRET is present (value not printed)."
           fi
-          echo "CRON_SECRET is present (value not printed)."
 
       - name: Call send-emails
         id: call
+        if: steps.mode.outputs.live != 'true' || steps.configured.outputs.ready == 'true'
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           LIVE: ${{ steps.mode.outputs.live }}
@@ -108,6 +123,7 @@ jobs:
           fi
 
       - name: Summarise, without printing a single address
+        if: steps.call.outcome == 'success' && steps.call.conclusion == 'success'
         run: |
           node -e '
             const fs = require("fs");
