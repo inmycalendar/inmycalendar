@@ -700,3 +700,50 @@ main{padding:16px 0 0}
   .toast .undogo{min-height:34px;padding:6px 14px}
   .toastx{min-width:30px;min-height:30px}
 }
+
+/* ---------------- phone: controls you can actually hit ----------------
+   An audit at 375px found 95 interactive elements under 32px. The earlier
+   mobile work had sized four things - the add field, its button, the task row
+   controls and the calendar cells - and left everything else at desktop size,
+   which is how a "mobile pass" can be done and still leave the app awkward to
+   use with a thumb.
+
+   The dense calendar grid is deliberately NOT in here. Its cells are 26x34 and
+   making them 44px would turn a year that fits on one screen into a scrolling
+   list, which loses the entire point of the view. Everything else is chrome,
+   and chrome has no such excuse. */
+@media (max-width:640px){
+  /* ribbon: the day arrows are the most-used controls on a phone and were
+     29px wide */
+  .nub{min-width:38px;height:38px}
+  .brand{min-height:34px;display:inline-flex;align-items:center}
+  .dpick{width:38px;height:38px}
+  .iso{min-height:38px}
+
+  /* the year and fold arrows on the calendar and the year-at-a-glance */
+  .yarr,.fold{min-width:34px;min-height:34px;font-size:13px}
+
+  /* footer links were 17px tall - two lines of them, tightly packed */
+  footer .wrap a{display:inline-block;padding:8px 10px;min-height:34px}
+  /* the data buttons live in .fdata in the footer, not .databox - the
+     class was renamed when they moved out of the rail. */
+  .databox .btn,.fdata .btn{min-height:36px;font-size:11.5px}
+
+  /* the rail: countdown controls, the regional-holiday checkbox, the
+     add-countdown date picker */
+  .tk .x{width:32px;height:32px;font-size:17px}
+  .tk select{min-height:30px;font-size:11.5px}
+  .tkdate{min-height:30px;padding:5px 8px;font-size:11.5px}
+  .tkl{min-height:30px}
+  .tform .dbtn,#tPick{min-width:34px;min-height:34px}
+  /* The LABEL is the tap target, not the box: clicking anywhere on it
+     toggles the checkbox, which gives a 34px-tall full-width target without
+     fighting the browser over how big a native checkbox may be. */
+  .chk{min-height:34px;display:flex;align-items:center;gap:8px}
+  .cat input[type=text]{min-height:32px}
+  .catdot{width:30px;height:30px}
+
+  /* the day popup's colour swatches and its close button */
+  .dab{min-width:36px;min-height:36px}
+  .mx,.bnx{min-width:36px;min-height:36px}
+}

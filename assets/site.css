@@ -138,13 +138,21 @@ input,select,textarea{font:inherit;color:inherit}
 @media (max-width:1499px){
   .meta{display:none}
 }
+/* The BASE state, and it must stay ABOVE the media query below.
+   It used to sit underneath it. A media query carries no extra specificity, so
+   an equally-specific plain rule written later simply wins - which meant
+   .navshort was display:none at EVERY width, and under 1250px .navlong was
+   hidden too. The result: on every phone, the main "Board" link in the ribbon
+   was an empty 16px box with no text in it at all. The same ordering trap is
+   already written up a few rules above for .appzone; it caught this one too. */
+.navshort{display:none}
+
 @media (max-width:1249px){
   .sitenav a{padding:6px 7px;letter-spacing:.05em}
   .sitenav .gap{margin:0 3px}
   .navlong{display:none}
   .navshort{display:inline}
 }
-.navshort{display:none}
 
 /* ---------------- shared controls ---------------- */
 .btn{background:var(--card);border:1px solid var(--rule);color:var(--ink);padding:5px 11px;

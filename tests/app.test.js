@@ -2344,6 +2344,57 @@ check(/\.toast\.above\{bottom:/.test(flat),
       "the undo bar stacks above the day-selection bar rather than under it");
 }
 
+console.log("\n=== C53. The phone pass, done properly this time ===");
+{
+/* THE BUG THIS SECTION EXISTS FOR.
+   On every phone, the main "Board" link in the ribbon was an EMPTY 16px box.
+   .navshort{display:none} was written BELOW the media query that shows it, and
+   a media query carries no extra specificity - so the later, equally specific
+   plain rule won at every width, while under 1250px .navlong was hidden too.
+   Both halves of the link were display:none at once.
+
+   The same ordering trap is already written up in site.css for .appzone. It
+   caught the nav as well, which is why it is now a test and not just a
+   comment. */
+const site = readFile("assets/site.css");
+const baseHide = site.indexOf(".navshort{display:none}");
+const showsIt  = site.indexOf(".navshort{display:inline}");
+check(baseHide >= 0 && showsIt >= 0, "the ribbon has a long and a short nav label");
+check(baseHide < showsIt,
+      "the base rule hiding the short label comes BEFORE the query that shows it, " +
+      "or a media query with no extra specificity loses and the link renders empty");
+
+/* Both labels must never be hidden together. */
+const flatSite = site.replace(/\s*\n\s*/g, "");
+check(!/\.navlong\{display:none\}[^@]*\.navshort\{display:none\}/.test(flatSite),
+      "the long and short labels are never both hidden at the same width");
+
+/* THE TAP TARGETS.
+   An audit at 375px found 95 interactive elements under 32px. The earlier
+   mobile work sized four things - the add field, its button, the row controls
+   and the calendar cells - and left the rest at desktop size. These pin the
+   ones that were missed, by rule rather than by measurement, since jsdom
+   reports zero for every box. */
+const phone = (flat.match(/@media \(max-width:640px\)\{[^@]*/g) || []).join("");
+check(phone.length > 0, "there is a phone stylesheet block to check");
+
+[["\\.nub\\{[^}]*min-width:38px",           "the day arrows in the ribbon"],
+ ["\\.yarr,\\.fold\\{[^}]*min-width:34px",  "the year and fold arrows"],
+ ["footer \\.wrap a\\{[^}]*min-height:34px","the footer links, which were 17px tall"],
+ ["\\.fdata \\.btn\\{[^}]*min-height:36px", "Export, Backup, Restore and Delete everything"],
+ ["\\.tk \\.x\\{[^}]*width:32px",           "the countdown delete button"],
+ ["\\.chk\\{[^}]*min-height:34px",          "the regional-holidays row, tapped by its label"],
+ ["\\.dab\\{[^}]*min-width:36px",           "the day popup's colour swatches"]
+].forEach(([re, what]) =>
+  check(new RegExp(re).test(phone), "sized for a thumb on a phone: " + what));
+
+/* The dense calendar grid is deliberately excluded: its cells are 26x34 and
+   making them 44px would turn a year that fits on one screen into a scrolling
+   list, which is the whole point of that view. */
+check(!/@media \(max-width:640px\)\{[^@]*\.wg \.dc\{[^}]*min-height:44px/.test(flat),
+      "the calendar cells are left dense on purpose, not inflated to 44px");
+}
+
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
 check(errors.length === 0, "no uncaught JS errors" + (errors.length ? " -> " + errors.join(" | ") : ""));
 check($("boardView").children[1].id === "scopeHost", "board still starts with the kanban");
