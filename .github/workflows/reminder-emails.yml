@@ -23,7 +23,7 @@
 #
 # SETUP, ONCE
 # Add the secret at:
-#   github.com/suyash-keshri/inmycalendar/settings/secrets/actions
+#   github.com/inmycalendar/inmycalendar/settings/secrets/actions
 #   Name:  CRON_SECRET
 #   Value: the same CRON_SECRET set on the Supabase function
 # Without it the live run is refused by the function with a 403.
