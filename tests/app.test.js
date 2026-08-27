@@ -2430,6 +2430,28 @@ check(!SMART.test(readFile("holidays/IN-2027.html")),
      git log --format='%an|%ae|%B' | grep -i 'co-authored'                    */
 check(!/Co-Authored-By/i.test(readFile("README.md")),
       "the README carries no attribution trailers");
+
+/* THE LICENCE HAS TO AGREE WITH ITSELF.
+   It did not. package.json said MIT, the README said MIT, terms.html said the
+   code belongs to its author - the opposite of MIT - and there was no LICENSE
+   file at all, so the legal default (all rights reserved) applied regardless.
+   The repository was advertising rights it had never granted, and nothing
+   noticed because no single file was wrong on its own. */
+check(fs.existsSync(path.join(ROOT, "LICENSE")),
+      "there is a LICENSE file, without which the claim in package.json grants nothing");
+const lic = readFile("LICENSE");
+check(/All rights reserved/i.test(lic), "it reserves rights rather than granting them");
+check(/hello@inmycalendar\.com/.test(lic), "and says where to ask for permission");
+
+const pkgLicence = JSON.parse(readFile("package.json")).license;
+check(pkgLicence === "UNLICENSED",
+      "package.json agrees with it (UNLICENSED is npm's term for proprietary), not MIT");
+
+const readme = readFile("README.md");
+check(!/^MIT\.$/m.test(readme), "the README no longer claims plain MIT");
+check(/all rights reserved/i.test(readme), "and states the same terms as the LICENSE file");
+check(/not host, redistribute or sell/i.test(readFile("terms.html")),
+      "and so does the terms page, which used to contradict both");
 }
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
