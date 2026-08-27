@@ -1,0 +1,41 @@
+Copyright (c) 2026 inmycalendar. All rights reserved.
+
+This source code is published so that it can be read, studied and audited.
+It is NOT open source, and no permission is granted to copy, modify,
+redistribute, host, sell or create derivative works from it, in whole or in
+part, without prior written permission from the copyright holder.
+
+WHAT YOU MAY DO
+  - Read the code, in full, for any purpose.
+  - Learn from it, and apply the ideas and techniques in your own work.
+  - Quote short excerpts with attribution, for teaching, review or discussion.
+  - Run it locally for the sole purpose of evaluating or auditing it.
+
+WHAT YOU MAY NOT DO WITHOUT PERMISSION
+  - Publish, host or operate this software, or any substantial part of it,
+    whether modified or not.
+  - Distribute it, bundle it, or include it in another product.
+  - Sell it, or use it as the basis of a commercial service.
+
+WHY IT IS NOT MIT
+  The project is intended to earn revenue. A permissive licence would allow
+  anyone to take it wholesale, rebrand it and run it commercially, which is
+  not the intention. Publishing the source without granting those rights keeps
+  the code readable and reviewable - which is the point, especially for a tool
+  that handles people's data - while leaving the work itself protected.
+
+THE PUBLIC HOLIDAY DATA
+  The holiday dates under assets/holidays/ and the pages generated from them
+  are compiled from publicly available sources. Factual dates are not subject
+  to copyright. The compilation, the wording around it and the code that
+  produces those pages are covered by this notice.
+
+NO WARRANTY
+  This software is provided "as is", without warranty of any kind, express or
+  implied, including but not limited to the warranties of merchantability,
+  fitness for a particular purpose and non-infringement. In no event shall the
+  copyright holder be liable for any claim, damages or other liability,
+  whether in an action of contract, tort or otherwise, arising from, out of or
+  in connection with the software or the use or other dealings in it.
+
+Permission enquiries: hello@inmycalendar.com

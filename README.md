@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/suyash-keshri/inmycalendar.git
 cd inmycalendar
 npm ci           # only needed to run the tests
-npm test         # expect: 915 passed, 0 failed
+npm test         # expect: 922 passed, 0 failed
 ```
 
 The tests need **Node 22.22.2 or newer** - jsdom 30 refuses to run on anything
@@ -78,7 +78,7 @@ assets/
   favicon.svg .ico apple-touch-icon-v2.png icon-192-v2.png icon-512-v2.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       915 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       922 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -272,7 +272,7 @@ collide with the semantic colours.
 npm test
 ```
 
-915 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+922 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
@@ -558,4 +558,18 @@ C15 fails if any personal term appears in a published file.
 
 ## Licence
 
-MIT.
+**Source available, all rights reserved.** See [LICENSE](LICENSE).
+
+The code is public so it can be read, studied and audited - which matters for a
+tool that holds people's data. It is deliberately **not** open source: the
+project is intended to earn revenue, and a permissive licence would let anyone
+take it wholesale, rebrand it and run it commercially.
+
+Read it, learn from it, quote it with attribution. Do not host, redistribute or
+sell it without asking first: hello@inmycalendar.com
+
+This replaced a claim of MIT that was never backed by a LICENSE file. Three
+places disagreed at once - `package.json` said MIT, the README said MIT, and
+`terms.html` said the code belongs to its author, which is the opposite. With
+no LICENSE file the legal default applied anyway, so the repository was
+promising rights it had not actually granted.
