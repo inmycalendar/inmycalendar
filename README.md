@@ -30,7 +30,7 @@ at a glance. Days can be coloured, given a note, and show your country's public 
 There is no build step. Clone and open `index.html` in a browser - that is the whole setup.
 
 ```
-git clone https://github.com/suyash-keshri/inmycalendar.git
+git clone https://github.com/inmycalendar/inmycalendar.git
 cd inmycalendar
 npm ci           # only needed to run the tests
 npm test         # expect: 922 passed, 0 failed
@@ -495,7 +495,7 @@ from them, the diagnostic survives its 30 days carrying no name, address or cont
 
 GitHub -> Hostinger auto-deploy -> Porkbun domain.
 
-- Repo: `suyash-keshri/inmycalendar` (public)
+- Repo: `inmycalendar/inmycalendar` (public)
 - Hostinger: hPanel -> Advanced -> Git, branch `main`, root `public_html`, auto-deploy on
 - Porkbun nameservers point at Hostinger (`pixel.dns-parking.com`, `byte.dns-parking.com`)
 - **Porkbun URL Forwarding must stay OFF** - it hijacked `/guide.html` to a parking page
