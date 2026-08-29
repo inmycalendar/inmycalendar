@@ -25,6 +25,7 @@ var COUNTRIES = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","A
 var HOL = {};                 /* code -> { "2026": { "0101": [name, 0|1] } } */
 var holWanted = null;
 
+var WEEK_RULES = ["majority","thursday","jan1"];
 var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
@@ -281,29 +282,55 @@ function dowLabels(){ var o=[]; for (var i=0;i<7;i++) o.push(DOW[(cfg.weekStart+
 /* ---------------------------------------------------------------------------
    WEEK NUMBERING
 
-   Two rules, because organisations genuinely differ:
+   THREE rules, because organisations genuinely differ, and because two of them
+   only look the same until you move the start of the week.
 
-   "thursday" (default) - week 1 is the week containing the year's first
-      Thursday. This is the logic ISO 8601 uses, but applied to whatever day
-      the user starts their week on. It is what most payroll, retail and
-      reporting calendars use. A year has 52 or 53 weeks, and the first days
-      of January often belong to the previous year's last week.
+   The thing worth understanding: ISO 8601's Thursday is not arbitrary. Thursday
+   is the FOURTH day of a Monday-start week, so "the week containing the first
+   Thursday" is just a compact way of saying "the first week with four or more
+   of its days in the new year" - the majority rule.
 
-   "jan1" - week 1 is simply the week containing 1 January. Easier to explain,
-      but it produces a 53rd week far more often and splits the year oddly.
+   That equivalence breaks the moment weeks start on another day. The fourth day
+   of a Sunday-start week is WEDNESDAY, not Thursday. So on a Sunday-start
+   calendar the two rules genuinely disagree, and both are in real use:
 
-   Worked example with weeks starting Sunday: 1 Jan 2026 is a Thursday, so
-   week 1 of 2026 starts Sunday 28 Dec 2025 - which means 31 Dec 2025 is in
-   week 1 of 2026, not week 53 of 2025. For 2027, the first Thursday is 7 Jan,
-   so week 1 starts Sunday 3 Jan 2027.
+     "majority"  week 1 is the first week with 4+ days in the new year. The
+        pivot moves with the week start - Thursday for Monday, Wednesday for
+        Sunday, Tuesday for Saturday. This is ISO 8601 exactly when weeks start
+        on Monday, and it is what most people mean by "the 4-day rule".
+
+     "thursday"  week 1 is the week containing the year's first Thursday,
+        whatever day the week starts on. Several large companies use precisely
+        this: ISO's pivot with a Sunday start, which gives a week 1 holding only
+        THREE days of the new year whenever 1 January is a Thursday. That is
+        deliberate on their part, not a mistake, and a calendar that silently
+        applied the majority rule instead would disagree with their reporting.
+
+     "jan1"  week 1 is simply the week containing 1 January. Easier to explain,
+        but it produces a 53rd week far more often and splits the year oddly.
+
+   With weeks starting Monday, "majority" and "thursday" are identical, and a
+   test asserts that so the two can never quietly drift apart.
+
+   Worked example, weeks starting Sunday, year 2026: 1 Jan 2026 is a Thursday.
+     thursday  week 1 starts Sun 28 Dec 2025 - three days of it are in 2026
+     majority  week 1 starts Sun 4 Jan 2026 - the week of the first Wednesday
+   Both are defensible. They are not the same, and the label has to say which.
    --------------------------------------------------------------------------- */
-function firstThursday(y){
+/* The first occurrence in year y of a given weekday (0 = Sunday). */
+function firstDowInYear(y, dow){
   var d = new Date(y,0,1); d.setHours(0,0,0,0);
-  while (d.getDay() !== 4) d.setDate(d.getDate()+1);
+  while (d.getDay() !== dow) d.setDate(d.getDate()+1);
   return d;
 }
+function firstThursday(y){ return firstDowInYear(y, 4); }
+/* The pivot for the majority rule: the FOURTH day of the week as the user has
+   it set. weekStart 1 (Mon) gives 4 (Thu); weekStart 0 (Sun) gives 3 (Wed). */
+function majorityPivot(){ return (cfg.weekStart + 3) % 7; }
 function week1Start(y){
-  return sow(cfg.weekRule === "jan1" ? new Date(y,0,1) : firstThursday(y));
+  if (cfg.weekRule === "jan1")     return sow(new Date(y,0,1));
+  if (cfg.weekRule === "majority") return sow(firstDowInYear(y, majorityPivot()));
+  return sow(firstThursday(y));
 }
 function weeksForYear(y){
   var start = week1Start(y), out = [], n;
@@ -1914,7 +1941,11 @@ function wire(){
   el.wsSel.addEventListener("change", function(){ setWeekStart(el.wsSel.value); });
   el.ctrySel.addEventListener("change", function(){ setCountry(el.ctrySel.value); });
   el.wkRule.addEventListener("change", function(){
-    cfg.weekRule = el.wkRule.value === "jan1" ? "jan1" : "thursday";
+    /* A whitelist, not a two-way coercion. The old line mapped anything that
+       was not "jan1" onto "thursday", which would have silently swallowed the
+       new rule and left the dropdown showing one thing while the calendar did
+       another. */
+    cfg.weekRule = WEEK_RULES.indexOf(el.wkRule.value) >= 0 ? el.wkRule.value : DEF.weekRule;
     commit("cfg"); renderAll();
   });
   el.holReg.addEventListener("change", function(){
@@ -2179,7 +2210,7 @@ function init(){
   }
   el.ctrySel.value = cfg.country || "";
   el.holReg.checked = !!cfg.holRegional;
-  el.wkRule.value = cfg.weekRule === "jan1" ? "jan1" : "thursday";
+  el.wkRule.value = WEEK_RULES.indexOf(cfg.weekRule) >= 0 ? cfg.weekRule : DEF.weekRule;
   wire();
   rangeLabel();
   applyAds();
