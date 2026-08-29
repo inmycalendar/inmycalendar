@@ -19,14 +19,14 @@
 <meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
 <meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512-v2.png">
-<link rel="icon" href="assets/favicon.ico?v=56" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=56">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=56">
-<link rel="manifest" href="manifest.webmanifest?v=56">
+<link rel="icon" href="assets/favicon.ico?v=57" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=57">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=57">
+<link rel="manifest" href="manifest.webmanifest?v=57">
 <meta name="theme-color" content="#18181b">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=56">
-<link rel="stylesheet" href="assets/app.css?v=56">
+<link rel="stylesheet" href="assets/site.css?v=57">
+<link rel="stylesheet" href="assets/app.css?v=57">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -157,13 +157,14 @@
         </label>
         <label class="fld"><span>Which week is week 1</span>
           <select id="wkRule" class="sel">
-            <!-- These two are IDENTICAL when weeks start on Monday and differ
-                 whenever they do not, so both have to exist and both have to
-                 say plainly which they are. See the comment above week1Start()
-                 in app.js for why ISO's Thursday is really "the fourth day of
-                 the week". -->
+            <!-- The first two are IDENTICAL when weeks start on Monday and
+                 differ whenever they do not, so both have to exist and both
+                 have to say plainly which they are. See the comment above
+                 week1Start() in app.js for why ISO's Thursday is really "the
+                 fourth day of the week", and for what each of the four means. -->
             <option value="majority">First week with 4+ days in the new year</option>
             <option value="thursday">Week containing the first Thursday</option>
+            <option value="firstfull">First week fully inside the new year</option>
             <option value="jan1">Week containing 1 January</option>
           </select>
         </label>
@@ -282,10 +283,10 @@
   </div>
 </div>
 
-<script src="assets/errors.js?v=56"></script>
+<script src="assets/errors.js?v=57"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=56"></script>
-<script src="assets/auth.js?v=56"></script>
-<script src="assets/sync.js?v=56"></script>
+<script src="assets/app.js?v=57"></script>
+<script src="assets/auth.js?v=57"></script>
+<script src="assets/sync.js?v=57"></script>
 </body>
 </html>

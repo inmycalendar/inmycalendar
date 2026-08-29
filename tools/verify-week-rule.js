@@ -17,6 +17,9 @@
                whatever day the week starts on. Some large organisations use
                this with a SUNDAY start, which gives a week 1 holding only
                three days of the new year. Deliberate, not a bug.
+     firstfull week 1 is the first week lying ENTIRELY in the new year, so it
+               begins on the first week-start day on or after 1 January and
+               never reaches back into December.
      jan1      week 1 is the week containing 1 January.
    --------------------------------------------------------------------------- */
 const MS_DAY = 86400000;
@@ -35,8 +38,9 @@ function firstDowInYear(y, dow){
 }
 function majorityPivot(){ return (cfg.weekStart + 3) % 7; }
 function week1Start(y){
-  if (cfg.weekRule === "jan1")     return sow(new Date(y,0,1));
-  if (cfg.weekRule === "majority") return sow(firstDowInYear(y, majorityPivot()));
+  if (cfg.weekRule === "jan1")      return sow(new Date(y,0,1));
+  if (cfg.weekRule === "firstfull") return firstDowInYear(y, cfg.weekStart);
+  if (cfg.weekRule === "majority")  return sow(firstDowInYear(y, majorityPivot()));
   return sow(firstDowInYear(y, 4));
 }
 function weeksForYear(y){
@@ -135,6 +139,58 @@ cfg.weekStart = 0; cfg.weekRule = "majority";
   console.log("  " + (differ ? "ok  " : "FAIL") +
     "  Sunday, 2026: thursday starts week 1 on " + iso(t) +
     ", majority on " + iso(m) + (differ ? "   (they differ, as they must)" : "   (IDENTICAL - the option is pointless)"));
+}
+
+/* 6. firstfull must keep ITS promise, on EVERY week start: week 1 holds seven
+      days of the new year and not one day of the old one. That is the whole
+      reason the rule exists, so it is checked for all seven starts. */
+{
+  let bad = 0, first = null, n = 0;
+  for (let ws = 0; ws <= 6; ws++){
+    cfg.weekStart = ws; cfg.weekRule = "firstfull";
+    for (let y = FROM; y <= TO; y++){
+      n++;
+      const s = week1Start(y);
+      let inNew = 0;
+      for (let i=0;i<7;i++) if (addDays(s,i).getFullYear() === y) inNew++;
+      if (inNew !== 7){ bad++; if (!first) first = "weekStart " + ws + ", " + y +
+        " week 1 starts " + iso(s) + " with only " + inNew + " days in " + y; }
+    }
+  }
+  report("firstfull: week 1 wholly inside the year, all 7 starts", { n, bad, first });
+}
+
+/* 7. And it must be a rule of its own, not a rename of one already present.
+      2024 is the case: 1 January 2024 is a Monday, so the other three all
+      reach back into December and firstfull alone does not. */
+{
+  cfg.weekStart = 0;
+  const at = r => { cfg.weekRule = r; return iso(week1Start(2024)); };
+  const j = at("jan1"), m = at("majority"), t = at("thursday"), f = at("firstfull");
+  const alone = f !== j && f !== m && f !== t;
+  if (!alone) failures++;
+  console.log("  " + (alone ? "ok  " : "FAIL") +
+    "  Sunday, 2024: jan1/majority/thursday all start week 1 on " + j +
+    ", firstfull on " + f +
+    (alone ? "   (distinct, as it must be)" : "   (DUPLICATE - the option is pointless)"));
+}
+
+/* 8. No two rules may agree on EVERY year and EVERY week start - a setting
+      that never changes anything is a setting that lies to the user. */
+{
+  const rules = ["majority","thursday","firstfull","jan1"];
+  let bad = 0, first = null;
+  for (let a = 0; a < rules.length; a++) for (let b = a+1; b < rules.length; b++){
+    let same = 0, tot = 0;
+    for (let ws = 0; ws <= 6; ws++) for (let y = FROM; y <= TO; y++){
+      cfg.weekStart = ws;
+      cfg.weekRule = rules[a]; const x = week1Start(y).getTime();
+      cfg.weekRule = rules[b]; const z = week1Start(y).getTime();
+      tot++; if (x === z) same++;
+    }
+    if (same === tot){ bad++; if (!first) first = rules[a] + " and " + rules[b] + " never differ"; }
+  }
+  report("all 4 rules are distinct from one another", { n: 6, bad, first });
 }
 
 console.log("\n  " + (failures ? failures + " CHECK(S) FAILED" : "all checks passed"));
