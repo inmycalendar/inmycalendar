@@ -297,7 +297,13 @@ $("wsSel").value = "6"; $("wsSel").dispatchEvent(new w.Event("change",{bubbles:t
 check(JSON.parse(w.localStorage.getItem("imc.cfg")).weekStart === 6, "choosing Saturday works");
 check(qa("#glance .dh")[1].textContent === "Sat", "and the grid starts on Saturday");
 $("wsSel").value = "0"; $("wsSel").dispatchEvent(new w.Event("change",{bubbles:true}));
-const railBoxes = [...qa(".rail .rbox h3")].map(h => h.textContent.trim());
+/* The Day colours heading now carries a hide/show control inside it, placed
+   there so hiding the colours costs no extra height in the rail. Compare the
+   heading text WITHOUT its nested controls, or adding any button to a heading
+   breaks a test about panel order, which is not what this checks. */
+const headingText = h => [...h.childNodes]
+  .filter(n => n.nodeType === 3).map(n => n.textContent).join("").trim();
+const railBoxes = [...qa(".rail .rbox h3")].map(headingText);
 check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours",
       "rail reads: " + railBoxes.join(" | "));
 const dataBtns = [...qa("footer .fdata .btn")].map(b => b.textContent.trim());
@@ -1066,7 +1072,7 @@ check(/\.wg \.dh\{[^}]*position:sticky;top:var\(--hYear\);z-index:6/.test(flatCa
       "and the day-of-week row sits under it, also sticky");
 
 console.log("\n=== C28. Rail order matches how people use it ===");
-const boxes = [...qa(".rail .rbox h3")].map(x => x.textContent.trim());
+const boxes = [...qa(".rail .rbox h3")].map(headingText);   /* controls inside a heading are not its name */
 check(boxes.indexOf("Countdowns") < boxes.indexOf("Day colours"),
       "Countdowns sits above Day colours: " + boxes.join(" -> "));
 
@@ -2452,6 +2458,100 @@ check(!/^MIT\.$/m.test(readme), "the README no longer claims plain MIT");
 check(/all rights reserved/i.test(readme), "and states the same terms as the LICENSE file");
 check(/not host, redistribute or sell/i.test(readFile("terms.html")),
       "and so does the terms page, which used to contradict both");
+}
+
+console.log("\n=== C55. Move to today, and the day-colours panel ===");
+{
+const src = readFile("assets/app.js");
+
+/* ---- move a task to today in one tap --------------------------------- */
+/* Looking back through old days and pulling an unfinished task forward is the
+   commonest thing to do there. Through the date picker it means opening a
+   calendar to choose a date you already know. */
+check(/Move to today/.test(src), "there is a move-to-today control");
+/* Conditional on purpose: the row already carries seven controls, and an
+   eighth that does nothing would be clutter on the board where most time is
+   spent. */
+check(/task\.date !== iso\(today\(\)\)/.test(src),
+      "which is only rendered when the task is not already on today");
+
+toBoard();
+click([...$("scopeSeg").children][0]);
+const lane = () => col(0);
+const opsOf = r => [...r.querySelectorAll(".op")].map(b => b.title);
+
+add(0, "Pull me forward");
+const todayRow = [...lane().querySelectorAll(".t")].find(r => r.querySelector(".txt").textContent === "Pull me forward");
+check(opsOf(todayRow).indexOf("Move to today") < 0,
+      "on today's own board it does not appear, so the row stays at seven controls");
+
+/* Move it to an earlier day, go there, and the control should appear. */
+const past = (function(){ const p=new Date(); p.setDate(p.getDate()-6); return iso(p); })();
+{
+  const id = JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Pull me forward").id;
+  dom.window.eval('moveTaskToDate("' + id + '","' + past + '"); refresh();');
+}
+$("dInput").value = past;
+$("dInput").dispatchEvent(new w.Event("change", { bubbles:true }));
+const pastRow = [...lane().querySelectorAll(".t")].find(r => r.querySelector(".txt").textContent === "Pull me forward");
+check(!!pastRow, "the task is on the older day");
+check(pastRow && opsOf(pastRow).indexOf("Move to today") >= 0,
+      "and there the control appears");
+
+click([...pastRow.querySelectorAll(".op")].find(b => b.title === "Move to today"));
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Pull me forward").date === TODAY,
+      "one tap moves it to today");
+check(/Moved .*to today/.test($("undoText").textContent),
+      "and it is undoable, because a mis-tap while browsing history relocates a task you cannot see");
+click($("undoGo"));
+check(JSON.parse(w.localStorage.getItem("imc.tasks")).find(t => t.text === "Pull me forward").date === past,
+      "undo puts it back on the day it came from");
+$("dInput").value = TODAY;
+$("dInput").dispatchEvent(new w.Event("change", { bubbles:true }));
+
+/* ---- the day colours panel ------------------------------------------- */
+/* REORDERING MUST NOT TOUCH THE DATA. A day stores its colour as an INDEX
+   into catLabels, so physically reordering those arrays would repaint every
+   day already marked. cfg.catOrder changes what the panel SHOWS. */
+check(/catOrder/.test(src), "there is a display order for the categories");
+check(/catOrder:\[0,1,2,3\]/.test(src), "defaulting to the natural order");
+
+{
+  const before = JSON.parse(w.localStorage.getItem("imc.cfg")).catOrder;
+  const rows = qa("#cats .cat");
+  check(rows.length === 4 && rows.every(r => r.draggable), "every category row is draggable");
+
+  rows[0].dispatchEvent(new w.Event("dragstart", { bubbles:true }));
+  rows[3].dispatchEvent(new w.Event("drop", { bubbles:true }));
+  const after = JSON.parse(w.localStorage.getItem("imc.cfg")).catOrder;
+  check(JSON.stringify(after) !== JSON.stringify(before), "dragging one to the end reorders the panel");
+  check(after.slice().sort().join() === "0,1,2,3",
+        "and the order stays a permutation, so no category is lost or duplicated");
+}
+
+/* The count answers "how much leave have I taken" without opening the export. */
+check(/function catCount\(/.test(src), "each colour carries a count of the days marked with it");
+check(qa("#cats .catn").length === 4, "one count per row");
+/* The span differs by view and the number has to describe what is on screen. */
+check(/el\.calView[\s\S]{0,120}calYears\(\)/.test(src),
+      "counted over the calendar's whole year range on the calendar, and one year on the board");
+
+/* Hiding every colour, for a screenshot that shows only holidays. */
+check(!!$("catsHide"), "there is a control to hide every day colour");
+check(/hideCats/.test(src), "backed by a setting");
+check(/hasCat && !cfg\.hideCats/.test(src),
+      "which stops the cell painting its colour WITHOUT deleting the colour");
+check($("catsHide").closest("h3") !== null,
+      "and it sits in the panel heading, so it costs no extra height in the rail");
+{
+  const notesBefore = Object.keys(JSON.parse(w.localStorage.getItem("imc.notes"))).length;
+  click($("catsHide"));
+  check(JSON.parse(w.localStorage.getItem("imc.cfg")).hideCats === true, "pressing it hides them");
+  check(Object.keys(JSON.parse(w.localStorage.getItem("imc.notes"))).length === notesBefore,
+        "and deletes nothing - every marked day is still marked");
+  click($("catsHide"));
+  check(JSON.parse(w.localStorage.getItem("imc.cfg")).hideCats === false, "pressing it again brings them back");
+}
 }
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");

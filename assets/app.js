@@ -27,13 +27,23 @@ var holWanted = null;
 
 var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
             catLabels:["Milestone","Travel","Leave","WFH"],
-            catColors:CATS.slice() };
+            catColors:CATS.slice(),
+            /* Display order only. The colour stored on a day is an INDEX into
+               catLabels/catColors, so physically reordering those arrays would
+               silently repaint every day already marked. This reorders what
+               the panel and the swatches SHOW, and leaves the stored data
+               alone. */
+            catOrder:[0,1,2,3],
+            /* Hides every day colour on the calendar without deleting any, so
+               a screenshot can show holidays alone. */
+            hideCats:false };
 
 var cfg = null, tasks = null, notes = null, track = null;
 var shadow = { tasks:null, notes:null, track:null, cfg:null };
 var pending = { full:false, n:0, rows:{} };
 var pendingSeq = 0;
 var sel = null, mDate = null, glanceYear = null, dragId = null, carryHidden = {};
+var catDrag = null;          /* which category row is being dragged */
 var el = {};
 
 /* ---------- helpers ---------- */
@@ -582,6 +592,28 @@ function taskRow(task, st, idx, total){
   ops.appendChild(opBtn("\u25bc","Move down", idx === total-1, function(){ nudge(task.id, 1); refresh(); }));
   ops.appendChild(opBtn("\u2190","Move left", st.k === "todo", function(){ shiftStatus(task.id,-1); refresh(); }));
   ops.appendChild(opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); }));
+  /* MOVE TO TODAY.
+     Deliberately only rendered when the task is not already on today. The
+     commonest thing to do while looking back through old days is to pull an
+     unfinished task forward, and doing it through the date picker means
+     opening a calendar and finding a date you already know. This is one tap.
+
+     Conditional because the row already carries seven controls and an eighth
+     that does nothing would be pure clutter: on today's board, where most time
+     is spent, it simply does not appear. It only exists where it is useful. */
+  if (task.date !== iso(today())){
+    ops.appendChild(opBtn("◎","Move to today", false, function(){
+      var from = task.date;
+      var label = String(task.text || "").replace(/\s+/g," ").trim().slice(0,32);
+      moveTaskToDate(task.id, iso(today()));
+      refresh();
+      /* Undoable: a mis-tap while browsing history would otherwise quietly
+         relocate a task to a day you were not even looking at. */
+      pushUndo("Moved '" + label + "' to today", function(){
+        moveTaskToDate(task.id, from); refresh();
+      });
+    }));
+  }
   ops.appendChild(opBtn("\u{1F4C5}","Move to another day", false, function(){
     var inp = document.createElement("input");
     inp.type = "date"; inp.value = task.date;
@@ -717,7 +749,10 @@ function renderWeekGrid(o){
           if (daySel[ds]) cell.className += " selected";
           var rec = notes[ds];
           var hasCat = rec && rec.color !== null && rec.color !== undefined;
-          if (hasCat) cell.className += " k" + rec.color;      /* whole cell takes the colour */
+          /* cfg.hideCats hides every day colour without deleting one, so a
+             screenshot of the calendar can show holidays alone. The day still
+             KNOWS its colour; the cell just does not paint it. */
+          if (hasCat && !cfg.hideCats) cell.className += " k" + rec.color;
           if (day.getFullYear() !== week.year && !hasCat) cell.className += " out";
           if (ds === nowISO) cell.className += " now";
           /* The day the board is showing. Same SHAPE as today (a ring, so it
@@ -889,6 +924,7 @@ function stepGlance(d){
   var cy = today().getFullYear();
   glanceYear = Math.min(cy+CAP, Math.max(cy-CAP, glanceYear + d));
   renderGlance();
+  renderRail();       /* the counts describe the year now on screen */
 }
 function stepCal(d){
   var cy = today().getFullYear();
@@ -969,11 +1005,72 @@ function runSearch(){
     })(hits[h]);
   }
 }
+/* How many days in the CURRENTLY VISIBLE span carry each colour.
+   The span differs by view, and the number has to describe what is on screen or
+   it is just a decoration:
+     board     the one year the "Year at a glance" grid is showing
+     calendar  the whole range of years the calendar is showing, which may be
+               three or more - so the tooltip names the range explicitly
+   Returns { n, label }. */
+function catCount(idx){
+  var from, to;
+  if (el.calView && !el.calView.classList.contains("hidden")){
+    var r = calYears(); from = r.from; to = r.to;
+  } else {
+    from = to = glanceYear;
+  }
+  var n = 0;
+  for (var ds in notes){
+    if (!has(notes, ds)) continue;
+    var rec = notes[ds];
+    if (!rec || rec.color !== idx) continue;
+    var y = parseInt(ds.slice(0,4), 10);
+    if (y >= from && y <= to) n++;
+  }
+  return { n:n, label: n + " day" + (n === 1 ? "" : "s") + " marked in " +
+                       (from === to ? from : from + " to " + to) };
+}
+
+function paintHideCats(){
+  if (!el.catsHide) return;
+  el.catsHide.textContent = cfg.hideCats ? "show" : "hide";
+  el.catsHide.classList.toggle("on", !!cfg.hideCats);
+  el.catsHide.title = cfg.hideCats
+    ? "Day colours are hidden on the calendar. Nothing was deleted."
+    : "Hide every day colour on the calendar. Nothing is deleted - useful for a screenshot showing only holidays.";
+}
 function renderRail(){
   el.cats.innerHTML = "";
-  for (var i=0;i<CATS.length;i++){
-    (function(idx){
+  paintHideCats();
+  /* Display order, not storage order - see cfg.catOrder in DEF. */
+  for (var oi=0; oi<cfg.catOrder.length; oi++){
+    (function(idx, slot){
       var row = mk("div","cat");
+      row.setAttribute("data-cat", idx);
+      row.draggable = true;
+
+      /* Reordering. The stored colour on a day is an index, so this moves the
+         ROW, never the data: a day marked "Leave" stays "Leave" and stays the
+         same colour wherever Leave sits in the list. */
+      row.addEventListener("dragstart", function(e){
+        catDrag = idx;
+        row.classList.add("dragging");
+        if (e.dataTransfer){ e.dataTransfer.effectAllowed = "move";
+                             try { e.dataTransfer.setData("text/plain", String(idx)); } catch (err){} }
+      });
+      row.addEventListener("dragend", function(){ row.classList.remove("dragging"); catDrag = null; });
+      row.addEventListener("dragover", function(e){ e.preventDefault(); row.classList.add("catover"); });
+      row.addEventListener("dragleave", function(){ row.classList.remove("catover"); });
+      row.addEventListener("drop", function(e){
+        e.preventDefault(); row.classList.remove("catover");
+        if (catDrag === null || catDrag === idx) return;
+        var order = cfg.catOrder.slice();
+        var from = order.indexOf(catDrag);
+        order.splice(from, 1);
+        order.splice(order.indexOf(idx) + (from < slot ? 1 : 0), 0, catDrag);
+        cfg.catOrder = order;
+        commit("cfg"); renderRail();
+      });
       /* The dot IS the colour picker. It was a plain swatch, which looked
          clickable, was not, and left no way to change a colour at all. */
       var dot = document.createElement("input");
@@ -996,10 +1093,18 @@ function renderRail(){
         cfg.catLabels[idx] = inp.value.trim() || DEF.catLabels[idx];
         commit("cfg"); renderCalendar(); renderGlance();
       });
+      /* The count, in the space freed by narrowing the name field. It answers
+         "how much leave have I actually taken this year" without opening a
+         spreadsheet, which is the question the colours exist to support. */
+      var c = catCount(idx);
+      var cnt = mk("span","catn", c.n ? String(c.n) : "");
+      cnt.title = c.label;
+
       row.appendChild(dot); row.appendChild(inp);
-      row.appendChild(mk("span","pen","\u270e"));
+      row.appendChild(mk("span","pen","✎"));
+      row.appendChild(cnt);
       el.cats.appendChild(row);
-    })(i);
+    })(cfg.catOrder[oi], oi);
   }
   renderTracked();
 }
@@ -1392,6 +1497,11 @@ function setView(v){
     links[i].classList.toggle("on", links[i].getAttribute("data-view") === v);
   viewHash(v);
   if (b) renderBoard(); else renderCalendar();
+  /* The day-colour counts describe whatever span is on screen, and the span
+     changes with the view: one year on the board, the whole calendar range on
+     the calendar. Without this the panel keeps showing the previous view's
+     number, which is worse than showing none at all. */
+  renderRail();
 }
 function setScope(s){ cfg.scope = s; commit("cfg"); segOn(el.scopeSeg,"scope",s); renderBoard(); }
 function setDate(ds){
@@ -1587,7 +1697,7 @@ function cacheEls(){
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
     "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","bnoteCancel","bnoteX","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
     "ov","mDate","mWk","mClose","mDone","mCancel","mClear","sov","sInput","sOut","sClose","searchBtn","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor",
-    "selBar","selCount","selSw","selClear","selStart",
+    "selBar","selCount","selSw","selClear","selStart","catsHide",
     "undoBar","undoText","undoGo","undoX"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
@@ -1638,13 +1748,13 @@ function wire(){
     cfg.holRegional = el.holReg.checked; commit("cfg"); renderAll();
   });
   el.rgBack.addEventListener("click", function(){
-    if (cfg.back < CAP) cfg.back += 1; commit("cfg"); rangeLabel(); renderCalendar();
+    if (cfg.back < CAP) cfg.back += 1; commit("cfg"); rangeLabel(); renderCalendar(); renderRail();
   });
   el.rgFwd.addEventListener("click", function(){
-    if (cfg.fwd < CAP) cfg.fwd += 1; commit("cfg"); rangeLabel(); renderCalendar();
+    if (cfg.fwd < CAP) cfg.fwd += 1; commit("cfg"); rangeLabel(); renderCalendar(); renderRail();
   });
   el.rgReset.addEventListener("click", function(){
-    cfg.back = 1; cfg.fwd = 1; cfg.shift = 0; commit("cfg"); rangeLabel(); renderCalendar();
+    cfg.back = 1; cfg.fwd = 1; cfg.shift = 0; commit("cfg"); rangeLabel(); renderCalendar(); renderRail();
   });
 
   el.expCsv.addEventListener("click", exportCsv);
@@ -1659,6 +1769,14 @@ function wire(){
   /* --- undo --- */
   if (el.undoGo) el.undoGo.addEventListener("click", doUndo);
   if (el.undoX)  el.undoX.addEventListener("click", hideUndo);
+
+  /* --- hide every day colour, without deleting any --- */
+  if (el.catsHide) el.catsHide.addEventListener("click", function(){
+    cfg.hideCats = !cfg.hideCats;
+    commit("cfg");
+    paintHideCats();
+    renderCalendar(); renderGlance();
+  });
 
   /* --- selecting several days --- */
   if (el.selStart) el.selStart.addEventListener("click", function(){ setSelMode(!selMode); });
@@ -1823,6 +1941,13 @@ function init(){
   if (!Array.isArray(cfg.catColors) || cfg.catColors.length !== 4) cfg.catColors = CATS.slice();
   for (var ci=0; ci<4; ci++)
     if (!/^#[0-9a-fA-F]{6}$/.test(cfg.catColors[ci] || "")) cfg.catColors[ci] = CATS[ci];
+  /* catOrder must be a permutation of 0..3. Anything else - a stale value, a
+     hand-edited backup, a half-finished sync - would hide or duplicate a
+     category, so it is rebuilt rather than trusted. */
+  if (!Array.isArray(cfg.catOrder) || cfg.catOrder.length !== 4 ||
+      [0,1,2,3].some(function(i){ return cfg.catOrder.indexOf(i) < 0; }))
+    cfg.catOrder = [0,1,2,3];
+  if (typeof cfg.hideCats !== "boolean") cfg.hideCats = false;
   // one-time migration: replace the OLD placeholder defaults with the new ones,
   // but never touch labels the user actually customised.
   var OLD_SETS = [["Category 1","Category 2","Category 3","Category 4"],
