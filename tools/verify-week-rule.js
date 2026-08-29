@@ -1,23 +1,26 @@
 /* RUN: node tools/verify-week-rule.js
-   Checks the app's week numbering against an organisation whose weeks start
-   on Sunday and whose week 1 is the one containing the first Thursday - the
-   convention several large companies use for reporting weeks.
-   Kept because the rule is easy to get subtly wrong at the year boundary and
-   a wrong week number is invisible until it corrupts a year-on-year report. */
-/* Does inmycalendar, set to "week starts Sunday" + "first week with 4+ days",
-   produce AMAZON week numbers?
+   ---------------------------------------------------------------------------
+   Checks the three week-numbering rules against independent implementations.
 
-   The wiki defines the Amazon week two equivalent ways:
-     - weeks start Sunday, and week 1 is the first week containing a Thursday
-     - the Amazon week number equals the ISO week number of the FOLLOWING day
+   Why this file exists: a week number that is wrong at the year boundary is
+   invisible. Nothing throws, nothing looks odd, and it only surfaces months
+   later as a year-on-year comparison that does not line up. So the rules are
+   checked against arithmetic that is obviously correct, over four decades, on
+   every single day.
 
-   The second is the one to test against, because it is trivially correct and
-   is what every snippet on that page uses.
-
-   This replicates the app's own functions exactly as written in assets/app.js.
-*/
+   The three rules:
+     majority  week 1 is the first week with 4+ of its days in the new year.
+               The pivot is the FOURTH day of the week, so it moves with the
+               week start: Thursday for Monday, Wednesday for Sunday.
+               With weeks starting Monday this IS ISO 8601.
+     thursday  week 1 is the week containing the year's first Thursday,
+               whatever day the week starts on. Some large organisations use
+               this with a SUNDAY start, which gives a week 1 holding only
+               three days of the new year. Deliberate, not a bug.
+     jan1      week 1 is the week containing 1 January.
+   --------------------------------------------------------------------------- */
 const MS_DAY = 86400000;
-const cfg = { weekStart: 0, weekRule: "thursday" };   // Sunday, first-Thursday
+const cfg = { weekStart: 0, weekRule: "thursday" };
 
 function sow(d){
   const x = new Date(d.getTime());
@@ -25,12 +28,17 @@ function sow(d){
   x.setHours(0,0,0,0); return x;
 }
 function addDays(d,n){ const x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x; }
-function firstThursday(y){
+function firstDowInYear(y, dow){
   const d = new Date(y,0,1); d.setHours(0,0,0,0);
-  while (d.getDay() !== 4) d.setDate(d.getDate()+1);
+  while (d.getDay() !== dow) d.setDate(d.getDate()+1);
   return d;
 }
-function week1Start(y){ return sow(firstThursday(y)); }
+function majorityPivot(){ return (cfg.weekStart + 3) % 7; }
+function week1Start(y){
+  if (cfg.weekRule === "jan1")     return sow(new Date(y,0,1));
+  if (cfg.weekRule === "majority") return sow(firstDowInYear(y, majorityPivot()));
+  return sow(firstDowInYear(y, 4));
+}
 function weeksForYear(y){
   const start = week1Start(y), out = [];
   let n = Math.round((week1Start(y+1) - start) / (7*MS_DAY));
@@ -40,68 +48,94 @@ function weeksForYear(y){
 }
 function appWeek(d){
   const s = sow(d).getTime(), y = d.getFullYear();
-  for (const c of [y-1,y,y+1]){
-    for (const w of weeksForYear(c)) if (w.start.getTime() === s) return w;
-  }
+  for (const c of [y-1,y,y+1]) for (const w of weeksForYear(c))
+    if (w.start.getTime() === s) return w;
   return null;
 }
 
-/* The reference: ISO week (and ISO week-year) of the following day. */
+/* Independent reference: real ISO 8601 week and week-year. */
 function isoWeekYear(d){
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = t.getUTCDay() || 7;               // Mon=1..Sun=7
-  t.setUTCDate(t.getUTCDate() + 4 - day);       // the Thursday of that ISO week
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
   const year = t.getUTCFullYear();
   const jan1 = new Date(Date.UTC(year,0,1));
-  const week = Math.ceil((((t - jan1) / MS_DAY) + 1) / 7);
-  return { year, week };
-}
-function amazonWeek(d){ return isoWeekYear(addDays(d,1)); }
-
-/* ---- 1. the specific facts the wiki states ---------------------------- */
-const iso = d => d.toISOString().slice(0,10);
-const named = [
-  ["2008-12-28", 2009,  1, "wiki: week 1 of 2009 began on 28 Dec 2008"],
-  ["2011-01-01", 2010, 52, "wiki sample table: 1 Jan 2011 is week 52 of 2010"],
-  ["2011-01-02", 2011,  1, "wiki sample table: 2 Jan 2011 is week 1 of 2011"],
-  ["2010-12-26", 2010, 52, "wiki sample table"],
-  ["2012-12-29", 2012, 52, "Access section: 29 Dec 2012 is week 52"],
-  ["2012-12-30", 2013,  1, "Access section: 30 Dec 2012 is week 1 of 2013"],
-  ["2004-01-02", 2004,  1, "Access section: 2 Jan 2004 is week 1"],
-];
-console.log("=== against the facts stated on the wiki page ===");
-let bad = 0;
-for (const [ds, wantY, wantW, why] of named){
-  const d = new Date(ds + "T00:00:00");
-  const got = appWeek(d);
-  const ok = got && got.year === wantY && got.num === wantW;
-  if (!ok) bad++;
-  console.log("  " + (ok ? "ok  " : "FAIL") + "  " + ds +
-              "  app says " + (got ? got.year + "-W" + String(got.num).padStart(2,"0") : "null") +
-              "   expected " + wantY + "-W" + String(wantW).padStart(2,"0") + "   (" + why + ")");
+  return { year, week: Math.ceil((((t - jan1) / MS_DAY) + 1) / 7) };
 }
 
-/* ---- 2. every day over a long range, against ISO-week-of-next-day ------ */
-console.log("\n=== every day 1995-01-01 to 2035-12-31, against the +1 day rule ===");
-let checked = 0, mismatch = 0, first = null;
-for (let d = new Date(1995,0,1); d <= new Date(2035,11,31); d = addDays(d,1)){
-  const a = appWeek(d), r = amazonWeek(d);
-  checked++;
-  if (!a || a.num !== r.week || a.year !== r.year){
-    mismatch++;
-    if (!first) first = iso(d) + "  app " + (a ? a.year+"-W"+a.num : "null") + "  vs  amazon " + r.year+"-W"+r.week;
+const FROM = 1995, TO = 2035;
+function sweep(fn){
+  let n = 0, bad = 0, first = null;
+  for (let d = new Date(FROM,0,1); d <= new Date(TO,11,31); d = addDays(d,1)){
+    n++;
+    const r = fn(d);
+    if (!r.ok){ bad++; if (!first) first = r.why; }
   }
+  return { n, bad, first };
 }
-console.log("  days checked: " + checked);
-console.log("  mismatches:   " + mismatch + (first ? "   first: " + first : ""));
+const iso = d => d.toISOString().slice(0,10);
+let failures = 0;
+const report = (label, res) => {
+  const ok = res.bad === 0;
+  if (!ok) failures++;
+  console.log("  " + (ok ? "ok  " : "FAIL") + "  " + label +
+              "   " + res.n + " days, " + res.bad + " mismatch" + (res.bad === 1 ? "" : "es") +
+              (res.first ? "   first: " + res.first : ""));
+};
 
-/* ---- 3. the 53-week years the wiki calls out --------------------------- */
-console.log("\n=== years with 53 weeks (wiki: any year starting Thursday, or a leap year starting Wednesday) ===");
-const long = [];
-for (let y=2015; y<=2035; y++) if (weeksForYear(y).length === 53) long.push(y);
-console.log("  app reports 53 weeks in: " + long.join(", "));
-console.log("  wiki names 2020 explicitly as one: " + (long.indexOf(2020) >= 0 ? "yes" : "NO"));
+/* 1. Monday start + majority must BE ISO 8601, exactly. */
+cfg.weekStart = 1; cfg.weekRule = "majority";
+report("Monday + majority == ISO 8601", sweep(d => {
+  const a = appWeek(d), r = isoWeekYear(d);
+  return { ok: a && a.num === r.week && a.year === r.year,
+           why: iso(d) + " app " + (a ? a.year+"-W"+a.num : "null") + " vs ISO " + r.year+"-W"+r.week };
+}));
 
-console.log("\n  VERDICT: " + (bad === 0 && mismatch === 0
-  ? "with week start = Sunday and the first-Thursday rule, the app's week numbers ARE Amazon week numbers."
-  : "the app does NOT match Amazon week numbers - do not link it from that page."));
+/* 2. With Monday start the two rules must be indistinguishable, or the labels
+      are lying to anyone who switches between them. */
+report("Monday: majority and thursday agree", sweep(d => {
+  cfg.weekRule = "majority"; const a = appWeek(d);
+  cfg.weekRule = "thursday"; const b = appWeek(d);
+  return { ok: a && b && a.num === b.num && a.year === b.year,
+           why: iso(d) + " majority " + (a?a.year+"-W"+a.num:"null") + " vs thursday " + (b?b.year+"-W"+b.num:"null") };
+}));
+
+/* 3. Sunday + thursday is the ISO-week-of-the-following-day convention, which
+      is the shorthand several organisations publish for their reporting week. */
+cfg.weekStart = 0; cfg.weekRule = "thursday";
+report("Sunday + thursday == ISO week of next day", sweep(d => {
+  const a = appWeek(d), r = isoWeekYear(addDays(d,1));
+  return { ok: a && a.num === r.week && a.year === r.year,
+           why: iso(d) + " app " + (a ? a.year+"-W"+a.num : "null") + " vs ref " + r.year+"-W"+r.week };
+}));
+
+/* 4. Sunday + majority really does put 4+ days of week 1 in the new year,
+      which is the entire promise the label makes. */
+cfg.weekStart = 0; cfg.weekRule = "majority";
+{
+  let bad = 0, first = null;
+  for (let y = FROM; y <= TO; y++){
+    const s = week1Start(y);
+    let inNew = 0;
+    for (let i=0;i<7;i++) if (addDays(s,i).getFullYear() === y) inNew++;
+    if (inNew < 4){ bad++; if (!first) first = y + " week 1 starts " + iso(s) + " with only " + inNew + " days in " + y; }
+  }
+  report("Sunday + majority: week 1 always has 4+ days in the year",
+         { n: TO-FROM+1, bad, first });
+}
+
+/* 5. And the two rules must genuinely DIFFER on a Sunday start, or the third
+      option is pointless. 2026 is the case: 1 Jan 2026 is a Thursday. */
+{
+  cfg.weekStart = 0;
+  cfg.weekRule = "thursday"; const t = week1Start(2026);
+  cfg.weekRule = "majority"; const m = week1Start(2026);
+  const differ = t.getTime() !== m.getTime();
+  if (!differ) failures++;
+  console.log("  " + (differ ? "ok  " : "FAIL") +
+    "  Sunday, 2026: thursday starts week 1 on " + iso(t) +
+    ", majority on " + iso(m) + (differ ? "   (they differ, as they must)" : "   (IDENTICAL - the option is pointless)"));
+}
+
+console.log("\n  " + (failures ? failures + " CHECK(S) FAILED" : "all checks passed"));
+process.exit(failures ? 1 : 0);

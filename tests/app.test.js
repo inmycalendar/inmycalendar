@@ -982,8 +982,11 @@ check(!JSON.parse(w.localStorage.getItem("imc.notes"))[dnDay] ||
 
 console.log("\n=== C23. Week numbering follows a real standard ===");
 check(/weekRule:"thursday"/.test(js), "the default is the first-Thursday rule, not the naive Jan-1 rule");
-check($("wkRule") !== null && $("wkRule").options.length === 2,
-      "and the user can switch between the two rules");
+/* Three, not two. The 4-day rule and the first-Thursday rule are the same
+   thing only when weeks start on Monday; on any other start they diverge and
+   both are in real use. See C57. */
+check($("wkRule") !== null && $("wkRule").options.length === 3,
+      "and the user can switch between all three rules");
 w.eval('cfg.weekStart=0; cfg.weekRule="thursday";');
 const wkOf = ds => w.eval('(function(){var x=weekOf("' + ds + '");return x?x.num+":"+x.year:null;})()');
 check(wkOf("2025-12-31") === "1:2026",
@@ -2663,6 +2666,95 @@ check(!!d.querySelector(".catadd .btn"), "and there is a control to add one");
   check(JSON.parse(w.localStorage.getItem("imc.cfg")).catOrder.length === before + 1,
         "and the display order grows with it, so it is not invisible");
 }
+}
+
+console.log("\n=== C57. Three week-numbering rules, and why two is not enough ===");
+{
+const src = readFile("assets/app.js");
+
+/* ISO 8601's Thursday is not a magic day. Thursday is the FOURTH day of a
+   Monday-start week, so "the week containing the first Thursday" is shorthand
+   for "the first week with four or more days in the new year".
+
+   That equivalence holds only for a Monday start. The fourth day of a
+   Sunday-start week is WEDNESDAY. So on a Sunday-start calendar the two rules
+   genuinely disagree, and both are in real use - some large organisations
+   deliberately keep ISO's Thursday pivot with a Sunday start, which gives a
+   week 1 holding only three days of the new year.
+
+   The app offered only the Thursday rule while LABELLING it as the 4-day rule,
+   which was wrong for every user who does not start their week on Monday. */
+check(/majorityPivot/.test(src), "the majority rule has a pivot that moves with the week start");
+check(/\(cfg\.weekStart \+ 3\) % 7/.test(src),
+      "computed as the FOURTH day of the week, which is what '4+ days' means");
+check(/WEEK_RULES = \["majority","thursday","jan1"\]/.test(src),
+      "and there are three rules, validated against a whitelist");
+/* A two-way coercion would silently map the new rule onto the old one, leaving
+   the dropdown showing one thing while the calendar did another. */
+check(!/weekRule = el\.wkRule\.value === "jan1" \? "jan1" : "thursday"/.test(src),
+      "the old two-way coercion is gone, so the new rule cannot be swallowed");
+
+const opts = [...d.querySelectorAll("#wkRule option")].map(o => o.value);
+check(opts.length === 3 && opts.indexOf("majority") >= 0 &&
+      opts.indexOf("thursday") >= 0 && opts.indexOf("jan1") >= 0,
+      "all three are offered in the settings, not just two");
+
+const labels = [...d.querySelectorAll("#wkRule option")].map(o => o.textContent.trim());
+check(labels.some(l => /4\+ days/.test(l)) && labels.some(l => /first Thursday/i.test(l)),
+      "and each is named for the rule it actually applies, not for the other one");
+
+/* The behaviour, driven through the real settings. 2026 is the case that
+   separates them: 1 January 2026 is a Thursday. */
+const setRule = (start, rule) => {
+  $("wsSel").value = String(start);
+  $("wsSel").dispatchEvent(new w.Event("change",{bubbles:true}));
+  $("wkRule").value = rule;
+  $("wkRule").dispatchEvent(new w.Event("change",{bubbles:true}));
+};
+const week1Of = y => dom.window.eval("iso(week1Start(" + y + "))");
+
+setRule(1, "majority"); const monMaj = week1Of(2026);
+setRule(1, "thursday"); const monThu = week1Of(2026);
+check(monMaj === monThu,
+      "with weeks starting Monday the two rules are indistinguishable (" + monMaj + ")");
+
+setRule(0, "thursday"); const sunThu = week1Of(2026);
+setRule(0, "majority"); const sunMaj = week1Of(2026);
+check(sunThu !== sunMaj,
+      "with weeks starting Sunday they genuinely differ: thursday " + sunThu + ", majority " + sunMaj);
+
+/* The majority rule has to keep its promise, or the label is a lie. */
+{
+  setRule(0, "majority");
+  let worst = 7;
+  for (let y = 2020; y <= 2035; y++){
+    const s = new Date(week1Of(y) + "T00:00:00");
+    let inYear = 0;
+    for (let i=0;i<7;i++){
+      const dd = new Date(s.getTime()); dd.setDate(dd.getDate()+i);
+      if (dd.getFullYear() === y) inYear++;
+    }
+    if (inYear < worst) worst = inYear;
+  }
+  check(worst >= 4, "and week 1 always holds at least 4 days of the new year (worst case " + worst + ")");
+}
+
+/* The Thursday rule keeps ITS promise too - the three-day week 1 is the point
+   of it, not a defect. */
+{
+  setRule(0, "thursday");
+  const s = new Date(week1Of(2026) + "T00:00:00");
+  let inYear = 0;
+  for (let i=0;i<7;i++){
+    const dd = new Date(s.getTime()); dd.setDate(dd.getDate()+i);
+    if (dd.getFullYear() === 2026) inYear++;
+  }
+  check(inYear === 3,
+        "while the Thursday rule gives 2026 a three-day week 1, which is exactly what it is for");
+}
+
+/* Leave the settings as the suite found them. */
+setRule(0, "thursday");
 }
 
 console.log("\n########  D. EVERYTHING THAT WAS ALREADY WORKING  ########");
