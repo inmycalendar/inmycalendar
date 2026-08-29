@@ -89,10 +89,26 @@ main{padding:16px 0 0}
   color:var(--soft);padding:10px 12px 2px;margin:0;font-weight:500}
 .rhint{font-size:10px;color:var(--faint);padding:0 12px 6px;font-style:italic;line-height:1.35}
 .rbody{padding:2px 12px 10px}
-.cat{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+/* The name field is HALF width now. The space it gave up carries the count
+   of days marked with that colour in whatever span is on screen, which is the
+   question the colours exist to answer - "how much leave have I taken" -
+   without opening the export. */
+.cat{display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:grab;
+  border-radius:6px;padding:1px 2px}
+.cat:active{cursor:grabbing}
+.cat.dragging{opacity:.45}
+.cat.catover{box-shadow:inset 0 -2px 0 var(--accent)}
+.catn{flex:none;min-width:34px;text-align:right;font-family:var(--mono);
+  font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+/* Sits in the heading, so hiding the colours costs no extra height. */
+.hidecats{float:right;background:transparent;border:1px solid var(--rule);
+  border-radius:5px;color:var(--faint);font-family:var(--disp);font-size:9px;
+  letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;margin-top:-2px}
+.hidecats:hover{color:var(--ink);border-color:var(--accent)}
+.hidecats.on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
 .cat i{width:11px;height:11px;border-radius:3px;flex:none}
-.cat input{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px solid transparent;
-  font-size:12px;padding:2px 0;color:var(--ink)}
+.cat input[type=text]{flex:1;min-width:0;max-width:108px;background:transparent;border:0;
+  border-bottom:1px solid transparent;font-size:12px;padding:2px 0;color:var(--ink)}
 .cat input:hover{border-bottom-color:var(--rule)}
 .cat input:focus{border-bottom-color:var(--accent);outline:none}
 .cat .pen{color:var(--faint);font-size:10px;flex:none;opacity:0;transition:opacity .12s}
@@ -742,6 +758,12 @@ main{padding:16px 0 0}
   .chk{min-height:34px;display:flex;align-items:center;gap:8px}
   .cat input[type=text]{min-height:32px}
   .catdot{width:30px;height:30px}
+
+  /* Found by measuring at 440x956 and again at 360x800: both were under 30px.
+     #bnote is the day note, which starts one row tall and grows as you type;
+     .hidecats is the hide-colours control that sits in the panel heading. */
+  #bnote{min-height:34px}
+  .hidecats{padding:5px 10px;font-size:10px;min-height:32px}
 
   /* the day popup's colour swatches and its close button */
   .dab{min-width:36px;min-height:36px}
