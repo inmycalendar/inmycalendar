@@ -517,7 +517,36 @@ function renderKanban(host, ds){
 
       function submitAdd(){
         var v = cleanTaskText(inp.value); if (!v) return;
-        addTask(ds, v, st.k); inp.value = ""; autoGrow(); refresh();
+
+        /* MANY LINES, MANY TASKS.
+           The thing this is for: during a call you type or paste five bullets,
+           press Enter once, and get five tasks rather than one card with five
+           lines buried in it. Leading bullet characters and numbering are
+           stripped, because pasted notes carry them and nobody wants "- " at
+           the front of every task.
+
+           A single line still behaves exactly as before, and Shift+Enter still
+           writes a genuinely multi-line task - the split only happens when you
+           submit, and only when there is more than one non-empty line. */
+        var lines = v.split("\n")
+                     .map(function(s){ return s.replace(/^\s*(?:[-*•·]|\d+[.)])\s+/, "").trim(); })
+                     .filter(function(s){ return s.length > 0; });
+
+        if (lines.length > 1){
+          var made = [];
+          for (var li=0; li<lines.length; li++)
+            made.push(addTask(ds, cleanTaskText(lines[li]), st.k).id);
+          inp.value = ""; autoGrow(); refresh();
+          /* Undoable as ONE action: five tasks from one paste came from one
+             decision, so taking it back should be one press, not five. */
+          pushUndo("Added " + made.length + " tasks", function(){
+            tasks = tasks.filter(function(t){ return made.indexOf(t.id) < 0; });
+            renumber(ds, st.k); commit("tasks"); refresh();
+          });
+        } else {
+          addTask(ds, v, st.k); inp.value = ""; autoGrow(); refresh();
+        }
+
         var again = host.querySelector('.cadd[data-add="' + st.k + '"]');
         if (again && again.focus) again.focus();
       }
@@ -858,25 +887,58 @@ function renderCarry(){
   el.carryHost.innerHTML = "";
   var nowISO = iso(today());
   if (sel !== nowISO || carryHidden[nowISO] || cfg.scope !== "day") return;
-  var prev = iso(addDays(today(),-1));
-  var open = tasks.filter(function(t){ return t.date === prev && t.status !== "done"; });
+  /* EVERY earlier day, not just yesterday.
+     This used to look at yesterday alone, which is the one case where you did
+     not need help: you were here yesterday. Come back after a week away and
+     the six days before yesterday were never offered at all, so the tasks that
+     had been open longest were exactly the ones it ignored. */
+  var open = tasks.filter(function(t){ return t.date < nowISO && t.status !== "done"; })
+                  .sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : a.order - b.order; });
   if (!open.length) return;
+
+  var oldest = open[0].date;
+  var days = {};
+  for (var oi=0; oi<open.length; oi++) days[open[oi].date] = 1;
+  var dayCount = Object.keys(days).length;
+
   var bar = mk("div");
   bar.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;" +
     "padding:5px 9px;background:var(--doingF);border:1px solid var(--doingE);border-left:3px solid var(--doing)";
-  bar.appendChild(mk("span", null, open.length + (open.length === 1 ? " task" : " tasks") +
-                                   " still open from " + prev));
-  var move = mk("button","btn","Move to today"); move.type = "button";
+  bar.appendChild(mk("span", null,
+    open.length + (open.length === 1 ? " task" : " tasks") + " still open from " +
+    (dayCount === 1 ? oldest : dayCount + " earlier days, back to " + oldest)));
+
+  var move = mk("button","btn","Move all to today"); move.type = "button";
   move.addEventListener("click", function(){
+    /* Snapshot where each one came from, so the whole sweep can be undone as a
+       single action. Moving a week of work forward by accident, with no way
+       back, would be a much worse bug than the one this fixes. */
+    var was = open.map(function(t){ return { id:t.id, date:t.date, order:t.order }; });
+    var touched = {};
+
     /* Set the date first, THEN renumber. Reading lane() inside the loop counted
        the task that had just been moved in, handing two tasks the same order. */
     for (var i=0;i<open.length;i++){
+      touched[open[i].date] = 1;
       open[i].date = nowISO;
       open[i].order = 99999 + i;      /* keep their relative order, park at the end */
     }
-    renumber(prev,"todo");   renumber(prev,"doing");
+    for (var d in touched){ if (has(touched,d)){ renumber(d,"todo"); renumber(d,"doing"); } }
     renumber(nowISO,"todo"); renumber(nowISO,"doing");
     commit("tasks"); refresh();
+
+    pushUndo("Moved " + was.length + (was.length === 1 ? " task" : " tasks") + " to today", function(){
+      var back = {};
+      for (var j=0;j<was.length;j++){
+        var t = byId(was[j].id);
+        if (!t) continue;
+        t.date = was[j].date; t.order = was[j].order;
+        back[was[j].date] = 1;
+      }
+      for (var b in back){ if (has(back,b)){ renumber(b,"todo"); renumber(b,"doing"); } }
+      renumber(nowISO,"todo"); renumber(nowISO,"doing");
+      commit("tasks"); refresh();
+    });
   });
   var no = mk("button","btn","Dismiss"); no.type = "button";
   no.addEventListener("click", function(){ carryHidden[nowISO] = true; renderCarry(); });
@@ -1100,11 +1162,31 @@ function renderRail(){
       var cnt = mk("span","catn", c.n ? String(c.n) : "");
       cnt.title = c.label;
 
+      /* Deleting a category. The last one cannot go: with none left there is
+         nothing to mark a day with, and the panel becomes an empty box. */
+      var del = mk("button","catx","×");
+      del.type = "button";
+      del.disabled = cfg.catLabels.length <= 1;
+      del.title = del.disabled
+        ? "The last colour cannot be removed"
+        : "Remove " + cfg.catLabels[idx] + (c.n ? " (" + c.n + " day" + (c.n===1?"":"s") + " marked in view)" : "");
+      del.setAttribute("aria-label", del.title);
+      del.addEventListener("click", function(){ deleteCat(idx); });
+
       row.appendChild(dot); row.appendChild(inp);
       row.appendChild(mk("span","pen","✎"));
       row.appendChild(cnt);
+      row.appendChild(del);
       el.cats.appendChild(row);
     })(cfg.catOrder[oi], oi);
+  }
+  if (cfg.catLabels.length < MAXCATS){
+    var addRow = mk("div","catadd");
+    var addBtn = mk("button","btn","+ add a colour");
+    addBtn.type = "button";
+    addBtn.addEventListener("click", addCat);
+    addRow.appendChild(addBtn);
+    el.cats.appendChild(addRow);
   }
   renderTracked();
 }
@@ -1328,10 +1410,86 @@ function blend(hex, t){
   function mix(v){ return Math.round(v + (to - v) * k); }
   return "#" + ((1 << 24) + (mix(r) << 16) + (mix(g) << 8) + mix(b)).toString(16).slice(1);
 }
+/* Eight is the ceiling. Past that the panel stops being scannable and the
+   colours stop being tellable apart at a glance, which is the whole job of a
+   colour. See the .k4..k7 rules in app.css. */
+var MAXCATS = 8;
+
+/* Adding a colour. The new one takes the next default in rotation rather than
+   a random hue, so two categories added in a row do not arrive looking alike. */
+function addCat(){
+  if (cfg.catLabels.length >= MAXCATS) return;
+  var i = cfg.catLabels.length;
+  cfg.catLabels.push("Category " + (i + 1));
+  cfg.catColors.push(CATS[i % CATS.length]);
+  cfg.catOrder.push(i);
+  commit("cfg");
+  applyCatColours(); renderRail(); renderCalendar(); renderGlance();
+}
+
+/* Removing a colour, and the part that is easy to get wrong.
+
+   A day stores its colour as an INDEX. Delete category 1 and every index above
+   it shifts down by one, so every day marked 2 must become 1, 3 must become 2,
+   and so on - otherwise a week of Leave silently turns into Travel. Days marked
+   with the category being removed lose their colour but keep their note.
+
+   The whole thing is one undoable action, because it rewrites data across
+   potentially hundreds of days and a mis-click should not be permanent. */
+function deleteCat(idx){
+  if (cfg.catLabels.length <= 1) return;
+
+  var name = cfg.catLabels[idx];
+  var hit = 0, ds;
+  for (ds in notes) if (has(notes, ds) && notes[ds] && notes[ds].color === idx) hit++;
+
+  var msg = "Remove the colour \"" + name + "\"?";
+  if (hit) msg += "\n\n" + hit + " day" + (hit === 1 ? "" : "s") +
+                  " marked with it will lose their colour. Notes on those days are kept.";
+  msg += "\n\nThis can be undone.";
+  if (!confirm(msg)) return;
+
+  /* Snapshot enough to put everything back exactly as it was. */
+  var before = {
+    labels: cfg.catLabels.slice(),
+    colors: cfg.catColors.slice(),
+    order:  cfg.catOrder.slice(),
+    colours: (function(){ var m = {}; for (var k in notes) if (has(notes,k) && notes[k]) m[k] = notes[k].color; return m; })()
+  };
+
+  for (ds in notes){
+    if (!has(notes, ds) || !notes[ds]) continue;
+    var c = notes[ds].color;
+    if (c === idx) notes[ds].color = null;          /* the colour goes, the note stays */
+    else if (typeof c === "number" && c > idx) notes[ds].color = c - 1;   /* everything above shifts down */
+  }
+  cfg.catLabels.splice(idx, 1);
+  cfg.catColors.splice(idx, 1);
+  cfg.catOrder = cfg.catOrder.filter(function(i){ return i !== idx; })
+                             .map(function(i){ return i > idx ? i - 1 : i; });
+
+  commit("cfg"); commit("notes");
+  applyCatColours(); renderRail(); renderCalendar(); renderGlance(); renderBoard();
+
+  pushUndo("Removed the colour '" + name + "'", function(){
+    cfg.catLabels = before.labels; cfg.catColors = before.colors; cfg.catOrder = before.order;
+    for (var k in before.colours)
+      if (has(before.colours, k) && notes[k]) notes[k].color = before.colours[k];
+    commit("cfg"); commit("notes");
+    applyCatColours(); renderRail(); renderCalendar(); renderGlance(); renderBoard();
+  });
+}
 function applyCatColours(){
   var root = document.documentElement;
   if (!root || !root.style) return;
-  for (var i=0;i<4;i++){
+  for (var i=0;i<MAXCATS;i++){
+    if (i >= cfg.catColors.length){
+      /* A category that has been deleted. Clear its variables so a stale value
+         cannot paint a cell if an old note still carries the index. */
+      root.style.removeProperty("--k" + i + "b");
+      root.style.removeProperty("--k" + i + "f");
+      continue;
+    }
     var c = catColour(i);
     root.style.setProperty("--k" + i + "b", blend(c,  0.88));   /* pale fill  */
     root.style.setProperty("--k" + i + "f", blend(c, -0.32));   /* legible text */
@@ -1397,7 +1555,7 @@ function renderSelBar(){
      immediately, the same as everywhere else that draws these swatches. */
   el.selSw.innerHTML = "";
   if (!n) return;
-  for (var i=0;i<CATS.length;i++){
+  for (var i=0;i<cfg.catLabels.length;i++){
     (function(idx){
       var b = mk("button","dab");
       b.type = "button";
@@ -1461,7 +1619,7 @@ function closeDay(){ el.ov.classList.add("hidden"); mDate = null; refresh(); }
 function renderSw(){
   el.mSw.innerHTML = "";
   var rec = notes[mDate] || {};
-  for (var i=0;i<CATS.length;i++){
+  for (var i=0;i<cfg.catLabels.length;i++){
     (function(idx){
       var b = mk("button","dab" + (rec.color === idx ? " on" : ""));
       b.type = "button"; b.style.background = catColour(idx);
@@ -1720,7 +1878,22 @@ function wire(){
   });
   /* Board/Calendar now live in the site nav next to About/Contact/Privacy */
   document.querySelector(".sitenav").addEventListener("click", function(e){
-    var v = e.target.getAttribute && e.target.getAttribute("data-view");
+    /* closest, NOT e.target. The Board link wraps its label in two spans, one
+       for the long form and one for the short:
+
+         <a href="#board" data-view="board">
+           <span class="navlong">Kanban Board</span><span class="navshort">Board</span>
+         </a>
+
+       Clicking the WORDS makes e.target the span, which carries no data-view,
+       so this handler returned early - no preventDefault - and the browser
+       just followed href="#board". The address bar changed and the view did
+       not. Clicking the few pixels of padding around the words hit the <a>
+       itself and worked, which is why it looked intermittent and why it
+       happened on every machine and browser. Calendar has no inner span, so
+       Calendar always worked. */
+    var link = e.target.closest ? e.target.closest("[data-view]") : null;
+    var v = link && link.getAttribute("data-view");
     if (!v) return;
     e.preventDefault(); setView(v);
   });
@@ -1933,20 +2106,28 @@ function wire(){
 function init(){
   openStore();   /* baseline the change journal before anything can commit */
   cfg = Object.assign({}, DEF, load(LS.cfg, {}));
-  if (!Array.isArray(cfg.catLabels) || cfg.catLabels.length !== 4) cfg.catLabels = DEF.catLabels.slice();
+  if (!Array.isArray(cfg.catLabels) || !cfg.catLabels.length || cfg.catLabels.length > MAXCATS)
+    cfg.catLabels = DEF.catLabels.slice();
   /* Everyone who used the app before the colours were choosable has no
      catColors at all. Fill it from the constants they were already seeing, so
      nothing changes appearance on upgrade. A single bad entry is repaired
      rather than throwing the whole set away. */
-  if (!Array.isArray(cfg.catColors) || cfg.catColors.length !== 4) cfg.catColors = CATS.slice();
-  for (var ci=0; ci<4; ci++)
-    if (!/^#[0-9a-fA-F]{6}$/.test(cfg.catColors[ci] || "")) cfg.catColors[ci] = CATS[ci];
-  /* catOrder must be a permutation of 0..3. Anything else - a stale value, a
-     hand-edited backup, a half-finished sync - would hide or duplicate a
-     category, so it is rebuilt rather than trusted. */
-  if (!Array.isArray(cfg.catOrder) || cfg.catOrder.length !== 4 ||
-      [0,1,2,3].some(function(i){ return cfg.catOrder.indexOf(i) < 0; }))
-    cfg.catOrder = [0,1,2,3];
+  /* Colours line up with labels one for one. A list that is short is padded
+     from the defaults rather than leaving a category with no colour at all. */
+  if (!Array.isArray(cfg.catColors)) cfg.catColors = CATS.slice();
+  cfg.catColors.length = cfg.catLabels.length;
+  for (var ci=0; ci<cfg.catLabels.length; ci++)
+    if (!/^#[0-9a-fA-F]{6}$/.test(cfg.catColors[ci] || ""))
+      cfg.catColors[ci] = CATS[ci % CATS.length];
+  /* catOrder must be a permutation of every index that exists. Anything else -
+     a stale value, a hand-edited backup, a half-finished sync, or a category
+     added on another device - would hide or duplicate one, so it is rebuilt
+     rather than trusted. */
+  var wantOrder = [];
+  for (var oi2=0; oi2<cfg.catLabels.length; oi2++) wantOrder.push(oi2);
+  if (!Array.isArray(cfg.catOrder) || cfg.catOrder.length !== wantOrder.length ||
+      wantOrder.some(function(i){ return cfg.catOrder.indexOf(i) < 0; }))
+    cfg.catOrder = wantOrder;
   if (typeof cfg.hideCats !== "boolean") cfg.hideCats = false;
   // one-time migration: replace the OLD placeholder defaults with the new ones,
   // but never touch labels the user actually customised.
