@@ -985,7 +985,7 @@ check(/weekRule:"thursday"/.test(js), "the default is the first-Thursday rule, n
 /* Three, not two. The 4-day rule and the first-Thursday rule are the same
    thing only when weeks start on Monday; on any other start they diverge and
    both are in real use. See C57. */
-check($("wkRule") !== null && $("wkRule").options.length === 3,
+check($("wkRule") !== null && $("wkRule").options.length === 4,
       "and the user can switch between all three rules");
 w.eval('cfg.weekStart=0; cfg.weekRule="thursday";');
 const wkOf = ds => w.eval('(function(){var x=weekOf("' + ds + '");return x?x.num+":"+x.year:null;})()');
@@ -2687,20 +2687,21 @@ const src = readFile("assets/app.js");
 check(/majorityPivot/.test(src), "the majority rule has a pivot that moves with the week start");
 check(/\(cfg\.weekStart \+ 3\) % 7/.test(src),
       "computed as the FOURTH day of the week, which is what '4+ days' means");
-check(/WEEK_RULES = \["majority","thursday","jan1"\]/.test(src),
-      "and there are three rules, validated against a whitelist");
+check(/WEEK_RULES = \["majority","thursday","firstfull","jan1"\]/.test(src),
+      "and there are four rules, validated against a whitelist");
 /* A two-way coercion would silently map the new rule onto the old one, leaving
    the dropdown showing one thing while the calendar did another. */
 check(!/weekRule = el\.wkRule\.value === "jan1" \? "jan1" : "thursday"/.test(src),
       "the old two-way coercion is gone, so the new rule cannot be swallowed");
 
 const opts = [...d.querySelectorAll("#wkRule option")].map(o => o.value);
-check(opts.length === 3 && opts.indexOf("majority") >= 0 &&
-      opts.indexOf("thursday") >= 0 && opts.indexOf("jan1") >= 0,
-      "all three are offered in the settings, not just two");
+check(opts.length === 4 && opts.indexOf("majority") >= 0 && opts.indexOf("thursday") >= 0 &&
+      opts.indexOf("firstfull") >= 0 && opts.indexOf("jan1") >= 0,
+      "all four are offered in the settings, not just two");
 
 const labels = [...d.querySelectorAll("#wkRule option")].map(o => o.textContent.trim());
-check(labels.some(l => /4\+ days/.test(l)) && labels.some(l => /first Thursday/i.test(l)),
+check(labels.some(l => /4\+ days/.test(l)) && labels.some(l => /first Thursday/i.test(l)) &&
+      labels.some(l => /fully inside/i.test(l)),
       "and each is named for the rule it actually applies, not for the other one");
 
 /* The behaviour, driven through the real settings. 2026 is the case that
@@ -2752,6 +2753,37 @@ check(sunThu !== sunMaj,
   check(inYear === 3,
         "while the Thursday rule gives 2026 a three-day week 1, which is exactly what it is for");
 }
+
+/* The fourth rule: week 1 must lie WHOLLY inside the new year. 2024 is the
+   case that isolates it - 1 January 2024 is a Monday, so all three of the
+   other rules reach back into December and this one refuses to. */
+{
+  setRule(0, "firstfull"); const ff = week1Of(2024);
+  setRule(0, "jan1");      const j24 = week1Of(2024);
+  setRule(0, "majority");  const m24 = week1Of(2024);
+  setRule(0, "thursday");  const t24 = week1Of(2024);
+  check(ff !== j24 && ff !== m24 && ff !== t24,
+        "firstfull is a rule of its own, not a rename: 2024 starts " + ff +
+        " where the other three all start " + j24);
+
+  setRule(0, "firstfull");
+  let worst = 7;
+  for (let y = 2020; y <= 2035; y++){
+    const s = new Date(week1Of(y) + "T00:00:00");
+    let inYear = 0;
+    for (let i=0;i<7;i++){
+      const dd = new Date(s.getTime()); dd.setDate(dd.getDate()+i);
+      if (dd.getFullYear() === y) inYear++;
+    }
+    if (inYear < worst) worst = inYear;
+  }
+  check(worst === 7, "and week 1 never borrows a single day from December (worst case " + worst + "/7)");
+}
+
+/* Every week start has to be offered, or the rule above is unusable for the
+   Saturday and Sunday starts used across the Gulf and much of the Americas. */
+check([...d.querySelectorAll("#wsSel option")].length === 7,
+      "all seven week starts are selectable, not just Monday and Sunday");
 
 /* Leave the settings as the suite found them. */
 setRule(0, "thursday");

@@ -25,7 +25,7 @@ var COUNTRIES = [["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AS","A
 var HOL = {};                 /* code -> { "2026": { "0101": [name, 0|1] } } */
 var holWanted = null;
 
-var WEEK_RULES = ["majority","thursday","jan1"];
+var WEEK_RULES = ["majority","thursday","firstfull","jan1"];
 var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
@@ -306,6 +306,15 @@ function dowLabels(){ var o=[]; for (var i=0;i<7;i++) o.push(DOW[(cfg.weekStart+
         deliberate on their part, not a mistake, and a calendar that silently
         applied the majority rule instead would disagree with their reporting.
 
+     "firstfull"  week 1 is the first week lying ENTIRELY inside the new year,
+        so it always begins on the first week-start day on or after 1 January.
+        Any days before it belong to the last week of the outgoing year. US
+        federal payroll and several broadcast and retail calendars work this
+        way, as do organisations that simply refuse to call a week that began
+        in December "week 1". It is not the majority rule: when 1 January falls
+        early in the week the majority rule reaches BACK into December, and
+        this one never does.
+
      "jan1"  week 1 is simply the week containing 1 January. Easier to explain,
         but it produces a 53rd week far more often and splits the year oddly.
 
@@ -313,9 +322,21 @@ function dowLabels(){ var o=[]; for (var i=0;i<7;i++) o.push(DOW[(cfg.weekStart+
    test asserts that so the two can never quietly drift apart.
 
    Worked example, weeks starting Sunday, year 2026: 1 Jan 2026 is a Thursday.
-     thursday  week 1 starts Sun 28 Dec 2025 - three days of it are in 2026
-     majority  week 1 starts Sun 4 Jan 2026 - the week of the first Wednesday
-   Both are defensible. They are not the same, and the label has to say which.
+     thursday   week 1 starts Sun 28 Dec 2025 - three days of it are in 2026
+     majority   week 1 starts Sun 4 Jan 2026 - the week of the first Wednesday
+     firstfull  week 1 starts Sun 4 Jan 2026 - the first wholly-2026 week
+     jan1       week 1 starts Sun 28 Dec 2025 - the week holding 1 January
+   All four are defensible. They are not the same, and the label has to say
+   which. Take 2024 instead, where 1 January is a Monday, and firstfull is the
+   one that stands alone: the other three all start week 1 on Sun 31 Dec 2023,
+   while firstfull waits until Sun 7 Jan 2024.
+
+   Four rules times seven week starts is 28 combinations, which covers ISO
+   8601, US broadcast, US federal, the Sunday-plus-Thursday convention used by
+   several large retailers, and the Saturday and Sunday starts used across the
+   Gulf and the Middle East. What it deliberately does NOT cover is a 4-4-5
+   retail fiscal calendar: those are anchored to a fiscal year end rather than
+   to January, so they need a different setting entirely, not a fifth rule.
    --------------------------------------------------------------------------- */
 /* The first occurrence in year y of a given weekday (0 = Sunday). */
 function firstDowInYear(y, dow){
@@ -328,8 +349,10 @@ function firstThursday(y){ return firstDowInYear(y, 4); }
    it set. weekStart 1 (Mon) gives 4 (Thu); weekStart 0 (Sun) gives 3 (Wed). */
 function majorityPivot(){ return (cfg.weekStart + 3) % 7; }
 function week1Start(y){
-  if (cfg.weekRule === "jan1")     return sow(new Date(y,0,1));
-  if (cfg.weekRule === "majority") return sow(firstDowInYear(y, majorityPivot()));
+  if (cfg.weekRule === "jan1")      return sow(new Date(y,0,1));
+  /* Already a week start by construction, so it needs no sow(). */
+  if (cfg.weekRule === "firstfull") return firstDowInYear(y, cfg.weekStart);
+  if (cfg.weekRule === "majority")  return sow(firstDowInYear(y, majorityPivot()));
   return sow(firstThursday(y));
 }
 function weeksForYear(y){

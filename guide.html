@@ -9,17 +9,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" href="assets/favicon.ico?v=56" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=56">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=56">
-<link rel="manifest" href="manifest.webmanifest?v=56">
+<link rel="icon" href="assets/favicon.ico?v=57" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=57">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=57">
+<link rel="manifest" href="manifest.webmanifest?v=57">
 <meta name="theme-color" content="#18181b">
 <meta property="og:title" content="What a Kanban board is, and how to use one - inmycalendar">
 <meta property="og:description" content="A plain-language guide to Kanban boards: the three columns, the one rule that makes them work, how teams use them, and where the method came from. Plus how to use inmycalendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/guide.html">
 <link rel="canonical" href="https://inmycalendar.com/guide.html">
-<link rel="stylesheet" href="assets/site.css?v=56">
+<link rel="stylesheet" href="assets/site.css?v=57">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Article",
  "headline":"What a Kanban board is, and how to use one",
@@ -72,13 +72,16 @@
 <p>Four things can mark a day and they never clash: the <strong>cell colour</strong> is your own category, a <strong>coloured line underneath</strong> is a public holiday (red for national, blue for regional), a <strong>ring</strong> is today, and a <strong>small dot</strong> means that day has tasks. Hovering a day shows the holiday name, your note, and the tasks on it.</p>
 
 <h2>How weeks are numbered</h2>
-<p>Two rules exist, and organisations genuinely disagree about which to use, so you can pick. Both are under <strong>Calendar setup</strong>.</p>
+<p>Everyone agrees a year has weeks. Nobody agrees which one is week 1. Four rules are in real use worldwide, so you pick the one your organisation follows, under <strong>Calendar setup</strong>.</p>
 <ul>
-  <li><strong>Standard (ISO week numbers)</strong> (the default) - week 1 is the first week that falls mostly in the new year - technically, the week containing the year's first Thursday. This is the international standard, and what most payroll, retail and reporting calendars follow. A year has 52 or 53 weeks, never more.</li>
-  <li><strong>The week holding 1 January</strong> - simpler to explain, but it produces a 53rd week far more often and splits the year awkwardly.</li>
+  <li><strong>First week with 4+ days in the new year</strong> - the majority rule. Week 1 is the first week with most of itself in the new year. With weeks starting Monday this is exactly ISO 8601, the international standard used across Europe and by most software.</li>
+  <li><strong>Week containing the first Thursday</strong> (the default here) - ISO's pivot day, kept whatever day your week starts on. Several large retailers and their suppliers run their reporting weeks this way with a Sunday start, which gives a week 1 holding only three days of the new year. That is deliberate on their part, not a mistake.</li>
+  <li><strong>First week fully inside the new year</strong> - week 1 never begins in December. Any days before it belong to the outgoing year's final week. Common in US federal payroll and in a number of broadcast and retail calendars.</li>
+  <li><strong>Week containing 1 January</strong> - the simplest to explain, but it produces a 53rd week far more often and splits the year awkwardly.</li>
 </ul>
-<p>Under the first rule, the last days of December often belong to the <em>next</em> year's week 1, and the first days of January often belong to the <em>previous</em> year's final week. That is correct, not a mistake. With weeks starting on Sunday, for example, week 1 of 2026 begins on Sunday 28 December 2025.</p>
-<p>You choose which day your week starts on separately, so the two settings work together: the rule decides which week is first, and the start day decides where each week begins.</p>
+<p>Why Thursday? It is not a magic day. Thursday is the <em>fourth</em> day of a week that starts on Monday, so "the week containing the first Thursday" and "the first week with 4+ days" are two ways of saying the same thing - but only for a Monday start. Start your week on Sunday and the fourth day is <strong>Wednesday</strong>, and the two rules genuinely part company. That is why both are offered rather than one being quietly applied under the other's name.</p>
+<p>Under the first three rules the last days of December often belong to the <em>next</em> year's week 1, or the first days of January to the <em>previous</em> year's final week. That is correct, not a mistake. With weeks starting Sunday, week 1 of 2026 begins on Sunday 28 December 2025 under the Thursday rule, and on Sunday 4 January 2026 under the majority rule.</p>
+<p>You choose which day your week starts on separately, and all seven days are available - Monday for most of the world, Sunday across the Americas and much of Asia, Saturday across much of the Middle East. The two settings work together: the start day decides where each week begins, and the rule decides which one is first.</p>
 
 <h2>Keyboard</h2>
 <ul>
@@ -132,9 +135,9 @@
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="assets/errors.js?v=56"></script>
+<script src="assets/errors.js?v=57"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/site.js?v=56"></script>
-<script src="assets/auth.js?v=56"></script>
+<script src="assets/site.js?v=57"></script>
+<script src="assets/auth.js?v=57"></script>
 </body>
 </html>
