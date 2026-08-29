@@ -2171,12 +2171,33 @@ check(/function cleanTaskText/.test(appSrc),
   check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === before,
         "Shift+Enter keeps typing instead of adding the task");
 
-  /* A deliberate line break survives being stored. */
-  addField.value = "Ring John\n- confirm the numbers";
+  /* SEVERAL LINES BECOME SEVERAL TASKS.
+     These two wishes genuinely conflict and only one can win on submit: either
+     five pasted bullets become one card with five lines, or they become five
+     tasks. Five tasks is what the feature is for - typing notes during a call
+     and getting actionable rows out of them - so the ADD field splits.
+     Shift+Enter still moves to the next line while typing, which is what it
+     was asked for; a genuinely multi-line task is made by renaming one, where
+     line breaks are preserved (checked further down). */
+  const countBefore = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+  addField.value = "Ring John\n- confirm the numbers\n2. send the deck";
   addField.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
   const all = JSON.parse(w.localStorage.getItem("imc.tasks"));
-  const saved = all[all.length-1];
-  check(saved.text.indexOf("\n") >= 0, "a task written over two lines keeps its line break");
+  check(all.length === countBefore + 3, "three lines become three tasks, not one card with three lines");
+  const madeTexts = all.slice(-3).map(t => t.text);
+  check(madeTexts.indexOf("confirm the numbers") >= 0 && madeTexts.indexOf("send the deck") >= 0,
+        "and the bullet and the numbering are stripped, because pasted notes carry them");
+  check(/Added 3 tasks/.test($("undoText").textContent),
+        "the whole paste undoes as ONE action - it came from one decision");
+  click($("undoGo"));
+  check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === countBefore,
+        "and undo removes all three");
+
+  /* One line still behaves exactly as it always did. */
+  addField.value = "Just the one";
+  addField.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+  check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === countBefore + 1,
+        "a single line still adds a single task");
 }
 check(/white-space:pre-wrap/.test(flat.match(/\.t \.txt\{[^}]*\}/)[0]),
       "and the card renders that break rather than running the lines together");
@@ -2551,6 +2572,96 @@ check($("catsHide").closest("h3") !== null,
         "and deletes nothing - every marked day is still marked");
   click($("catsHide"));
   check(JSON.parse(w.localStorage.getItem("imc.cfg")).hideCats === false, "pressing it again brings them back");
+}
+}
+
+console.log("\n=== C56. The nav bug, quick capture, the sweep, and adding colours ===");
+{
+const src = readFile("assets/app.js");
+
+/* ---- THE NAVIGATION BUG ------------------------------------------------
+   Reported as: the address bar changes to #board but the page does not.
+   Seen on two machines and two browsers, which ruled out anything local.
+
+   The Board link wraps its label in two spans, one long and one short:
+     <a href="#board" data-view="board">
+       <span class="navlong">Kanban Board</span><span class="navshort">Board</span>
+     </a>
+   The handler read data-view off e.target. Click the WORDS and e.target is the
+   span, which has no data-view, so it returned early - no preventDefault - and
+   the browser simply followed the href. Click the few pixels of padding and
+   e.target was the <a>, and it worked. Hence "sometimes".
+
+   Calendar has no inner span, which is why Calendar always worked. */
+check(/closest\("\[data-view\]"\)/.test(src),
+      "the nav handler walks up to the link, so clicking the label works too");
+
+toCal();
+check(!$("calView").classList.contains("hidden"), "starting on the calendar");
+{
+  const link = d.querySelector('.sitenav a[data-view="board"]');
+  const span = link.querySelector("span");
+  check(!!span, "the Board link really does wrap its label in a span");
+  span.dispatchEvent(new w.MouseEvent("click", { bubbles:true }));
+  check(!$("boardView").classList.contains("hidden") && $("calView").classList.contains("hidden"),
+        "clicking the LABEL switches the view, not just the address bar");
+}
+
+/* ---- several lines become several tasks -------------------------------- */
+toBoard();
+click([...$("scopeSeg").children][0]);
+{
+  const f = col(0).querySelector(".cadd");
+  const before = JSON.parse(w.localStorage.getItem("imc.tasks")).length;
+  f.value = "Ring John about pricing\n- send the Q3 deck\n2. book the room\n\n* chase the invoice";
+  f.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+  const after = JSON.parse(w.localStorage.getItem("imc.tasks"));
+  check(after.length === before + 4, "four lines become four tasks");
+  const texts = after.slice(-4).map(t => t.text);
+  check(texts.indexOf("send the Q3 deck") >= 0 && texts.indexOf("book the room") >= 0 &&
+        texts.indexOf("chase the invoice") >= 0,
+        "with bullets, numbering and the blank line stripped, because pasted notes carry them");
+  check(/Added 4 tasks/.test($("undoText").textContent), "undone as one action, not four");
+  click($("undoGo"));
+  check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === before, "and all four go");
+}
+
+/* ---- the carry-forward sweep ------------------------------------------- */
+/* It used to look at YESTERDAY alone, which is the one case where you did not
+   need help - you were here yesterday. Come back after a week and the days
+   before yesterday were never offered, so the tasks open longest were exactly
+   the ones it ignored. */
+check(/t\.date < nowISO && t\.status !== "done"/.test(src),
+      "the sweep gathers every earlier day, not just yesterday");
+check(/Move all to today/.test(src), "and says so on the button");
+check(/Moved " \+ was\.length/.test(src) || /pushUndo\("Moved "/.test(src),
+      "the whole sweep is undoable - moving a week of work forward by accident must not be permanent");
+
+/* ---- adding and removing colours --------------------------------------- */
+check(/var MAXCATS = 8/.test(src), "there is a ceiling on how many colours can exist");
+check(/function addCat\(/.test(src) && /function deleteCat\(/.test(src),
+      "colours can be added and removed");
+check(/cfg\.catLabels\.length <= 1/.test(src),
+      "but never the last one, or there is nothing left to mark a day with");
+
+/* THE PART THAT IS EASY TO GET WRONG. A day stores its colour as an INDEX, so
+   deleting one shifts every index above it down. Without the shift, a week of
+   Leave silently becomes Travel. */
+check(/c > idx\) notes\[ds\]\.color = c - 1/.test(src),
+      "deleting a colour shifts every higher index down, so days keep their MEANING");
+check(/if \(c === idx\) notes\[ds\]\.color = null/.test(src),
+      "days marked with the removed colour lose the colour and keep the note");
+
+toBoard();
+check(qa("#cats .catx").length === qa("#cats .cat").length, "every colour row has a remove control");
+check(!!d.querySelector(".catadd .btn"), "and there is a control to add one");
+{
+  const before = JSON.parse(w.localStorage.getItem("imc.cfg")).catLabels.length;
+  click(d.querySelector(".catadd .btn"));
+  check(JSON.parse(w.localStorage.getItem("imc.cfg")).catLabels.length === before + 1,
+        "adding gives a new colour with its own default hue");
+  check(JSON.parse(w.localStorage.getItem("imc.cfg")).catOrder.length === before + 1,
+        "and the display order grows with it, so it is not invisible");
 }
 }
 

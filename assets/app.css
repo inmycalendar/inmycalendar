@@ -430,6 +430,15 @@ main{padding:16px 0 0}
 .wg .dc.k1{background:var(--k1b,#fdf0d9);color:var(--k1f,#8a5a10)}
 .wg .dc.k2{background:var(--k2b,#e2f4e9);color:var(--k2f,#1f6640)}
 .wg .dc.k3{background:var(--k3b,#e4edfd);color:var(--k3f,#1e4694)}
+/* Categories are addable now, capped at eight. Beyond that the panel stops
+   being scannable and the colours stop being distinguishable at a glance,
+   which is the entire job of a colour. Four through seven have no literal
+   fallback because they only exist once someone adds them, and
+   applyCatColours() always sets the variable before a cell can use the class. */
+.wg .dc.k4{background:var(--k4b);color:var(--k4f)}
+.wg .dc.k5{background:var(--k5b);color:var(--k5f)}
+.wg .dc.k6{background:var(--k6b);color:var(--k6f)}
+.wg .dc.k7{background:var(--k7b);color:var(--k7f)}
 .wg .dc.hol-nat::after,.wg .dc.hol-reg::after{content:"";position:absolute;left:4px;right:4px;
   bottom:2px;height:2px;border-radius:2px}
 .wg .dc.hol-nat::after{background:var(--holNat)}
@@ -768,4 +777,25 @@ main{padding:16px 0 0}
   /* the day popup's colour swatches and its close button */
   .dab{min-width:36px;min-height:36px}
   .mx,.bnx{min-width:36px;min-height:36px}
+}
+
+/* Adding and removing day colours. The delete button is hidden until the row
+   is hovered or focused: it is the only destructive control in a panel that is
+   otherwise all editing, and a permanently visible x next to four rows invites
+   exactly the mis-click it should not. */
+.catx{flex:none;width:18px;height:18px;padding:0;background:transparent;border:0;
+  color:var(--faint);font-size:14px;line-height:1;border-radius:4px;
+  opacity:0;transition:opacity .12s}
+.cat:hover .catx,.catx:focus-visible{opacity:1}
+.catx:hover:not(:disabled){color:var(--danger);background:var(--card2)}
+.catx:disabled{opacity:0 !important;cursor:default}
+.catadd{margin-top:2px}
+.catadd .btn{width:100%;padding:4px 8px;font-size:10.5px;color:var(--soft)}
+.catadd .btn:hover{color:var(--ink);border-color:var(--accent)}
+
+@media (max-width:640px){
+  /* No hover on a touch screen, so the delete control has to be permanent
+     there - and big enough to hit deliberately rather than by accident. */
+  .catx{opacity:1;width:32px;height:32px;font-size:17px}
+  .catadd .btn{min-height:36px}
 }
