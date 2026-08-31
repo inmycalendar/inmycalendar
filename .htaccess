@@ -32,3 +32,15 @@
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
+
+# COUNTRY CODE ALIASES
+# The United Kingdom's ISO 3166-1 code is GB, so every data file and holiday
+# page is named GB. Almost nobody types GB. /holidays/UK and /holidays/UK-2026
+# answer with a permanent redirect instead of a 404, while GB stays the single
+# canonical page, so no duplicate content is created. EL is the EU's own code
+# for Greece and shows up in anything sourced from Eurostat.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^holidays/UK(-[0-9]{4})?(\.html)?$  /holidays/GB$1.html  [R=301,L]
+  RewriteRule ^holidays/EL(-[0-9]{4})?(\.html)?$  /holidays/GR$1.html  [R=301,L]
+</IfModule>

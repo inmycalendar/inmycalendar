@@ -1090,6 +1090,14 @@ function stepCal(d){
   commit("cfg"); renderCalendar();
 }
 function renderCalendar(){
+  /* KEEP THE READER'S PLACE.
+     This function rebuilds the rail from scratch, and emptying it resets the
+     scroll to the top. Anything that triggers a re-render therefore threw you
+     back to January of the earliest year: changing a day colour, picking a
+     country, or simply the holiday file arriving a moment after load, which is
+     what made the scroll-to-today below appear not to work at all. */
+  var sbox = el.calView ? el.calView.querySelector(".calbox") : null;
+  var keepScroll = sbox ? sbox.scrollTop : 0;
   var r = calYears(), cy = today().getFullYear();
   el.cyLabel.textContent = r.from === r.to ? String(r.from) : (r.from + "-" + r.to);
   el.cyPrev.disabled = r.from <= cy-CAP;
@@ -1106,6 +1114,56 @@ function renderCalendar(){
     if (y === focus) g.className += " focusyear";
     el.rail.appendChild(g);
   }
+  if (sbox && keepScroll) sbox.scrollTop = keepScroll;
+}
+
+/* SCROLL TODAY INTO VIEW ON THE CALENDAR.
+
+   The calendar box is as tall as the viewport allows and it starts at week 1
+   of the earliest year on show. On a laptop that puts today below the fold, so
+   the first thing anyone has to do on arrival is scroll around hunting for
+   themselves. On a tall monitor today is usually already on screen, and moving
+   the view there would be an unrequested jump.
+
+   So the rule is: scroll ONLY when today is genuinely out of sight. Nothing is
+   hard-coded to a screen size and there is no breakpoint - the height of the
+   box is measured, which is what makes it adapt to the actual monitor rather
+   than to a guess about it.
+
+   Where it lands: about two thirds down the visible area, not jammed against
+   the bottom edge. Pinning today to the last row would show only the weeks
+   already gone, which is the wrong half of a planning calendar. This way the
+   recent past stays visible above and there is still road ahead below.
+
+   Deliberately NOT called from renderCalendar(). The calendar re-renders when
+   a day colour changes or a holiday country is picked, and yanking the scroll
+   back mid-edit would be its own bug. Only arrival and an explicit "Today"
+   move the view. */
+function revealToday(){
+  var box = el.calView ? el.calView.querySelector(".calbox") : null;
+  var cell = box ? box.querySelector(".dc.now") : null;
+  if (!cell || !cell.scrollIntoView) return;   /* today is outside the years on show */
+  /* block:"nearest" is the whole feature. The browser scrolls the smallest
+     amount that brings the cell into view and does NOTHING when it is already
+     visible, which is precisely the "small laptop yes, big monitor no" rule,
+     decided by the browser against real layout rather than by the app against
+     a guessed screen width. */
+  try { cell.scrollIntoView({ block:"nearest", inline:"nearest" }); }
+  catch (e){ cell.scrollIntoView(false); }     /* the old boolean signature */
+}
+/* Twice, deliberately.
+
+   The first attempt covers the normal case. The second exists because the
+   holiday file arrives a moment after load and re-renders the calendar, and
+   because a box with no layout yet cannot be scrolled at all. Calling again is
+   free: block:"nearest" does nothing when today is already on screen.
+
+   NOT requestAnimationFrame. rAF does not run in a hidden or background tab,
+   so the first version of this silently did nothing when the calendar was
+   opened in a background tab and looked at later. Measured, not guessed. */
+function revealTodaySoon(){
+  revealToday();
+  setTimeout(revealToday, 90);
 }
 
 /* ---------- RIGHT RAIL ---------- */
@@ -1741,7 +1799,7 @@ function setView(v){
   for (var i=0;i<links.length;i++)
     links[i].classList.toggle("on", links[i].getAttribute("data-view") === v);
   viewHash(v);
-  if (b) renderBoard(); else renderCalendar();
+  if (b) renderBoard(); else { renderCalendar(); revealTodaySoon(); }
   /* The day-colour counts describe whatever span is on screen, and the span
      changes with the view: one year on the board, the whole calendar range on
      the calendar. Without this the panel keeps showing the previous view's
@@ -1756,6 +1814,21 @@ function setDate(ds){
 function knownCountry(code){
   for (var i=0;i<COUNTRIES.length;i++) if (COUNTRIES[i][0] === code) return true;
   return false;
+}
+/* Codes people actually type that are not the ISO ones.
+
+   GB is the ISO 3166-1 alpha-2 code for the United Kingdom, which is why the
+   country list, the data files and the holiday pages are all named GB. Nobody
+   outside a standards body writes GB, though: they write UK. So /#calendar/UK
+   has to work, or the most obvious link anyone would guess at silently does
+   nothing. EL is the EU's own code for Greece and turns up in anything sourced
+   from Eurostat. Both are aliases, not renames - GB and GR stay canonical, so
+   there is exactly one page per country and no duplicate content. */
+var CODE_ALIAS = { UK:"GB", EL:"GR" };
+function resolveCountry(code){
+  var c = String(code || "").toUpperCase();
+  if (CODE_ALIAS[c]) c = CODE_ALIAS[c];
+  return knownCountry(c) ? c : "";
 }
 function setCountry(code){
   cfg.country = code || ""; commit("cfg");
@@ -1953,7 +2026,12 @@ function typing(e){
 function wire(){
   el.dPrev.addEventListener("click", function(){ setDate(iso(addDays(parseISO(sel),-1))); });
   el.dNext.addEventListener("click", function(){ setDate(iso(addDays(parseISO(sel), 1))); });
-  el.dToday.addEventListener("click", function(){ setDate(iso(today())); });
+  el.dToday.addEventListener("click", function(){
+    setDate(iso(today()));
+    /* On the calendar, "Today" has to move the calendar. setDate only redraws
+       the board, which is invisible from here. */
+    if (cfg.view !== "board") revealTodaySoon();
+  });
   el.dPick.addEventListener("click", function(){
     if (el.dInput.showPicker){ try { el.dInput.showPicker(); return; } catch (e){} }
     el.dInput.click();
@@ -2255,8 +2333,8 @@ function init(){
   var h = (window.location.hash || "").replace("#","");
   var hashParts = h.split("/");
   var view = (hashParts[0] === "board" || hashParts[0] === "calendar") ? hashParts[0] : "board";
-  var hashCountry = (hashParts[1] || "").toUpperCase();
-  if (/^[A-Z]{2}$/.test(hashCountry) && knownCountry(hashCountry)) cfg.country = hashCountry;
+  var hashCountry = resolveCountry(hashParts[1]);
+  if (hashCountry) cfg.country = hashCountry;
 
   cacheEls();
   el.wsSel.value = String(cfg.weekStart);

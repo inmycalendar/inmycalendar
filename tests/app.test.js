@@ -3133,6 +3133,163 @@ check(isNational(GB,"2025","0825","Late Summer Bank Holiday"),
 }
 }
 
+console.log("\n=== C60. UK is not a country code, and the data pipeline ===");
+{
+const src = readFile("assets/app.js");
+
+/* GB is the ISO 3166-1 alpha-2 code for the United Kingdom, which is why the
+   country list, the data files and the holiday pages are all named GB. Nobody
+   outside a standards body writes GB. So the code someone would actually guess
+   at has to resolve, or /#calendar/UK silently does nothing and the visitor
+   concludes the feature is broken. GB stays canonical: this is an alias, not a
+   rename, so there is still exactly one page per country. */
+const resolve = c => dom.window.eval("resolveCountry(" + JSON.stringify(c) + ")");
+
+check(resolve("UK") === "GB", "UK resolves to GB, because that is what people type");
+check(resolve("uk") === "GB", "and lower case works, since a URL is not shouted");
+check(resolve("GB") === "GB", "GB itself still resolves, so no existing link breaks");
+check(resolve("EL") === "GR", "EL resolves to GR, the EU's own code for Greece");
+check(resolve("JP") === "JP", "an ordinary code passes through untouched");
+check(resolve("ZZ") === "",   "an unknown code resolves to nothing rather than guessing");
+check(resolve("") === "" && resolve(null) === "",
+      "and empty input is handled, since the hash may carry no country at all");
+
+/* The alias must not become a second set of pages: duplicate content on 1719
+   holiday pages would be an SEO problem, not a feature. A redirect keeps one
+   canonical page per country. */
+{
+  const ht = readFile(".htaccess");
+  check(/RewriteRule \^holidays\/UK/.test(ht),
+        "/holidays/UK redirects rather than 404s");
+  check(/GB\$1\.html\s+\[R=301,L\]/.test(ht),
+        "and it is a permanent redirect to the canonical GB page, not a copy");
+  check(!fs.existsSync(path.join(ROOT, "holidays", "UK.html")),
+        "no duplicate UK page exists, which would split the search ranking");
+}
+
+/* THE PIPELINE.
+   The holiday data is generated. Corrections made by hand to the generated
+   files survive exactly until the next regeneration and then vanish silently,
+   with no error and no conflict. So the corrections live in code, and the
+   audit is what refuses to let a regeneration ship without them. */
+{
+  const T = f => path.join(ROOT, "tools", f);
+  check(fs.existsSync(T("extract-holidays.py")),
+        "the extractor is in the repo, not only in a notebook nobody can diff");
+  check(fs.existsSync(T("holiday-corrections.js")),
+        "the corrections are code, so a regeneration cannot quietly undo them");
+  check(fs.existsSync(T("audit-holidays.js")),
+        "and the audit is what catches it if someone skips the corrections");
+
+  const corr = readFile("tools/holiday-corrections.js");
+  check(/Easter Monday/.test(corr) && /Late Summer Bank Holiday/.test(corr),
+        "the UK promotion is encoded as a rule, not left in the data file");
+  check(/Australia Day/.test(corr),
+        "so is the nationwide Australia Day substitute");
+  check(/ES: \[/.test(corr) || /ES:\s*\[/.test(corr),
+        "and Spain's deleted fixed dates");
+  /* The rule is anchored so it cannot swallow Western Australia Day, which is
+     a genuinely state-only holiday sharing most of its name. */
+  check(/\^Australia Day\$/.test(corr),
+        "the Australia Day rule is anchored, so Western Australia Day is untouched");
+
+  const py = readFile("tools/extract-holidays.py");
+  check(/observed=False/.test(py) && /observed=True/.test(py),
+        "the extractor takes both the real and the observed dates, which is the Spain fix");
+  check(/holiday-corrections/.test(py) && /audit-holidays/.test(py),
+        "and it tells whoever runs it what to run next");
+
+  const readme = readFile("README.md");
+  check(/extract-holidays\.py/.test(readme) && /holiday-corrections\.js/.test(readme),
+        "README documents the run order, because getting it wrong is silent");
+}
+}
+
+console.log("\n=== C61. Landing on the calendar without having to hunt for today ===");
+{
+const src = readFile("assets/app.js");
+
+/* THE COMPLAINT: arriving at the calendar on a laptop, today was below the
+   fold. The box opens at week 1 of the earliest year, and on a 1366x700 screen
+   today sat 872px down inside a 510px-tall box. On a big monitor it was
+   already on screen and moving the view would have been an unwanted jump.
+
+   Measured in a real browser, before and after:
+     1366x700    before scrollTop 0, today NOT visible
+                 after  scrolled, today visible
+     1600x1250   before and after scrollTop 0, no scroll at all
+     re-render   user at 120, stays at 120 instead of snapping to the top
+     Today       returns to today from anywhere
+
+   jsdom has no layout engine, so none of that can be reproduced here. What is
+   locked instead is the shape, because every one of these was a real failure
+   during the fix. */
+
+check(/function revealToday/.test(src), "the calendar can bring today into view");
+
+/* THE FIRST VERSION MEASURED THE BOX AND WAS WRONG TO.
+   It read clientHeight and getBoundingClientRect to decide whether today was
+   visible and where to scroll. This suite already forbids that: layout is
+   CSS's job. The rule caught it, and the compliant answer turned out to be
+   better than the one it rejected.
+
+   block:"nearest" asks the BROWSER to scroll the smallest amount that brings
+   the cell into view, and to do nothing when it is already visible. That is
+   the entire "small laptop yes, big monitor no" requirement, decided against
+   real layout rather than against a guessed screen width, with no measuring
+   and no breakpoint. */
+check(/block:"nearest"/.test(src),
+      "it asks the browser for the minimum scroll, so a visible today is left alone");
+{
+  const fn = src.slice(src.indexOf("function revealToday"),
+                       src.indexOf("function revealTodaySoon"));
+  check(!/clientHeight|offsetHeight|getBoundingClientRect/.test(fn),
+        "and measures nothing itself, which is the rule the first attempt broke");
+  check(!/matchMedia|innerWidth/.test(fn),
+        "no screen-width guess either: adaptive means measured, not bracketed");
+  check(/cell\.scrollIntoView\(false\)/.test(fn),
+        "with a fallback for browsers that only take the old boolean signature");
+}
+
+/* NOT requestAnimationFrame. rAF does not run in a hidden or background tab,
+   so the first version did nothing at all when the calendar was opened in a
+   background tab and looked at later. Found by measuring, after the scroll
+   silently failed to happen. */
+{
+  const fn = src.slice(src.indexOf("function revealTodaySoon"),
+                       src.indexOf("function revealTodaySoon") + 400);
+  check(!/requestAnimationFrame/.test(fn),
+        "the retry avoids requestAnimationFrame, which never fires in a background tab");
+  check(/setTimeout\(revealToday/.test(fn),
+        "using a timer instead, which fires whether the tab is visible or not");
+}
+
+/* A re-render rebuilt the rail and reset the scroll to the top, so changing a
+   day colour or picking a country threw the reader back to January. It also
+   made the scroll-to-today look broken, because the holiday file lands a
+   moment after load and re-rendered straight over it. */
+check(/keepScroll/.test(src), "re-rendering the calendar keeps the reader's place");
+{
+  const rc = src.slice(src.indexOf("function renderCalendar"),
+                       src.indexOf("function revealToday"));
+  check(/var keepScroll = sbox \? sbox\.scrollTop : 0/.test(rc),
+        "the position is read before the rail is emptied");
+  check(/sbox\.scrollTop = keepScroll/.test(rc),
+        "and put back after it is rebuilt");
+  check(rc.indexOf("keepScroll = sbox") < rc.indexOf("el.rail.innerHTML"),
+        "in that order, or the value read is already zero");
+  /* renderCalendar runs on every colour change and every country change.
+     Scrolling to today from there would yank the view away mid-edit. */
+  check(!/revealToday/.test(rc),
+        "renderCalendar never moves the view itself, only arrival and Today do");
+}
+
+check(/renderCalendar\(\); revealTodaySoon\(\)/.test(src),
+      "switching to the calendar brings today into view");
+check(/if \(cfg\.view !== "board"\) revealTodaySoon\(\)/.test(src),
+      "and the Today button moves the calendar, not just the board you cannot see");
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
