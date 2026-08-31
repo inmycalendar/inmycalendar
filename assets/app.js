@@ -665,6 +665,43 @@ function taskRow(task, st, idx, total){
      no reason. Source order here is grip, ops, txt; the float puts ops back in
      the top right visually. */
 
+  /* DRAG THRESHOLD, and why the row is not simply draggable.
+
+     HTML5 drag and drop has NO movement threshold. The browser commits to a
+     drag on the very FIRST mousemove after mousedown, and once it does, it
+     never fires click. A trackpad drifts a pixel or two under almost every
+     tap, so clicking a task to rename it failed a large share of the time, on
+     every laptop and every browser. Measured on the live site: press, move two
+     pixels, release, and the row receives mousedown and nothing else. No
+     mouseup, no click, no editor. Hold perfectly still and it works.
+
+     So the row is not draggable until the pointer has travelled far enough to
+     mean it. Press and release in place and the click arrives untouched; press
+     and actually move and the row turns draggable in time for the browser to
+     take the gesture as a drag. The grip is exempt because it is an explicit
+     handle, and the op buttons are not drag surfaces at all. */
+  var DRAG_SLOP = 6, pdX = 0, pdY = 0, armed = false;
+  function unarm(){ armed = false; n.draggable = true; }
+  n.addEventListener("pointerdown", function(e){
+    if (e.button) return;                    /* right and middle click never drag */
+    var onHandle = e.target && e.target.closest ? e.target.closest(".grip, .op") : null;
+    if (onHandle) return;                    /* the grip drags immediately */
+    armed = true; pdX = e.clientX; pdY = e.clientY;
+    n.draggable = false;
+  });
+  n.addEventListener("pointermove", function(e){
+    if (!armed) return;
+    if (Math.abs(e.clientX - pdX) > DRAG_SLOP || Math.abs(e.clientY - pdY) > DRAG_SLOP){
+      /* far enough to be a real drag: hand the gesture back to the browser,
+         which picks it up on the next mousemove */
+      armed = false; n.draggable = true;
+    }
+  });
+  n.addEventListener("pointerup", unarm);
+  n.addEventListener("pointercancel", unarm);
+  n.addEventListener("pointerleave", unarm);
+  n.addEventListener("dragend", unarm);
+
   var ops = mk("div","ops");
   ops.appendChild(opBtn("\u270e","Rename", false, function(){ inlineEdit(n, txt, task); }));
   ops.appendChild(opBtn("\u25b2","Move up",   idx === 0,       function(){ nudge(task.id,-1); refresh(); }));

@@ -2922,6 +2922,94 @@ check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === 0, "wipe clears
    to the real total. It runs AFTER the counters are final and deliberately
    sits outside check(), so it cannot change the number it is verifying.
    --------------------------------------------------------------------------- */
+console.log("\n=== C58. The rename click, and two holidays that were wrong ===");
+{
+const src = readFile("assets/app.js");
+
+/* THE RENAME CLICK.
+   The task row carries draggable="true", and HTML5 drag has NO movement
+   threshold: the browser commits to a drag on the FIRST mousemove after
+   mousedown and then never fires click. A trackpad drifts a pixel or two under
+   almost every tap, so clicking a task to rename it failed a large share of the
+   time, on every laptop and every browser.
+
+   Measured on the live site before the fix: press, move two pixels, release,
+   and the row received mousedown and nothing else. No mouseup, no click, no
+   editor. Hold perfectly still and it worked. That is exactly the reported
+   "it doesn't work at once".
+
+   jsdom has no drag machinery, so the behaviour cannot be reproduced here.
+   What CAN be locked is that the guard exists and is wired to every event that
+   has to release it, because if any one of them is dropped the row stays
+   permanently undraggable and nothing visibly complains. */
+check(/DRAG_SLOP/.test(src), "task rows have a drag threshold");
+check(/n\.draggable = false/.test(src),
+      "the row stops being draggable while a press is still undecided");
+check(/pointermove[\s\S]{0,400}n\.draggable = true/.test(src),
+      "and becomes draggable again once the pointer has actually travelled");
+check(/closest\(".grip, .op"\)/.test(src),
+      "the grip is exempt, so the explicit drag handle still drags at once");
+["pointerup","pointercancel","pointerleave","dragend"].forEach(function(ev){
+  check(new RegExp('addEventListener\\("' + ev + '", *unarm\\)').test(src),
+        "draggable is restored on " + ev + ", so a row can never get stuck");
+});
+
+/* THE UK BANK HOLIDAY.
+   Reported as "25 August 2025 is missing". It was in the data all along,
+   flagged regional, and regional days are hidden by default. The upstream
+   source marks a day national only when EVERY subdivision observes it, so
+   Scotland doing something different demoted a bank holiday that applies to
+   England, Wales and Northern Ireland - about 97% of the UK. */
+{
+  var GB = null;
+  new Function("window", "return eval(arguments[1])")(
+    { __imcHol: function(c, d){ GB = d; } }, readFile("assets/holidays/GB.js"));
+  check(GB && GB["2025"], "GB holiday data loads");
+  check(GB["2025"]["0825"] && GB["2025"]["0825"][1] === 0,
+        "25 Aug 2025, the late-August bank holiday, is national and therefore drawn");
+  check(GB["2025"]["0421"] && GB["2025"]["0421"][1] === 0,
+        "Easter Monday is national too, demoted by the very same rule");
+  check(GB["2025"]["0804"] && GB["2025"]["0804"][1] === 1,
+        "Scotland's own early-August holiday stays regional, which is correct");
+
+  /* One year proves nothing: the demotion applied to all 31 years in the file. */
+  var stillRegional = 0, years = 0;
+  for (var y in GB){
+    years++;
+    for (var k in GB[y]){
+      var e = GB[y][k];
+      if (/^(Easter Monday|Late Summer Bank Holiday)$/.test(e[0]) && e[1] === 1) stillRegional++;
+    }
+  }
+  check(years > 25 && stillRegional === 0,
+        "and it is fixed across all " + years + " years, not only the one reported");
+}
+
+/* SWEDEN.
+   Swedish law really does class every Sunday as a public holiday. Correct, and
+   useless in a calendar: 1529 entries named "Sunday" painted the entire Sunday
+   column red for 31 years and buried the eleven days a Swede plans around. */
+{
+  var SE = null;
+  new Function("window", "return eval(arguments[1])")(
+    { __imcHol: function(c, d){ SE = d; } }, readFile("assets/holidays/SE.js"));
+  var DOWNAME = /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)$/;
+  var bare = 0;
+  for (var y2 in SE) for (var k2 in SE[y2]){
+    if (String(SE[y2][k2][0]).split(";").some(function(s){ return DOWNAME.test(s.trim()); })) bare++;
+  }
+  check(bare === 0, "Sweden lists no bare weekday as a holiday");
+  var n25 = Object.keys(SE["2025"]).length;
+  check(n25 > 5 && n25 < 20,
+        "and 2025 is a believable " + n25 + " days rather than 63");
+}
+
+/* The audit tool is the thing that finds the NEXT one of these, so it has to
+   exist and has to be runnable. */
+check(fs.existsSync(path.join(ROOT, "tools", "audit-holidays.js")),
+      "the holiday audit tool is present for finding the next fault of this kind");
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
