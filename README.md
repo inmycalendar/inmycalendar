@@ -33,7 +33,7 @@ There is no build step. Clone and open `index.html` in a browser - that is the w
 git clone https://github.com/inmycalendar/inmycalendar.git
 cd inmycalendar
 npm ci           # only needed to run the tests
-npm test         # expect: 1016 passed, 0 failed
+npm test         # expect: 1050 passed, 0 failed
 ```
 
 The tests need **Node 22.22.2 or newer** - jsdom 30 refuses to run on anything
@@ -78,7 +78,7 @@ assets/
   favicon.svg .ico apple-touch-icon-v2.png icon-192-v2.png icon-512-v2.png
   holidays/         248 files, one per country, ~16 KB each - loaded on demand
 tests/
-  app.test.js       1016 checks: behaviour, layout, content accuracy, privacy
+  app.test.js       1050 checks: behaviour, layout, content accuracy, privacy
 ```
 
 `site.css` loads before `app.css`; app rules win where they overlap. That ordering is
@@ -236,9 +236,34 @@ always wins over regional for the same date.
 **Regional holidays are opt-in.** The US has 41 national but 191 total - the regional markers
 buried the national ones.
 
-**Regenerating the data:** the `holidays` library lists every country twice, once by alpha-2 and
-once by alpha-3 code, and the alpha-3 rows lose their country name. Keep only 2-letter codes, or
-you get 495 "countries" instead of 248 and a file twice the size.
+**Regenerating the data is a THREE step job, and skipping step two is silent.** Corrections made
+by editing `assets/holidays/*.js` by hand survive exactly until the next regeneration and then
+vanish, with no error and no conflict. So the corrections live in code:
+
+```
+python tools/extract-holidays.py     # writes assets/holidays/*.js + coverage-review.csv
+node   tools/holiday-corrections.js  # re-applies every hand-verified fix
+node   tools/audit-holidays.js       # fails loudly if step two was skipped
+```
+
+`tools/extract-holidays.py` keeps the two known quirks of the `holidays` library: it lists every
+country twice, once by alpha-2 and once by alpha-3, and the alpha-3 rows lose their country name,
+so only 2-letter codes are kept. It also fixes three faults found by auditing the output against
+the official lists of the largest countries:
+
+- **`observed=True` deleted holidays instead of adding to them.** For some countries the library
+  substitutes the observed day for the real one. Spain lost nine of its ten fixed national
+  holidays in any year they fell on a Sunday - Christmas Day was absent from the Spanish calendar
+  in 2016, 2022, 2033, 2039 and 2044. Now both views are pulled and unioned.
+- **"National" quietly meant "observed in every subdivision".** Anything one subdivision skips
+  becomes regional and is therefore hidden by default. That is how UK users lost Easter Monday
+  and the late-August bank holiday: Scotland does something different, so three of four nations
+  were outvoted. The script cannot decide this on its own, so it writes `coverage-review.csv`
+  listing each regional day with the share of subdivisions observing it. Anything high is worth
+  checking against an official source and, if confirmed, adding to `holiday-corrections.js`.
+- **The duplicate check compared one name against many.** `national.get(d) != hname` fails when a
+  date carries more than one holiday, because the library joins them as `"A; B"`. Dates are
+  compared now, not name strings.
 
 ### Four independent visual channels
 So nothing ever collides on one day: **fill** = category, **bottom stripe** = holiday,
@@ -272,7 +297,7 @@ collide with the semantic colours.
 npm test
 ```
 
-1016 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
+1050 checks against a real DOM (`jsdom`), driving the app with synthetic clicks and keystrokes
 rather than inspecting source. The suite exists because this project was repeatedly bitten by
 bugs that static review missed.
 
