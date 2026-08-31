@@ -3010,6 +3010,129 @@ check(fs.existsSync(path.join(ROOT, "tools", "audit-holidays.js")),
       "the holiday audit tool is present for finding the next fault of this kind");
 }
 
+console.log("\n=== C59. The big countries, checked against their official lists ===");
+{
+/* Every fault in this file was invisible until someone who knew the answer
+   looked at the calendar and saw a day missing. So the answers are written
+   down here. These are counts and dates taken from each country's own
+   published list, not from the upstream data, which is the thing being
+   tested. */
+function hol(code){
+  var out = null;
+  new Function("window", "return eval(arguments[1])")(
+    { __imcHol: function(c, d){ out = d; } }, readFile("assets/holidays/" + code + ".js"));
+  return out;
+}
+function nat(D, y){
+  var v = D[y] || {}, n = 0;
+  for (var k in v) if (v[k][1] !== 1) n++;
+  return n;
+}
+function day(D, y, k){ return (D[y] && D[y][k]) || null; }
+function isNational(D, y, k, name){
+  var e = day(D, y, k);
+  return !!e && e[1] === 0 && e[0].indexOf(name) >= 0;
+}
+
+var GB = hol("GB"), ES = hol("ES"), DE = hol("DE"), FR = hol("FR"),
+    IT = hol("IT"), US = hol("US"), JP = hol("JP"), AU = hol("AU");
+
+/* ---- the counts each country actually has --------------------------------- */
+/* UK: 8 bank holidays in England and Wales. Scotland's extra days are regional
+   and correctly stay hidden unless asked for. */
+check(nat(GB,"2025") === 8, "UK has 8 national bank holidays in 2025, got " + nat(GB,"2025"));
+/* US: 11 federal holidays, unchanged since Juneteenth was added in 2021. */
+check(nat(US,"2025") === 11, "US has 11 federal holidays in 2025, got " + nat(US,"2025"));
+/* Germany: 9 observed in every Land; the rest are state-level and regional. */
+check(nat(DE,"2025") === 9, "Germany has 9 nationwide holidays in 2025, got " + nat(DE,"2025"));
+/* France: the 11 jours feries. Good Friday and 26 December are Alsace-Moselle
+   only, so they belong in regional. */
+check(nat(FR,"2025") === 11, "France has 11 national holidays in 2025, got " + nat(FR,"2025"));
+check(day(FR,"2025","0418") && day(FR,"2025","0418")[1] === 1,
+      "and France keeps Good Friday regional, because it is Alsace-Moselle only");
+/* Japan has no regional public holidays at all: every one is nationwide. */
+check(nat(JP,"2025") === 19, "Japan has 19 national days in 2025 including substitutes, got " + nat(JP,"2025"));
+{
+  var jpReg = 0, v = JP["2025"];
+  for (var k in v) if (v[k][1] === 1) jpReg++;
+  check(jpReg === 0, "and Japan has no regional holidays, which is correct for Japan");
+}
+
+/* ---- the specific days that were wrong ------------------------------------ */
+/* Spain. The upstream source deleted a national holiday outright whenever it
+   landed on a Sunday, leaving only a hidden regional "Monday following X".
+   Christmas Day itself was missing from the Spanish calendar in five years. */
+check(isNational(ES,"2025","1012","National Day"),
+      "Spain: 12 October 2025 is the Fiesta Nacional even though it is a Sunday");
+check(isNational(ES,"2033","1225","Christmas Day"),
+      "Spain: Christmas Day 2033 exists even though it is a Sunday");
+check(isNational(ES,"2016","1225","Christmas Day"),
+      "Spain: and Christmas Day 2016, the same fault in the other direction");
+{
+  /* the whole class, not just the examples: every Spanish fixed-date national
+     day must be present in every year of the file */
+  var FIXED = ["0101","0106","0501","0815","1012","1101","1206","1208","1225"];
+  var gaps = 0, yrs = 0;
+  for (var y in ES){ yrs++;
+    for (var i = 0; i < FIXED.length; i++){
+      var e = ES[y][FIXED[i]];
+      if (!e || e[1] === 1) gaps++;
+    }
+  }
+  check(gaps === 0,
+        "Spain: all 9 fixed national days present in all " + yrs + " years, " + gaps + " gaps");
+}
+
+/* Australia. 26 January is national. When it falls on a Sunday the entire
+   country takes the Monday, but the substitute was flagged regional and so was
+   never drawn. */
+check(isNational(AU,"2025","0126","Australia Day"), "Australia: 26 January is national");
+check(isNational(AU,"2025","0127","Australia Day"),
+      "Australia: and the nationwide Monday substitute is national too");
+check(day(AU,"2025","0609") && day(AU,"2025","0609")[1] === 1,
+      "Australia: but the King's Birthday stays regional, since the date differs by state");
+
+/* Italy and the UK, the two remaining EU5 members, on days nobody disputes. */
+check(isNational(IT,"2025","0425","Liberation Day"), "Italy: 25 April, Liberation Day, is national");
+check(isNational(IT,"2025","0602","Republic Day"),   "Italy: 2 June, Republic Day, is national");
+check(isNational(GB,"2025","0825","Late Summer Bank Holiday"),
+      "UK: the August bank holiday that started all of this is still national");
+
+/* ---- and the property behind all of it ------------------------------------ */
+/* A fixed-date national holiday cannot stop existing because of what weekday
+   it lands on. Checked across the eight countries asked about. */
+{
+  var SET = { GB:GB, ES:ES, DE:DE, FR:FR, IT:IT, US:US, JP:JP, AU:AU };
+  var offenders = [];
+  for (var code in SET){
+    var D = SET[code], years = Object.keys(D).map(Number).sort(function(a,b){return a-b;});
+    var seen = {};
+    for (var yi = 0; yi < years.length; yi++){
+      var yv = D[String(years[yi])];
+      for (var kk in yv) if (yv[kk][1] !== 1){
+        if (!seen[kk]) seen[kk] = { years: [], name: yv[kk][0] };
+        seen[kk].years.push(years[yi]);
+      }
+    }
+    for (var kx in seen){
+      if (/observed|substitut/i.test(seen[kx].name)) continue;
+      if (seen[kx].years.length < years.length * 0.6) continue;
+      var have = {}; seen[kx].years.forEach(function(y){ have[y] = 1; });
+      var miss = years.filter(function(y){ return !have[y]; });
+      if (miss.length < 2) continue;
+      var allWeekend = miss.every(function(y){
+        var dd = new Date(y, +kx.slice(0,2)-1, +kx.slice(2)).getDay();
+        return dd === 0 || dd === 6;
+      });
+      if (allWeekend) offenders.push(code + " " + kx + " " + seen[kx].name);
+    }
+  }
+  check(offenders.length === 0,
+        "no fixed-date national holiday in the eight big countries vanishes on a weekend" +
+        (offenders.length ? ": " + offenders.join(", ") : ""));
+}
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
