@@ -3290,6 +3290,120 @@ check(/if \(cfg\.view !== "board"\) revealTodaySoon\(\)/.test(src),
       "and the Today button moves the calendar, not just the board you cannot see");
 }
 
+console.log("\n=== C62. A sync that repainted over you, and one date format ===");
+{
+const src = readFile("assets/app.js");
+
+/* THE EDIT THAT ESCAPED ITSELF.
+
+   Reported as "I click a task, it goes into edit mode, and immediately escapes
+   out of edit mode". The v47 drag threshold was a real fix and was not this:
+   this is a second, separate bug that the first fix uncovered by finally
+   letting the click through.
+
+   The tell was that it happened on every laptop and every browser but never
+   reproduced signed out. repaint() is called by the sync layer and by nothing
+   else, so only signed-in people could see it. A sync runs 1.5 seconds after
+   any change, when the tab returns to the front, and on reconnect. Click a
+   task inside one of those windows and the row is rebuilt underneath the
+   editor a moment after it opens.
+
+   Reproduced in a browser: open the rename box, type into it, repaint, and the
+   box is gone, focus falls back to BODY, and the typing is lost.
+
+   The repaint is HELD rather than dropped. Dropping it would leave the screen
+   showing data from before the sync, which is a different bug. */
+check(/function doRepaint/.test(src), "repaints go through one place that can hold them");
+check(/repaint: function\(\)\{ doRepaint\(\); \}/.test(src),
+      "and the sync layer's entry point is that place, not renderAll directly");
+check(/function editorIsOpen/.test(src), "which asks first whether someone is mid-edit");
+check(/\.t\.editing, \.bnotewrap\.editing/.test(src),
+      "covering both the task rename box and the day note");
+check(/heldRepaint = true; return;/.test(src),
+      "a repaint arriving mid-edit is remembered, not thrown away");
+check(/function repaintIfHeld/.test(src), "and replayed when the edit finishes");
+
+/* Both editors must release it, or a sync can be held forever. */
+{
+  const done = src.slice(src.indexOf("function inlineEdit"),
+                         src.indexOf("function inlineEdit") + 1600);
+  check(/repaintIfHeld\(\)/.test(done),
+        "the rename box releases the held repaint when it closes");
+}
+check(/el\.bnote\.blur\(\); renderAll\(\);\s*\n\s*repaintIfHeld\(\);/.test(src),
+      "and so does the day note, or a sync could be held indefinitely");
+
+/* The add fields are deliberately NOT guarded: they live in index.html and
+   survive a render, so blocking on them would mean a cursor parked in an add
+   box stops syncing all day. */
+check(/blocking on them would mean a cursor left in an add box stops syncing/.test(src),
+      "the add fields are deliberately excluded, and the file says why");
+
+/* Behaviour, driven through the real DOM. jsdom has no layout but it has
+   elements and classes, which is all this needs. */
+{
+  toBoard();
+  const add = qa("textarea.cadd")[0];
+  add.value = "Repaint should not eat this";
+  add.dispatchEvent(new w.KeyboardEvent("keydown", { key:"Enter", bubbles:true, cancelable:true }));
+  const row = d.querySelector(".t");
+  check(!!row, "a task exists to edit");
+  row.querySelector(".txt").dispatchEvent(new w.MouseEvent("click", { bubbles:true }));
+  const box = d.querySelector("textarea.edit");
+  check(!!box, "clicking the text opens the rename box");
+  box.value = "half typed";
+  /* Through the REAL entry point the sync layer uses, window.imcStore.repaint,
+     not doRepaint directly. Calling the inner function would still pass if the
+     sync layer were rewired straight back to renderAll, which is precisely the
+     bug. */
+  dom.window.eval("window.imcStore.repaint()");
+  const still = d.querySelector("textarea.edit");
+  check(!!still && still.value === "half typed",
+        "a sync repaint mid-edit leaves the box and the typing alone");
+  check(dom.window.eval("heldRepaint") === true, "and the repaint is held, not lost");
+  box.dispatchEvent(new w.KeyboardEvent("keydown", { key:"Enter", bubbles:true, cancelable:true }));
+  check(!d.querySelector("textarea.edit"), "finishing the edit closes the box");
+  check(dom.window.eval("heldRepaint") === false, "and the held repaint has been applied");
+}
+
+/* ONE DATE FORMAT.
+   The countdown row followed the machine's locale, so the same date read
+   10/17/2026 on one computer and 17/10/2026 on another, while the ribbon, the
+   calendar cells and the week grid all used yyyy-mm-dd. 03/04/2026 is 3 April
+   to most of the world and 4 March in the United States, and nothing on screen
+   says which. */
+check(!/toLocaleDateString/.test(src.replace(/\/\*[\s\S]*?\*\//g, "")),
+      "no date is formatted by the machine's locale any more");
+{
+  const iso = dom.window.eval('shortDate("2026-10-17")');
+  check(iso === "2026-10-17", "a countdown date reads 2026-10-17, got " + iso);
+  const long = dom.window.eval('longDate("2026-10-17")');
+  check(/^2026-10-17 \(/.test(long),
+        "and the tooltip leads with the same ISO date, got " + long);
+  check(/Sat/.test(long),
+        "keeping the weekday, which is the one thing a bare date does not tell you");
+  check(dom.window.eval('shortDate("nonsense")') === "",
+        "a date that will not parse renders as nothing rather than as garbage");
+}
+
+/* THE SHAREABLE LINK.
+   GB is the ISO code and stays the internal one: the data file, the country
+   list and the holiday page are all GB. But the hash is a fragment, not a
+   page, so nothing is gained by showing a code almost nobody recognises. */
+check(/var HASH_ALIAS = \{ GB:"UK" \}/.test(src), "the shared link says UK, not GB");
+check(/hashCode\(cfg\.country\)/.test(src), "and the hash is written through that map");
+{
+  check(dom.window.eval('hashCode("GB")') === "UK", "GB is shown as UK in the link");
+  check(dom.window.eval('hashCode("GR")') === "GR",
+        "Greece stays GR: EL is a code to be read, never one to be written");
+  check(dom.window.eval('hashCode("JP")') === "JP", "everything else is untouched");
+  /* Reading must still accept both, or existing links break. */
+  check(dom.window.eval('resolveCountry("UK")') === "GB" &&
+        dom.window.eval('resolveCountry("GB")') === "GB",
+        "and both spellings still resolve, so no shared link ever breaks");
+}
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],

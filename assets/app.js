@@ -40,6 +40,9 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
             hideCats:false };
 
 var cfg = null, tasks = null, notes = null, track = null;
+/* A sync that landed while someone was mid-edit used to repaint over them.
+   Held here until the edit finishes, then run once. See doRepaint(). */
+var heldRepaint = false;
 var shadow = { tasks:null, notes:null, track:null, cfg:null };
 var pending = { full:false, n:0, rows:{} };
 var pendingSeq = 0;
@@ -193,7 +196,7 @@ function openStore(){
       if (has(pending.rows, key)){ delete pending.rows[key]; pending.n -= 1; writeRaw(LS.pending, pending); }
     },
 
-    repaint: function(){ try { renderAll(); setView(cfg.view === "calendar" ? "calendar" : "board"); } catch (e){} },
+    repaint: function(){ doRepaint(); },
 
     /* Sign-out on a shared machine must leave nothing behind. Only the things
        that are actually personal go: settings like week-start and country are
@@ -761,6 +764,38 @@ function tilt(id){
   for (var i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i))|0;
   return ((((h % 1000)+1000)%1000)/1000*2 - 1).toFixed(2);
 }
+/* IS SOMEONE TYPING INTO SOMETHING A REPAINT WOULD DESTROY?
+
+   The inline rename box and the day note are both built fresh by a render, so
+   rebuilding the page throws them away along with whatever was half-typed. The
+   add fields are not checked: they live in index.html and survive a render, and
+   blocking on them would mean a cursor left in an add box stops syncing all
+   day. */
+function editorIsOpen(){
+  return !!document.querySelector(".t.editing, .bnotewrap.editing");
+}
+/* THE BUG THIS EXISTS FOR.
+
+   Reported as "I click a task, it goes into edit mode, and immediately escapes
+   out of edit mode again". Only signed-in people ever saw it, on every laptop
+   and every browser, which is the tell: repaint() is called by the sync layer
+   and by nothing else. A sync fires 1.5 seconds after any change, when the tab
+   comes back to the front, and on reconnect. Click a task inside one of those
+   windows and the row is rebuilt underneath the editor a moment after it opens.
+
+   Reproduced by opening the rename box, typing into it, and calling a repaint:
+   the box vanishes, focus falls back to the body, and the typing is gone.
+
+   So a repaint that arrives mid-edit is held rather than dropped. Dropping it
+   would leave the screen showing stale data from before the sync; holding it
+   runs it the moment the edit is finished. */
+function doRepaint(){
+  if (editorIsOpen()){ heldRepaint = true; return; }
+  heldRepaint = false;
+  try { renderAll(); setView(cfg.view === "calendar" ? "calendar" : "board"); } catch (e){}
+}
+function repaintIfHeld(){ if (heldRepaint) doRepaint(); }
+
 function inlineEdit(row, txt, task){
   if (row.classList.contains("editing")) return;   /* already editing this one */
   /* A textarea, not an input. A one-line input showed a sliver of a task that
@@ -782,6 +817,7 @@ function inlineEdit(row, txt, task){
     var v = cleanTaskText(inp.value);
     if (keep && v){ task.text = v; commit("tasks"); }
     refresh();
+    repaintIfHeld();      /* a sync that arrived mid-edit was waiting on this */
   }
   inp.addEventListener("blur", function(){ done(true); });
   inp.addEventListener("keydown", function(e){
@@ -1338,26 +1374,29 @@ function renderRail(){
 /* "Thu 12 Nov 2026" - the form a person reads, not the form a computer sorts.
    Returns "" for anything unparseable rather than throwing, because this is
    only ever decoration beside the real value. */
+/* ONE DATE FORMAT, EVERYWHERE: yyyy-mm-dd.
+
+   The countdown row used to follow the machine's locale, so it read 10/17/2026
+   on one computer and 17/10/2026 on another. The reasoning was that a date in
+   the wrong order is worse than useless because it gets misread - which is
+   true, and is exactly the argument FOR doing it this way instead.
+
+   03/04/2026 is 3 April to most of the world and 4 March to the United States,
+   and nothing on screen tells you which one you are looking at. 2026-04-03 is
+   the same date to everyone, sorts correctly as text, and is already what the
+   date ribbon, the calendar cells and the week grid use. Following the local
+   machine made the countdowns the only part of the app written in a different
+   language from the rest of it. */
 function longDate(ds){
   var d = parseISO(ds);
   if (!d) return "";
-  return DOW[d.getDay()] + " " + d.getDate() + " " + MON3[d.getMonth()] + " " + d.getFullYear();
+  /* The tooltip form. ISO first so it matches everything else, with the
+     weekday after it, which is the thing the bare date does not tell you. */
+  return ds + " (" + DOW[d.getDay()] + " " + d.getDate() + " " + MON3[d.getMonth()] + ")";
 }
-/* The compact form shown on the countdown row itself: "10/17/2026" for someone
-   whose machine writes dates that way, "17/10/2026" for someone whose does
-   not. Deliberately not a fixed order - a date in the wrong order is worse
-   than useless, it is misread. Falls back to the ISO string if the browser has
-   no locale support. */
+/* The compact form on the countdown row itself. */
 function shortDate(ds){
-  var d = parseISO(ds);
-  if (!d) return "";
-  try {
-    if (d.toLocaleDateString){
-      var s = d.toLocaleDateString(undefined, { year:"numeric", month:"2-digit", day:"2-digit" });
-      if (s) return s;
-    }
-  } catch (e){}
-  return ds;
+  return parseISO(ds) ? ds : "";
 }
 function renderTracked(){
   el.tkList.innerHTML = "";
@@ -1830,6 +1869,20 @@ function resolveCountry(code){
   if (CODE_ALIAS[c]) c = CODE_ALIAS[c];
   return knownCountry(c) ? c : "";
 }
+/* The other direction, for the shareable link only.
+
+   Rewriting a typed /#calendar/UK into /#calendar/GB was correct and felt
+   wrong, which is a fair description of the whole GB-versus-UK problem. GB is
+   the ISO code and stays the internal one: the data file, the country list and
+   the holiday page are all GB, and there is still exactly one page per country.
+   But the hash is a fragment, not a page - search engines do not index it
+   separately - so nothing is gained by making the link show a code almost
+   nobody recognises. It shows UK.
+
+   Only GB is mapped. Nobody calls Greece EL outside EU paperwork, so GR stays
+   GR; that alias exists to be READ, not written. */
+var HASH_ALIAS = { GB:"UK" };
+function hashCode(code){ return HASH_ALIAS[code] || code; }
 function setCountry(code){
   cfg.country = code || ""; commit("cfg");
   loadHolidays(cfg.country);
@@ -1837,7 +1890,7 @@ function setCountry(code){
 }
 /* The address bar mirrors what is on screen, so copying it shares that view. */
 function viewHash(v){
-  var suffix = (v === "calendar" && cfg.country) ? "/" + cfg.country : "";
+  var suffix = (v === "calendar" && cfg.country) ? "/" + hashCode(cfg.country) : "";
   var curHash = window.location.hash || "";
   if (curHash.indexOf("access_token") >= 0 || curHash.indexOf("error_description") >= 0) return;
   try { history.replaceState(null, "", "#" + v + suffix); } catch (e){}
@@ -2198,7 +2251,10 @@ function wire(){
     }, 120);
     renderAll();
   });
-  function closeNote(){ el.bnoteWrap.classList.remove("editing"); el.bnote.blur(); renderAll(); }
+  function closeNote(){
+    el.bnoteWrap.classList.remove("editing"); el.bnote.blur(); renderAll();
+    repaintIfHeld();
+  }
   /* Mouse users need mousedown: blur fires between mousedown and click, so a
      click-only handler reached a button the re-render had already replaced -
      that is why Done had to be pressed twice. Keyboard users only ever get a

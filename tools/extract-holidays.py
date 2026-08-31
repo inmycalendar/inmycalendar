@@ -70,7 +70,18 @@ except ImportError:
     sys.exit("pip install holidays pycountry")
 
 THIS_YEAR = datetime.date.today().year
-YEARS = list(range(THIS_YEAR - 15, THIS_YEAR + 16))       # about 31 years
+
+# CAP in assets/app.js is 20, so the calendar's arrows reach 20 years either
+# side of today. Generating a narrower window leaves years the user can
+# navigate to with no holidays at all and nothing on screen to say why.
+#
+# This deliberately does NOT use the +/-15 of the earlier version. Run today
+# that would produce 2011-2041, which is narrower at the far end than the
+# 2015-2045 already shipped: regenerating would silently DELETE four years of
+# future holidays. A window tied to CAP grows forwards as time passes instead
+# of sliding a fixed-width hole across the data.
+CAP = 20
+YEARS = list(range(THIS_YEAR - CAP, THIS_YEAR + CAP + 1))   # 41 years
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(HERE, "..", "assets", "holidays")
