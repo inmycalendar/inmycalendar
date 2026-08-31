@@ -1186,7 +1186,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK.html</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -8146,32 +8146,32 @@
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB-2025.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK-2025.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB-2026.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK-2026.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB-2027.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK-2027.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB-2028.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK-2028.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB-2029.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK-2029.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://inmycalendar.com/holidays/GB-2030.html</loc>
+    <loc>https://inmycalendar.com/holidays/UK-2030.html</loc>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>

@@ -34,13 +34,15 @@
 </IfModule>
 
 # COUNTRY CODE ALIASES
-# The United Kingdom's ISO 3166-1 code is GB, so every data file and holiday
-# page is named GB. Almost nobody types GB. /holidays/UK and /holidays/UK-2026
-# answer with a permanent redirect instead of a 404, while GB stays the single
-# canonical page, so no duplicate content is created. EL is the EU's own code
-# for Greece and shows up in anything sourced from Eurostat.
+# GB is the ISO 3166-1 code for the United Kingdom and stays the DATA code:
+# assets/holidays/GB.js, the country list, the app internals. But a URL is read,
+# typed and shared by people, and outside a standards body nobody writes GB. The
+# real page is /holidays/UK.html; /holidays/GB.html permanently redirects to it,
+# so anything already indexed or bookmarked still lands correctly and there is
+# still exactly one canonical page per country.
+# EL is the EU code for Greece and turns up in anything sourced from Eurostat.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^holidays/UK(-[0-9]{4})?(\.html)?$  /holidays/GB$1.html  [R=301,L]
+  RewriteRule ^holidays/GB(-[0-9]{4})?(\.html)?$  /holidays/UK$1.html  [R=301,L]
   RewriteRule ^holidays/EL(-[0-9]{4})?(\.html)?$  /holidays/GR$1.html  [R=301,L]
 </IfModule>
