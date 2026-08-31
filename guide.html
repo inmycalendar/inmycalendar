@@ -9,17 +9,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" href="assets/favicon.ico?v=61" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=61">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=61">
-<link rel="manifest" href="manifest.webmanifest?v=61">
+<link rel="icon" href="assets/favicon.ico?v=62" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=62">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=62">
+<link rel="manifest" href="manifest.webmanifest?v=62">
 <meta name="theme-color" content="#18181b">
 <meta property="og:title" content="What a Kanban board is, and how to use one - inmycalendar">
 <meta property="og:description" content="A plain-language guide to Kanban boards: the three columns, the one rule that makes them work, how teams use them, and where the method came from. Plus how to use inmycalendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/guide.html">
 <link rel="canonical" href="https://inmycalendar.com/guide.html">
-<link rel="stylesheet" href="assets/site.css?v=61">
+<link rel="stylesheet" href="assets/site.css?v=62">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Article",
  "headline":"What a Kanban board is, and how to use one",
@@ -67,9 +67,24 @@
 <p>Three columns - to do, in progress, done - side by side on every screen size, phones included. Each task is a single line so a full day fits without scrolling. Type into a column to add straight to it. Drag to reorder, or use the arrows: the top of a column is your highest priority, so ranking costs nothing to express.</p>
 <p>Switch the scope to <strong>week</strong> or <strong>month</strong> to see everything from that stretch of time in one read-only list; click any line to jump back to the day it belongs to. A column scrolls once it passes ten tasks, so a busy day never pushes the calendar off the screen.</p>
 
+<h2>Moving a task, and undoing it</h2>
+<p>Every task carries a row of controls. The <strong>arrows</strong> move it up and down its column or left and right between to do, in progress and done. <strong>&#9678;</strong> moves it to today in one tap, and only appears when the task is not already on today - on today's board it would do nothing, so it is not there. <strong>&#128197;</strong> opens a date picker to send it to any other day. <strong>&times;</strong> deletes it.</p>
+<p><strong>Almost everything can be undone.</strong> Delete a task, move one to today, sweep a week forward, and a bar appears offering to put it back. It stays available for about 45 seconds, so a mis-tap is never final. Undo restores the task to the exact column and position it came from, not just to the day.</p>
+<p><strong>A task can be more than one line.</strong> Enter adds the task; <strong>Shift+Enter</strong> starts a new line inside it, the same convention every chat box uses. Pasting several lines keeps them as one task rather than silently mangling them into a single run-on line.</p>
+
+<h2>Picking up where you left off</h2>
+<p>Open today's board and anything still unfinished from <em>any</em> earlier day is offered at the top: how many tasks, how many days, and how far back the oldest one goes. <strong>Move all to today</strong> brings the lot forward in one action, keeping their order, and the whole sweep is a single undo.</p>
+<p>It looks at every earlier day, not just yesterday. Yesterday is the one case where you did not need reminding - you were here. Come back after a week away and it is the tasks that have been open longest that matter.</p>
+<p>Dismiss it and it stays dismissed for the rest of the day.</p>
+
 <h2>The calendar</h2>
 <p>Years sit side by side, laid out by week rather than by month, so a long stretch of time reads at a glance. The arrows in the calendar's own header move the whole window a year at a time. Colour a day and the whole cell takes that colour.</p>
 <p>Four things can mark a day and they never clash: the <strong>cell colour</strong> is your own category, a <strong>coloured line underneath</strong> is a public holiday (red for national, blue for regional), a <strong>ring</strong> is today, and a <strong>small dot</strong> means that day has tasks. Hovering a day shows the holiday name, your note, and the tasks on it.</p>
+
+<h2>Day colours</h2>
+<p>Colour a day and the whole cell takes that colour, so a year of leave, travel or deadlines reads at a glance. The panel on the right lists your colours with a <strong>count</strong> beside each one, so you can see how many days you have marked without counting them yourself.</p>
+<p>You can <strong>add</strong> a colour, <strong>rename</strong> one by clicking its name, <strong>delete</strong> one, and <strong>drag a row</strong> to reorder the list. Deleting a colour that is in use tells you how many days it will clear first. <strong>Hide</strong> collapses every day colour on the calendar without deleting anything, which is useful when you want a clean screenshot of just the holidays - the days still remember their colour and come back when you show them again.</p>
+<p><strong>Marking several days at once.</strong> Press <strong>Select days</strong>, then click a day and click another to take everything between them, or drag across a run of days. Ctrl-click (Cmd on a Mac) adds or removes single days. Then pick a colour and the whole selection takes it in one go, which is how a two-week holiday gets marked without fourteen clicks.</p>
 
 <h2>How weeks are numbered</h2>
 <p>Everyone agrees a year has weeks. Nobody agrees which one is week 1. Four rules are in real use worldwide, so you pick the one your organisation follows, under <strong>Calendar setup</strong>.</p>
@@ -80,7 +95,7 @@
   <li><strong>Week containing 1 January</strong> - the simplest to explain, but it produces a 53rd week far more often and splits the year awkwardly.</li>
 </ul>
 <p>Why Thursday? It is not a magic day. Thursday is the <em>fourth</em> day of a week that starts on Monday, so "the week containing the first Thursday" and "the first week with 4+ days" are two ways of saying the same thing - but only for a Monday start. Start your week on Sunday and the fourth day is <strong>Wednesday</strong>, and the two rules genuinely part company. That is why both are offered rather than one being quietly applied under the other's name.</p>
-<p>Under the first three rules the last days of December often belong to the <em>next</em> year's week 1, or the first days of January to the <em>previous</em> year's final week. That is correct, not a mistake. With weeks starting Sunday, week 1 of 2026 begins on Sunday 28 December 2025 under the Thursday rule, and on Sunday 4 January 2026 under the majority rule.</p>
+<p>Under every rule except "first week fully inside the new year", the last days of December often belong to the <em>next</em> year's week 1. Under all four, the first days of January can belong to the <em>previous</em> year's final week. That is correct, not a mistake. With weeks starting Sunday, week 1 of 2026 begins on Sunday 28 December 2025 under the Thursday rule, and on Sunday 4 January 2026 under the majority rule.</p>
 <p>You choose which day your week starts on separately, and all seven days are available - Monday for most of the world, Sunday across the Americas and much of Asia, Saturday across much of the Middle East. The two settings work together: the start day decides where each week begins, and the rule decides which one is first.</p>
 
 <h2>Keyboard</h2>
@@ -135,9 +150,9 @@
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="assets/errors.js?v=61"></script>
+<script src="assets/errors.js?v=62"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/site.js?v=61"></script>
-<script src="assets/auth.js?v=61"></script>
+<script src="assets/site.js?v=62"></script>
+<script src="assets/auth.js?v=62"></script>
 </body>
 </html>

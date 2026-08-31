@@ -33,7 +33,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "61";                        /* cache tag, keep in step with the pages */
+const V    = "62";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
@@ -188,8 +188,21 @@ fs.readdirSync(OUT).forEach(f => { if (f.endsWith(".html")) fs.unlinkSync(path.j
 const built = [];
 const yearPages = [];
 
-COUNTRIES.forEach(([code, name]) => {
-  const data = loadHolidays(code);
+/* THE PAGE NAME IS NOT ALWAYS THE DATA CODE.
+
+   GB is the ISO 3166-1 code for the United Kingdom, so the data file is GB.js
+   and always will be. But /holidays/GB.html is a URL a person reads, types and
+   shares, and outside a standards body nobody writes GB. Serving the real page
+   at /holidays/UK.html and redirecting GB to it costs nothing and matches what
+   people expect.
+
+   Only the URL changes. The data code, the country list and the app's internal
+   country value all stay GB. */
+const PAGE_SLUG = { GB: "UK" };
+
+COUNTRIES.forEach(([dataCode, name]) => {
+  const data = loadHolidays(dataCode);
+  const code = PAGE_SLUG[dataCode] || dataCode;   /* used for every URL below */
   if (!data) return;
   const years = YEARS.filter(y => rowsFor(data, y).length);
   if (!years.length) return;

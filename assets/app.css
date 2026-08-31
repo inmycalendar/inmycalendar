@@ -616,7 +616,10 @@ main{padding:16px 0 0}
   /* thumb-sized calendar days */
   .wg .dc{min-height:34px;font-size:11px}
   .wg.c .dc{min-height:30px;font-size:10.5px}
-  .wg .wk{min-height:34px;font-size:10px}
+  /* 26px wide was the last control under 32 on a phone. Eight columns share
+     the width, so taking it to 32 costs each of the seven day cells under a
+     pixel - measured at 344px, the narrowest screen tested, with no overflow. */
+  .wg .wk{min-height:34px;min-width:32px;font-size:10px}
   .wg .dh{min-height:22px}
 
   /* The row controls get their own line. Trying to fit seven buttons and the
@@ -627,8 +630,16 @@ main{padding:16px 0 0}
      changing the source order the desktop float depends on. */
   .t{display:flex;flex-direction:column;row-gap:6px;padding:7px 9px}
   .t .txt{order:1;float:none;font-size:14px;line-height:1.4;max-height:calc(1.4em * 3)}
-  .t .ops{order:2;float:none;width:100%;justify-content:flex-start;gap:8px;margin:0}
-  .op{width:34px;height:32px;font-size:13px}
+  /* WRAP, DO NOT SHRINK.
+     Eight controls at 34px with seven 8px gaps needs 328px. On the narrowest
+     phones the card is about 294px wide, and flex's default shrink quietly
+     took every button down to 27.8px - under the size this whole block exists
+     to guarantee. Measured at 344px wide, which is a folded Galaxy Flip.
+     A second row of buttons costs a few pixels of height; shrinking them costs
+     the thumb, so the row wraps and flex:none holds the size. */
+  .t .ops{order:2;float:none;width:100%;justify-content:flex-start;gap:8px;margin:0;
+    flex-wrap:wrap;row-gap:6px}
+  .op{width:34px;height:32px;font-size:13px;flex:none}
   .t .edit{order:1;width:100%;font-size:16px;padding:6px 8px}
   .t::after{display:none}
 
@@ -636,6 +647,8 @@ main{padding:16px 0 0}
   .nub,.iso,.seg button,.sitenav a,.authslot .btn{min-height:36px}
   .seg button{padding-left:12px;padding-right:12px}
   .swatch,.sw{min-width:32px;min-height:32px}
+  /* .go was 30px, under the 32 this block sets everywhere else */
+  .go{min-height:32px}
   .amrow,.amsend{min-height:42px;font-size:15px}
   .aminput{font-size:16px;min-height:42px}
   .op.x{margin-left:auto}
@@ -766,7 +779,8 @@ main{padding:16px 0 0}
      fighting the browser over how big a native checkbox may be. */
   .chk{min-height:34px;display:flex;align-items:center;gap:8px}
   .cat input[type=text]{min-height:32px}
-  .catdot{width:30px;height:30px}
+  /* 30px, and every other control in this block is at least 32 */
+  .catdot{width:32px;height:32px}
 
   /* Found by measuring at 440x956 and again at 360x800: both were under 30px.
      #bnote is the day note, which starts one row tall and grows as you type;
@@ -798,4 +812,24 @@ main{padding:16px 0 0}
      there - and big enough to hit deliberately rather than by accident. */
   .catx{opacity:1;width:32px;height:32px;font-size:17px}
   .catadd .btn{min-height:36px}
+}
+
+/* ===========================================================================
+   TOUCH ON A BIG SCREEN
+   The phone pass above is keyed to max-width:640px, so a tablet in portrait
+   gets desktop density with a finger driving it. Measured at 768x1024: the
+   year arrows were 24px, the colour swatches 18px, the delete-colour buttons
+   18px. All fine under a mouse, all too small for a thumb.
+
+   Keyed to (hover:none) instead of to a width, so it follows the input device
+   rather than a guess about screen size. Deliberately sizes ONLY: a tablet has
+   room for the desktop LAYOUT and should keep it. The calendar day cells and
+   the week column are left alone on purpose - they are a dense grid where
+   growing one cell shrinks six others.
+   =========================================================================== */
+@media (hover:none) and (min-width:641px){
+  .nub,.iso,.fold,.yarr,.addgo,.dbtn,.catx,.hidecats{min-width:32px;min-height:32px}
+  .sitenav a,.seg button,.btn,.go,.cadd,.tkl,.tkdate{min-height:32px}
+  .catdot{width:32px;height:32px}
+  .chk{min-height:32px;display:flex;align-items:center;gap:8px}
 }

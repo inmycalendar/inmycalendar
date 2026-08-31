@@ -3154,17 +3154,47 @@ check(resolve("ZZ") === "",   "an unknown code resolves to nothing rather than g
 check(resolve("") === "" && resolve(null) === "",
       "and empty input is handled, since the hash may carry no country at all");
 
-/* The alias must not become a second set of pages: duplicate content on 1719
-   holiday pages would be an SEO problem, not a feature. A redirect keeps one
-   canonical page per country. */
+/* THE PAGE ITSELF IS NAMED UK, not just redirected to.
+
+   The first attempt at this kept /holidays/GB.html as the real page and
+   redirected UK to it. That was defensible and it was not what was asked for:
+   the link people see and share still read GB. GB is the ISO code and stays
+   the DATA code - assets/holidays/GB.js, the country list, the app's internal
+   value - but a URL is read and typed by people, and outside a standards body
+   nobody writes GB.
+
+   So the real page is UK.html and GB.html permanently redirects to it. Exactly
+   one canonical page per country either way; only the direction changed. */
 {
   const ht = readFile(".htaccess");
-  check(/RewriteRule \^holidays\/UK/.test(ht),
-        "/holidays/UK redirects rather than 404s");
-  check(/GB\$1\.html\s+\[R=301,L\]/.test(ht),
-        "and it is a permanent redirect to the canonical GB page, not a copy");
-  check(!fs.existsSync(path.join(ROOT, "holidays", "UK.html")),
-        "no duplicate UK page exists, which would split the search ranking");
+  check(/RewriteRule \^holidays\/GB/.test(ht),
+        "/holidays/GB redirects rather than being the page people land on");
+  check(/holidays\/UK\$1\.html\s+\[R=301,L\]/.test(ht),
+        "and it is a permanent redirect, so indexed GB links still land correctly");
+  check(fs.existsSync(path.join(ROOT, "holidays", "UK.html")),
+        "the United Kingdom page is served at /holidays/UK.html");
+  check(!fs.existsSync(path.join(ROOT, "holidays", "GB.html")),
+        "and no GB page remains, so there is still one canonical page per country");
+
+  /* The data code must NOT have moved. Renaming the data file would break the
+     app, which looks countries up by ISO code. */
+  check(fs.existsSync(path.join(ROOT, "assets", "holidays", "GB.js")),
+        "the data file is still GB.js, because the app looks countries up by ISO code");
+  check(!fs.existsSync(path.join(ROOT, "assets", "holidays", "UK.js")),
+        "and there is no UK.js, which would be a second source of truth");
+
+  /* Every internal reference has to follow, or the site links to 404s. */
+  const uk = readFile("holidays/UK.html");
+  check(/rel="canonical" href="https:\/\/inmycalendar\.com\/holidays\/UK\.html"/.test(uk),
+        "the page declares itself canonical at the UK address");
+  check(/href="UK-\d{4}\.html"/.test(uk),
+        "and its year links point at UK pages, not at GB ones that no longer exist");
+  const map = readFile("sitemap.xml");
+  check(/holidays\/UK\.html/.test(map) && !/holidays\/GB/.test(map),
+        "the sitemap lists UK and never GB");
+  const hub = readFile("holidays/index.html");
+  check(/href="UK\.html"/.test(hub),
+        "and the country index links to it");
 }
 
 /* THE PIPELINE.
@@ -3402,6 +3432,60 @@ check(/hashCode\(cfg\.country\)/.test(src), "and the hash is written through tha
         dom.window.eval('resolveCountry("GB")') === "GB",
         "and both spellings still resolve, so no shared link ever breaks");
 }
+}
+
+console.log("\n=== C63. Thumb targets, measured on real phone widths ===");
+{
+const css = readFile("assets/app.css");
+
+/* Measured in a real browser at 344, 375, 412 and 430 CSS pixels, which covers
+   a folded Galaxy Flip, an iPhone mini, an S26 Ultra and an iPhone Pro Max.
+   Before this pass, 344px had eight task controls at 27.8px and the week
+   column at 26px. After it, no control under 32px at any phone width, and no
+   horizontal page scroll at any of them. */
+
+/* THE SHRINK.
+   Eight controls at 34px with seven 8px gaps needs 328px; the card is about
+   294px on the narrowest phone. Flex's default shrink silently took every
+   button under the size the phone pass exists to guarantee - the rule said 34
+   and the browser drew 27.8, which is exactly the kind of gap a source read
+   never catches. */
+check(/\.t \.ops\{[^}]*flex-wrap:wrap/.test(css),
+      "the task controls wrap onto a second row instead of shrinking");
+check(/\.op\{[^}]*flex:none/.test(css),
+      "and flex:none stops the browser overriding their size");
+
+/* Two controls sat 2px under the 32 the same block sets everywhere else, and
+   one of them lost a cascade fight: a later rule in the file redefined
+   .catdot at 30px, so raising it earlier in the sheet did nothing. */
+check(/\.go\{min-height:32px\}/.test(css), "the add-countdown button reaches 32px");
+check(/\.catdot\{width:32px;height:32px\}/.test(css),
+      "and the colour swatch does too, in the rule that actually wins");
+check(!/\.catdot\{width:30px;height:30px\}/.test(css),
+      "with the losing 30px rule gone rather than left to fight it");
+
+/* The week column was the last one under 32. Eight columns share the width, so
+   the cost of widening it is under a pixel per day cell. */
+check(/\.wg \.wk\{[^}]*min-width:32px/.test(css),
+      "the week-number column is wide enough to hit on a phone");
+
+/* TABLETS.
+   The phone pass is keyed to max-width:640px, so a tablet in portrait got
+   desktop density with a finger driving it: year arrows at 24px, colour
+   swatches at 18px. Keyed to the INPUT DEVICE rather than to a width. */
+check(/@media \(hover:none\) and \(min-width:641px\)/.test(css),
+      "a touch device wider than a phone still gets touch-sized controls");
+{
+  const block = css.slice(css.indexOf("@media (hover:none) and (min-width:641px)"));
+  check(/\.nub,\.iso,\.fold,\.yarr/.test(block),
+        "covering the arrows and folds that were 24px");
+  check(!/flex-direction:column|order:\d/.test(block.slice(0, 400)),
+        "and sizes only: a tablet has room for the desktop layout and keeps it");
+}
+
+/* Left alone on purpose, so nobody 'fixes' them later without knowing why. */
+check(/growing one cell shrinks six others/.test(css),
+      "the calendar grid is documented as a deliberate density tradeoff");
 }
 
 let docFail = 0;
