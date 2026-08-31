@@ -229,6 +229,38 @@ line(broken.length === 0,
   }
 }
 
+/* ---- 8b. years the calendar can reach but has no holidays for ------------- */
+/* CAP in app.js is 20, so the arrows reach twenty years either side of today.
+   A year outside the data renders as an ordinary month with no holidays at
+   all and nothing on screen to say why, which is the same silent failure as
+   every other fault in this file.
+
+   Reported rather than enforced: closing it needs a regeneration, not an edit,
+   and failing the build over it would only block work that has nothing to do
+   with holidays. */
+{
+  const now = new Date().getFullYear(), CAP = 20;
+  let lo = 9999, hi = 0;
+  for (const c in data){
+    const ys = Object.keys(data[c]).map(Number);
+    lo = Math.min(lo, Math.min.apply(null, ys));
+    hi = Math.max(hi, Math.max.apply(null, ys));
+  }
+  const wantLo = now - CAP, wantHi = now + CAP;
+  console.log("");
+  console.log("  Data covers " + lo + " to " + hi + ", " + (hi - lo + 1) + " years.");
+  console.log("  The calendar's arrows reach " + wantLo + " to " + wantHi + ".");
+  if (lo > wantLo || hi < wantHi){
+    const gaps = [];
+    if (lo > wantLo) gaps.push(wantLo + " to " + (lo - 1));
+    if (hi < wantHi) gaps.push((hi + 1) + " to " + wantHi);
+    console.log("  REACHABLE BUT EMPTY: " + gaps.join(", ") + ".");
+    console.log("  Regenerate to close it. extract-holidays.py now uses the same CAP.");
+  } else {
+    console.log("  Every reachable year has data.");
+  }
+}
+
 /* ---- 9. the classification watchlist (reported, not enforced) ------------- */
 {
   console.log("\n  Classification watchlist. These have subdivisions that observe");
