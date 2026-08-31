@@ -127,7 +127,90 @@ line(broken.length === 0,
        (bad.length ? "   " + [...new Set(bad.map(b=>b.split(":")[0]))].join(" ") : ""));
 }
 
-/* ---- 6. horizon coverage (reported, not enforced) ------------------------- */
+/* ---- 6. a fixed-date holiday must not vanish just because it is a weekend -- */
+/* This is the fault that hid Christmas Day in Spain. The upstream source
+   deleted the holiday outright in years when it fell on a Sunday and left
+   behind only a REGIONAL "Monday following X", which is hidden by default. So
+   a Spanish user opening 25 December 2033 saw an ordinary day.
+
+   The check: for every national holiday on a fixed date that appears in most
+   years, find the years it is absent. If every one of those absences lands on
+   a Saturday or Sunday, that is not a calendar quirk, that is the bug.
+
+   Two exemptions, both legitimate. A holiday that genuinely MOVES is fine, so
+   a national stand-in within two days clears it (Dutch King's Day really does
+   shift to the 26th when the 27th is a Sunday). And a day whose own name marks
+   it as an observance or a substitution is year-specific by definition. */
+{
+  const key = d => String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+  const EXEMPT = /observed|substitut/i;
+  const bad = [];
+  for (const c in data){
+    const years = Object.keys(data[c]).map(Number).sort((a,b)=>a-b);
+    if (years.length < 10) continue;
+    const seen = {};
+    for (const y of years) for (const k in data[c][String(y)]) if (data[c][String(y)][k][1] !== 1)
+      (seen[k] = seen[k] || { years:[], name:data[c][String(y)][k][0] }).years.push(y);
+
+    for (const k in seen){
+      if (EXEMPT.test(seen[k].name)) continue;
+      const present = new Set(seen[k].years);
+      const missing = years.filter(y => !present.has(y));
+      if (present.size < years.length * 0.6 || missing.length < 2) continue;
+      if (!missing.every(y => { const d = new Date(y, +k.slice(0,2)-1, +k.slice(2)).getDay();
+                                return d === 0 || d === 6; })) continue;
+
+      /* does a national stand-in exist within two days in EVERY missing year? */
+      let covered = 0;
+      for (const y of missing){
+        const base = new Date(y, +k.slice(0,2)-1, +k.slice(2));
+        for (let off = -2; off <= 2; off++){
+          if (!off) continue;
+          const d = new Date(base); d.setDate(d.getDate() + off);
+          const e = data[c][String(y)][key(d)];
+          if (e && e[1] !== 1 && e[0].indexOf(seen[k].name) >= 0){ covered++; break; }
+        }
+      }
+      if (covered < missing.length)
+        bad.push(c + " " + k.slice(0,2) + "-" + k.slice(2) + " " + seen[k].name +
+                 " (missing " + missing.length + "y)");
+    }
+  }
+  line(bad.length === 0,
+       "no fixed-date national holiday disappears on weekends" +
+       (bad.length ? "   " + bad.slice(0,6).join("; ") : ""));
+}
+
+/* ---- 7. the big countries keep the days they are known to have ------------ */
+/* Spot values, checked by hand against each country's official list. They are
+   here because every fault above was invisible until someone who knew the
+   answer looked. If a regeneration ever silently changes one of these, this is
+   what says so. */
+{
+  const EXPECT = [
+    ["GB","2025","0825","Late Summer Bank Holiday"],  /* the reported bug */
+    ["GB","2025","0421","Easter Monday"],
+    ["ES","2025","1012","National Day"],              /* dropped for being a Sunday */
+    ["ES","2033","1225","Christmas Day"],
+    ["AU","2025","0127","Australia Day"],             /* nationwide substitute */
+    ["US","2025","0619","Juneteenth National Independence Day"],
+    ["JP","2025","0505","Children's Day"],
+    ["DE","2025","1003","German Unity Day"],
+    ["FR","2025","0714","National Day"],
+    ["IT","2025","0425","Liberation Day"]
+  ];
+  const missed = [];
+  for (const [c, y, k, name] of EXPECT){
+    const e = data[c] && data[c][y] && data[c][y][k];
+    if (!e || e[1] === 1 || e[0].indexOf(name) < 0)
+      missed.push(c + " " + y + "-" + k + " " + name + (e ? " (flag " + e[1] + ")" : " (absent)"));
+  }
+  line(missed.length === 0,
+       EXPECT.length + " hand-checked days in the largest countries are national" +
+       (missed.length ? "   " + missed.join("; ") : ""));
+}
+
+/* ---- 8. horizon coverage (reported, not enforced) ------------------------- */
 /* Not a failure: the upstream source genuinely stops early for some countries,
    and inventing dates to fill the gap would be worse than showing none. */
 {
@@ -146,7 +229,7 @@ line(broken.length === 0,
   }
 }
 
-/* ---- 7. the classification watchlist (reported, not enforced) ------------- */
+/* ---- 9. the classification watchlist (reported, not enforced) ------------- */
 {
   console.log("\n  Classification watchlist. These have subdivisions that observe");
   console.log("  different days, so 'national' may be under-reporting. Check each");
