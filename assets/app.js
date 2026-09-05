@@ -454,6 +454,16 @@ function addTask(ds,text,status){
             order:lane(ds,status).length, ts:{todo:null,doing:null,done:null} };
   t.ts[status] = stamp();
   tasks.push(t); commit("tasks");
+  /* THE ONE NUMBER WORTH MORE THAN PAGE VIEWS: somebody actually used the
+     board. A visit that never gets here is a bounce however long it lasted,
+     and no amount of traffic means anything without this.
+
+     It carries the event name and nothing else - no task text, no id, no
+     count. See assets/stats.js: there is no identifier anywhere in the
+     payload, so this cannot say WHO added a task, only that one was added.
+     Wrapped because a counter must never be the thing that breaks adding a
+     task, and absent entirely under test, where there is no transport. */
+  try { if (window.imcStat) window.imcStat("task"); } catch (e){}
   return t;
 }
 function byId(id){ for (var i=0;i<tasks.length;i++) if (tasks[i].id === id) return tasks[i]; return null; }

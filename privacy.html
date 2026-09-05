@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google-site-verification" content="gRRv6fKWN6oDjRM4Cr7qIJGNQwQ-DdCstT81NpCegRU">
 <title>Privacy - inmycalendar</title>
-<meta name="description" content="What inmycalendar stores and what it never stores. No analytics, no advertising, no tracking cookies. Sign-in is optional, and you can delete your account yourself at any time.">
+<meta name="description" content="What inmycalendar stores and what it never stores. Page counts carry no identifier, no advertising, no tracking cookies. Sign-in is optional, and you can delete your account yourself at any time.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
 <div class="eyebrow">Short version: what you write stays in your browser unless you sign in</div>
 
 <h2>If you do not sign in</h2>
-<p>No account, no analytics, and nothing you type is collected. Your tasks, day notes, day colours, countdowns and settings are saved in this browser's local storage, on this device, and nothing you type is transmitted anywhere.</p>
+<p>No account, and nothing you type is collected. Your tasks, day notes, day colours, countdowns and settings are saved in this browser's local storage, on this device, and nothing you type is transmitted anywhere.</p>
 <p>Clearing your browser's site data, or using <strong>Delete everything</strong> in the footer, removes it permanently. If you are not signed in there is no copy elsewhere to restore from, so use <strong>Backup</strong> first if you might want it later.</p>
 
 <h2>Crash reports</h2>
@@ -61,8 +61,14 @@
 <h2>Fonts</h2>
 <p>Two typefaces load from Google Fonts, which means Google receives your IP address as part of that request, the same as on most sites using web fonts. Nothing about your tasks or notes is included.</p>
 
+<h2>Page counts</h2>
+<p>Pages are counted, so it is possible to tell which parts of the site are used and whether a change helped. This page used to say "no analytics", and that wording was changed when counting was added rather than left standing while it quietly stopped being true.</p>
+<p><strong>Nothing counted can identify you.</strong> There is no cookie, no stored identifier, no session and no fingerprint. Four things are recorded and no others: the page address without its query or fragment, the <em>host</em> of the site you followed a link from if it was not this one, your screen width rounded to one of four buckets, and whether a task was added. The text of a task is never sent, only that one was created.</p>
+<p>Because there is no identifier, two visits by you cannot be told apart from visits by two different people. That is a deliberate limitation, not an oversight: it means the counts cannot say how many people came or whether anyone came back, and it also means nothing here can follow you anywhere.</p>
+<p>If your browser sends <strong>Do Not Track</strong> or <strong>Global Privacy Control</strong>, nothing is counted at all.</p>
+
 <h2>Cookies and tracking</h2>
-<p>No tracking or advertising cookies are used, and crash reports are not tracking: they carry no stored identifier and cannot follow you between visits. Local storage is not a cookie and is not sent with network requests. If you sign in, a session token is stored in your browser so you stay signed in; it does nothing else.</p>
+<p>No tracking or advertising cookies are used. Neither the page counts nor the crash reports are tracking: both carry no stored identifier and cannot follow you between visits. Local storage is not a cookie and is not sent with network requests. If you sign in, a session token is stored in your browser so you stay signed in; it does nothing else.</p>
 
 <h2>If this changes</h2>
 <p>Advertising is planned for a later version. It would change what is collected, and this page will be updated before it goes live. Advertising will also require a consent banner for visitors in the EU and UK.</p>
@@ -78,5 +84,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/site.js?v=64"></script>
 <script src="assets/auth.js?v=64"></script>
+<script src="assets/stats.js?v=64"></script>
 </body>
 </html>

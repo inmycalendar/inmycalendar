@@ -3747,6 +3747,115 @@ console.log("\n=== C67. The SEO content lives on the pages that are for reading 
 }
 }
 
+console.log("\n=== C68. Counting, without breaking the promise on the privacy page ===");
+{
+const st = readFile("assets/stats.js");
+
+/* There was no measurement of any kind. Search Console shows what happens
+   inside Google and stops at the click; it cannot say whether anyone who
+   arrived ever used the board.
+
+   THE CONSTRAINT: privacy.html promised "no analytics". Breaking that quietly
+   to gain a dashboard would have been a bad trade, so this carries no
+   identifier at all and the page was rewritten to say what is actually done. */
+
+/* NO IDENTIFIER. This is the whole design, so it is checked hard - against the
+   CODE, with comments stripped first. The first version of this check failed on
+   the file's own prose explaining that there is no cookie and no session, which
+   is the same trap as measuring page words without removing comments. A grep
+   that cannot tell code from the paragraph describing it will always raise
+   false alarms in a codebase commented this heavily. */
+const stCode = st.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+["cookie", "localStorage", "sessionStorage", "randomUUID", "Math.random",
+ "userAgent", "canvas", "sessionId"].forEach(function (bad) {
+  check(stCode.indexOf(bad) < 0,
+        "stats.js has no " + bad + " in its code, so two visits cannot be linked");
+});
+check(!/\bid\s*:/.test(stCode), "and no id field is ever put in the payload");
+
+/* Only four things, named. A payload that grows silently is how a counter
+   becomes a tracker. */
+check(/path: cleanPath\(\), ev: String\(ev\)/.test(st.replace(/\s+/g, " ")) ||
+      /path:.*ev:.*ref:.*w:/.test(st.replace(/\s+/g, " ")),
+      "the payload is path, ev, ref and w, and nothing else");
+
+/* The hash is where an OAuth access token lands after a redirect. Sending the
+   URL whole would post a credential to a table. */
+check(/no query, no hash/i.test(st), "the path is sent without its query or fragment");
+check(/pathname/.test(st) && !/location\.href/.test(st),
+      "using pathname rather than the full URL, so no token can leak");
+
+/* A full referrer can carry someone else's search query or private path. */
+check(/a\.hostname/.test(st) && /never the full URL/i.test(st),
+      "only the referring host is kept, never the whole referrer");
+check(/a\.hostname === window\.location\.hostname/.test(st),
+      "and same-site referrers are dropped, since they measure our own navigation");
+
+/* Exact screen size is a fingerprinting signal and answers no question. */
+check(/widthBucket/.test(st) && /return 360/.test(st),
+      "screen width is bucketed, not recorded");
+
+/* Both opt-out signals. */
+check(/doNotTrack/.test(st) && /globalPrivacyControl/.test(st),
+      "Do Not Track and Global Privacy Control are both honoured");
+
+/* It must never be the thing that breaks the app. */
+check(/\["catch"\]\(function \(\) \{/.test(st), "a failed count is swallowed");
+check(/typeof fetch === "function"/.test(st),
+      "and with no transport it does nothing, which is why it is inert under test");
+
+/* THE EVENT WORTH MORE THAN VIEWS. */
+{
+  const app = readFile("assets/app.js");
+  check(/try \{ if \(window\.imcStat\) window\.imcStat\("task"\); \} catch \(e\)\{\}/.test(app),
+        "adding a task is counted, which is the only real activation signal");
+  const addTask = app.slice(app.indexOf("function addTask"), app.indexOf("function byId"));
+  check(!/text|task\.text/.test(addTask.split("imcStat")[1] || ""),
+        "and the task's text is never part of it");
+}
+
+/* THE PROMISE. privacy.html must not still claim something that stopped being
+   true, and the change must be stated rather than slipped in. */
+{
+  const p = readFile("privacy.html");
+  check(!/no analytics, and nothing you type/i.test(p),
+        "privacy.html no longer claims 'no analytics' while counting pages");
+  check(/used to say "no analytics"/.test(p),
+        "it says plainly that the wording changed, rather than quietly editing it");
+  check(/There is no cookie, no stored identifier, no session and no fingerprint/.test(p),
+        "and states exactly what cannot identify you");
+  check(/Do Not Track/.test(p) && /Global Privacy Control/.test(p),
+        "including the two opt-out signals");
+  check(!/no analytics, no advertising/i.test(p),
+        "and the meta description Google shows was corrected too");
+}
+
+/* THE TABLE. A column that does not exist cannot be filled in by accident. */
+{
+  const sql = readFile("supabase-hits-table.sql");
+  check(/create table if not exists public\.hits/.test(sql), "the table definition ships with the repo");
+  /* Only the CREATE TABLE body is searched, for the same reason as above: the
+     file's own comments explain that there is deliberately no session column,
+     and a naive search finds that sentence and calls it a session column. */
+  const body = sql.slice(sql.indexOf("create table"),
+                         sql.indexOf(");", sql.indexOf("create table")));
+  ["user_id", "session", "ip", "fingerprint", "uid"].forEach(function (col) {
+    check(!new RegExp("(^|\\s)" + col + "\\s", "m").test(body),
+          "the table has no " + col + " column to fill in later");
+  });
+  check(/enable row level security/.test(sql), "row level security is on");
+  check(/for insert/.test(sql) && !/for select/.test(sql),
+        "and the site may insert only: it cannot read, change or delete a count");
+}
+
+/* THE BOARD PAGE. The owner allowed a script tag and nothing else. */
+{
+  const home = readFile("index.html");
+  check(/stats\.js/.test(home), "the app page is counted too, or the funnel measures everything but the app");
+  check(!/homecopy|class="hero"/.test(home), "and gained nothing visible in the process");
+}
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
