@@ -3606,6 +3606,81 @@ check(fs.existsSync(path.join(ROOT, "week-number", "index.html")),
 }
 }
 
+console.log("\n=== C65. The monitor that cried wolf ===");
+{
+const wf = readFile(".github/workflows/uptime.yml");
+
+/* THE COMPLAINT: a "Run failed: uptime" email every day or two, for weeks.
+   Nothing was wrong with the site. Measured while investigating: 8 of 8
+   requests answered in about 1.0s, and both Supabase functions in 0.5s. Every
+   probe passed by hand.
+
+   The workflow ran every 30 minutes with ten probes and NO retry, so a single
+   timed-out request failed the whole run and sent an email. That is roughly
+   3,400 network requests a week; at 99.9% per-request reliability it produces
+   about three failures a week, which is exactly the observed rate.
+
+   A monitor that cries wolf is worse than no monitor: the one email that
+   matters arrives looking like the forty that did not. */
+
+check(/--retry 2/.test(wf), "probes retry at the curl level");
+check(/while \[ "\$attempt" -le 3 \]/.test(wf),
+      "and the whole probe is attempted three times before it is believed");
+check(/after 3 attempts/.test(wf),
+      "with the failure message saying so, rather than implying one bad request");
+
+/* Frequency. Four a day still catches sustained breakage within six hours,
+   which is the most a free in-repo canary is for. */
+{
+  const cron = (wf.match(/cron: "([^"]+)"/) || [])[1] || "";
+  check(cron !== "*/30 * * * *", "it no longer runs every 30 minutes");
+  check(/^\d+ \*\/6 \* \* \*$/.test(cron), "four times a day instead, got: " + cron);
+  check(!/^0 /.test(cron),
+        "and not on the hour, which is the slot GitHub queues and drops");
+}
+
+/* THE BUG THE RETRY WORK UNCOVERED.
+   curl's -w already prints 000 when it cannot connect, so the original
+   '|| echo "000"' appended a second one and the status became 000000. Against
+   a "= 200" test that is harmless. Against the delete-account check, which
+   compares to 401 and treats 000 as "no answer", it is not: a network blip
+   would have fallen through to ALARM and reported a SECURITY problem.
+
+   Found by running the extracted functions against an unreachable host, not by
+   reading them. */
+check(!/\|\| echo "000"\)/.test(wf),
+      "the double-000 status bug is gone");
+{
+  const norm = (wf.match(/tr -dc "0-9" \| tail -c 3/g) || []).length;
+  check(norm >= 2, "every captured status is normalised to three digits (" + norm + " places)");
+}
+check(/SKIP {2}delete-account did not answer at all/.test(wf),
+      "and no answer from delete-account is a network problem, not a security finding");
+check(/ALARM delete-account answered HTTP/.test(wf),
+      "while a genuinely wrong answer is still an alarm");
+
+/* The deploy window. Hostinger has taken well over half an hour, and a check
+   landing mid-deploy reports drift that is not drift. */
+{
+  const grace = (wf.match(/-lt (\d+)/g) || []).map(s => +s.replace("-lt ",""));
+  check(grace.length >= 2 && grace.every(g => g >= 2700),
+        "the deploy grace is at least 45 minutes everywhere it is used, got " + grace.join("/"));
+}
+
+/* The asset check fetches nineteen files, so it is the step most exposed to a
+   single unlucky request. */
+check(/passed on the second attempt; the first was a blip/.test(wf),
+      "the asset check is run twice before a failure is believed");
+
+/* The new pages have to be watched too, or a broken deploy of them is silent. */
+check(/week-number\//.test(wf), "the week-number pages are probed as well");
+
+/* And the file should say why it is quiet now, or someone will helpfully turn
+   the frequency back up. */
+check(/cries wolf/.test(wf),
+      "the reasoning is recorded, so the cadence is not innocently reverted");
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
