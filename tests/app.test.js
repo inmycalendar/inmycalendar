@@ -715,8 +715,25 @@ console.log("\n=== C13. Copy and titles ===");
 PAGES.forEach(pg => check(!/\u2014|\u2013|&mdash;|&ndash;/.test(readFile(pg)),
   pg + " uses plain hyphens, no em dashes"));
 const ih3 = readFile("index.html");
-check(/<title>inmycalendar - Kanban board \+ year calendar<\/title>/.test(ih3),
-      "the tab title names Kanban and survives truncation");
+/* This used to pin the exact string, so every wording change failed a test
+   that had no opinion about the wording. What actually matters is checked
+   instead: the searchable words come FIRST and the brand goes last.
+
+   The old title was "inmycalendar - Kanban board + year calendar". Nobody
+   searches for "inmycalendar", so leading with it spent the most valuable
+   words in the title on a term with no demand. Right way round until the
+   brand is worth searching for. */
+{
+  const t = (ih3.match(/<title>([^<]*)<\/title>/) || [])[1] || "";
+  check(/Kanban/i.test(t) && /calendar/i.test(t),
+        "the tab title names Kanban and calendar, which is what people search");
+  check(t.length <= 62,
+        "and is short enough to survive truncation in a search result (" + t.length + " chars)");
+  check(!/^inmycalendar/i.test(t),
+        "it does not open with the brand name, which nobody is searching for yet");
+  check(/inmycalendar\s*$/i.test(t),
+        "the brand is still there, at the end where it costs nothing");
+}
 check(/og:title[^>]*Kanban board and your whole year/.test(ih3),
       "the share title is fuller, since social previews have room");
 check(/holidays built in/.test(ih3), "the description names the real benefits");
