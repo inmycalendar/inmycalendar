@@ -235,6 +235,7 @@ ${yearNav(code, year, years)}
 
 <div class="card">
   <p style="margin:0"><strong>See ${year} on a calendar.</strong> <a href="../index.html#calendar/${code}">Open the ${esc(name)} calendar</a> to see these marked on a year-at-a-glance grid next to your own leave, travel and deadlines. Free, no sign-up.</p>
+  <p style="margin:6px 0 0">Planning around a reporting week rather than a month? <a href="../week-number/${year}.html">Week numbers for ${year}</a> lists every week with its dates.</p>
 </div>
 
 <h2>Public holiday dates in ${esc(name)}, ${year}</h2>
@@ -272,6 +273,7 @@ ${yearNav(code, hubYear, years)}
 
 <div class="card">
   <p style="margin:0"><strong>See them on a calendar.</strong> <a href="../index.html#calendar/${code}">Open the ${esc(name)} calendar</a> to plan leave, travel and deadlines around them on a year-at-a-glance grid. Free, no sign-up.</p>
+  <p style="margin:6px 0 0">Working to week numbers rather than months? <a href="../week-number/">See the current week number</a>, in both the ISO and US systems.</p>
 </div>
 
 <h2>Public holidays in ${esc(name)}, ${hubYear}</h2>
