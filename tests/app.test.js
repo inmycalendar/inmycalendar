@@ -233,14 +233,8 @@ check(fs.existsSync(path.join(ROOT,"assets/app.js")) && !/<style>|<script>[^<]/.
 check(!/\.pagebody[^{]*\{[^}]*\}[\s\S]*\.sitenav a\.page\b/.test(siteCss) || true, "content wrapper and nav link no longer share a class name");
 check(/\.pagebody\{/.test(siteCss) && !/^\.page\{/m.test(siteCss),
       ".page now means only 'a nav link to a content page'");
-/* The point of this number was "no inline CSS or JS has crept back in", and
-   that is asserted directly at the top of this section by looking for <style>
-   and <script> rather than by inferring it from a byte count. The cap stayed on
-   as a second line of defence, then failed because readable copy was ADDED -
-   the opposite of what it exists to prevent. Raised, with the direct check left
-   doing the real work. */
-check(readFile("index.html").length < 30000,
-      "index.html is " + readFile("index.html").length + " bytes of markup, with no inline CSS or JS (was ~57000)");
+check(readFile("index.html").length < 20000,
+      "index.html is down to " + readFile("index.html").length + " bytes of readable markup (was ~57000)");
 check(fs.existsSync(path.join(ROOT,"package.json")) && fs.existsSync(path.join(ROOT,"README.md")),
       "package.json and README.md are in the repo");
 check(readFile(".gitignore").includes("node_modules"), ".gitignore keeps node_modules out of the repo");
@@ -715,25 +709,8 @@ console.log("\n=== C13. Copy and titles ===");
 PAGES.forEach(pg => check(!/\u2014|\u2013|&mdash;|&ndash;/.test(readFile(pg)),
   pg + " uses plain hyphens, no em dashes"));
 const ih3 = readFile("index.html");
-/* This used to pin the exact string, so every wording change failed a test
-   that had no opinion about the wording. What actually matters is checked
-   instead: the searchable words come FIRST and the brand goes last.
-
-   The old title was "inmycalendar - Kanban board + year calendar". Nobody
-   searches for "inmycalendar", so leading with it spent the most valuable
-   words in the title on a term with no demand. Right way round until the
-   brand is worth searching for. */
-{
-  const t = (ih3.match(/<title>([^<]*)<\/title>/) || [])[1] || "";
-  check(/Kanban/i.test(t) && /calendar/i.test(t),
-        "the tab title names Kanban and calendar, which is what people search");
-  check(t.length <= 62,
-        "and is short enough to survive truncation in a search result (" + t.length + " chars)");
-  check(!/^inmycalendar/i.test(t),
-        "it does not open with the brand name, which nobody is searching for yet");
-  check(/inmycalendar\s*$/i.test(t),
-        "the brand is still there, at the end where it costs nothing");
-}
+check(/<title>inmycalendar - Kanban board \+ year calendar<\/title>/.test(ih3),
+      "the tab title names Kanban and survives truncation");
 check(/og:title[^>]*Kanban board and your whole year/.test(ih3),
       "the share title is fuller, since social previews have room");
 check(/holidays built in/.test(ih3), "the description names the real benefits");
@@ -953,18 +930,8 @@ PAGES.forEach(pg => {
                    dd.querySelector('label[for="' + f.id + '"]') || f.closest("label")));
   check(unlabelled.length === 0, pg + " has no unlabelled form fields");
 });
-/* THIS CHECK USED TO REQUIRE THE OPPOSITE, and justified it with "the layout
-   has no room for a visible one". The layout did have room. The headline is
-   two lines, 52px tall on desktop and 62px on a phone, and the board columns
-   still start at 133px - above the fold at every size tested.
-
-   What the hidden h1 cost was the whole page. A crawler saw 264 readable words
-   under no visible heading, and a site: search returned nothing at all. The
-   trade was made to protect the fold, and it protected 62 pixels of it. */
-check(!/class="sronly">inmycalendar - a Kanban board/.test(readFile("index.html")),
-      "the app page's h1 is no longer hidden from everyone except screen readers");
-check(/<h1>Plan today\. See the whole year\.<\/h1>/.test(readFile("index.html")),
-      "and it is a visible headline that says what the tool is for");
+check(/class="sronly">inmycalendar - a Kanban board/.test(readFile("index.html")),
+      "the app page has a visually-hidden h1 - Google needs one, the layout has no room for a visible one");
 check(/\.sronly\{position:absolute/.test(siteCss.replace(/\s*\n\s*/g,"")), "and the sronly helper exists");
 
 console.log("\n=== C23. Sign-in failure explains itself ===");
@@ -3712,64 +3679,6 @@ check(/week-number\//.test(wf), "the week-number pages are probed as well");
    the frequency back up. */
 check(/cries wolf/.test(wf),
       "the reasoning is recorded, so the cadence is not innocently reverted");
-}
-
-console.log("\n=== C66. A homepage a search engine can read ===");
-{
-const html = readFile("index.html");
-const css  = readFile("assets/app.css");
-
-/* The h1 was class="sronly" - present for a screen reader, invisible to
-   everyone else. A crawler saw 620 words, almost all of it interface labels,
-   under no readable heading. Nothing was indexed, and that is most of why. */
-check(!/<h1 class="sronly"/.test(html), "the headline is no longer hidden from everyone but screen readers");
-check(/<h1>Plan today\. See the whole year\.<\/h1>/.test(html),
-      "it leads with the benefit rather than with a description of the software");
-check(/Kanban board and a three-year calendar/.test(html),
-      "and Kanban stays in the line underneath, which is the word people search");
-
-/* THE CONSTRAINT NEITHER PIECE OF ADVICE ACCOUNTED FOR: this page IS the app.
-   A full-height marketing hero would push the board below the fold, which is
-   the same fault already fixed on the calendar. Measured: the hero is 52px on
-   desktop and 62px on a phone, and the columns still start at 133px. */
-{
-  const hero = css.slice(css.indexOf(".hero{"), css.indexOf(".homecopy{"));
-  check(!/min-height:\s*\d+vh/.test(hero) && !/height:\s*100vh/.test(hero),
-        "the hero is not a full-height banner covering the tool");
-  check(/clamp\(19px,3\.4vw,26px\)/.test(hero),
-        "the headline scales with the screen instead of shouting on a phone");
-}
-
-/* Real prose, and below the app so a visitor who came for the tool gets the
-   tool. A crawler reads the whole document either way. */
-{
-  const i = html.indexOf('<section class="homecopy">');
-  const board = html.indexOf('id="boardView"');
-  check(i > 0, "there is a block of readable copy");
-  check(i > board, "and it sits BELOW the app, not in front of it");
-  const words = html.slice(i).replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
-  check(words > 350, "carrying real prose rather than a keyword list (" + words + " words)");
-  /* Comments stripped FIRST. Measuring without doing that counts this repo's
-     own very extensive source comments as page content, which is what inflated
-     the "before" figure to 620 when the honest number was 264. Google reads
-     neither the comments nor the tags. */
-  const total = html.replace(/<!--[\s\S]*?-->/g, "")
-                    .replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
-  check(total > 600, "the page went from 264 readable words to " + total);
-}
-
-/* Internal links are how a crawler finds the rest of the site, and the week
-   pages are the ones with a chance of ranking. */
-["week-number/", "holidays/index.html", "guide.html"].forEach(function(href){
-  check(new RegExp('href="' + href.replace(/\//g, "\/") + '"').test(html),
-        "the copy links to " + href);
-});
-
-/* The claims have to be true, or the page is worse than empty. */
-check(/247 countries/.test(html), "the country count matches the data");
-check(/four numbering rules across all seven\s+week starts/.test(html.replace(/\s+/g, " ")) ||
-      /four numbering rules across all seven week starts/.test(html.replace(/\s+/g, " ")),
-      "and the week-rule claim matches what the app actually implements");
 }
 
 let docFail = 0;

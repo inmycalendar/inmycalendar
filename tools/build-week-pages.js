@@ -31,7 +31,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "week-number");
-const V    = "63";                    /* keep in step with the other pages */
+const V    = "64";                    /* keep in step with the other pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 2, THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3];
