@@ -3856,6 +3856,32 @@ check(/typeof fetch === "function"/.test(st),
 }
 }
 
+console.log("\n=== C69. The setup script raises no destructive-operation warning ===");
+{
+const sql = readFile("supabase-hits-table.sql");
+/* The first version used the usual "drop policy if exists, then create"
+   idiom to stay re-runnable. It works, and it made the Supabase editor warn
+   "this query includes destructive operations" on a first-time setup script.
+
+   The problem is not the dialog. It is that a setup script which trips the
+   warning teaches whoever runs it to click through that warning without
+   reading it, and the next script they paste might deserve it. */
+const live = sql.replace(/--.*$/gm, "");
+["drop", "delete", "truncate"].forEach(function (word) {
+  check(!new RegExp("\b" + word + "\b", "i").test(live),
+        "no " + word.toUpperCase() + " outside a comment, so the warning never fires");
+});
+/* The DELETE for housekeeping is offered, but commented, so pasting the file
+   never removes anything. */
+check(/--\s+delete from public\.hits/.test(sql),
+      "the housekeeping DELETE is there to copy, and commented so it cannot run by accident");
+/* Still re-runnable, which is what the DROP was for in the first place. */
+check(/create table if not exists/.test(sql) && /create index if not exists/.test(sql),
+      "the table and indexes are still created only if missing");
+check(/select 1 from pg_policies/.test(sql) && /if not exists \(/.test(sql),
+      "and the policy is guarded by an existence check rather than by dropping it");
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],

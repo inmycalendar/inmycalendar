@@ -32,11 +32,26 @@ alter table public.hits enable row level security;
 -- cannot change a row and cannot delete one. Anyone who lifts the anon key out
 -- of the page source gets the ability to inflate a counter, which is the least
 -- interesting thing they could possibly have.
-drop policy if exists "anon may count" on public.hits;
-create policy "anon may count"
-  on public.hits for insert
-  to anon, authenticated
-  with check (true);
+-- Postgres has no "create policy if not exists", and the usual workaround is to
+-- DROP the policy first. That works, and it makes the Supabase editor raise
+-- "this query includes destructive operations" on what is a first-time setup
+-- script - which teaches whoever runs it to click through that warning without
+-- reading it. The warning is worth more than the convenience, so the existence
+-- check is done properly instead and nothing is ever dropped.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename  = 'hits'
+      and policyname = 'anon may count'
+  ) then
+    create policy "anon may count"
+      on public.hits for insert
+      to anon, authenticated
+      with check (true);
+  end if;
+end $$;
 
 -- No select policy is created ON PURPOSE. With RLS on and no policy, reads
 -- return zero rows to the site, and you still read everything from the
