@@ -149,6 +149,7 @@ ${body}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/site.js?v=${V}"></script>
 <script src="../assets/auth.js?v=${V}"></script>
+<script src="../assets/stats.js?v=${V}"></script>
 </body>
 </html>
 `;
