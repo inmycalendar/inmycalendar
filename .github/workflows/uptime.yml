@@ -7,13 +7,29 @@
 # an hour ago is not actually live. Comparing the build tag on the live page
 # against the one in this repository is what catches that.
 #
+# WHY IT USED TO EMAIL EVERY DAY OR TWO
+# The first version ran every 30 minutes with ten probes and no retry at all.
+# That is roughly 3,400 network requests a week, and a single one timing out
+# failed the whole run and sent a "Run failed" email. Measured while
+# investigating: the site answered 8 out of 8 in about 1.0s and the Supabase
+# functions in 0.5s, so nothing was actually wrong. The check was reporting the
+# health of the runner's network path to Hostinger, not the health of the site.
+#
+# A monitor that cries wolf teaches you to ignore it, which is worse than
+# having no monitor: the one email that matters arrives looking exactly like
+# the forty that did not. So:
+#   - every probe retries before it is believed
+#   - four runs a day instead of forty-eight
+#   - a wider deploy window, because Hostinger is not always quick
+#
 # WHAT THIS IS NOT
 # GitHub's scheduler is not a real uptime monitor. It drifts under load, has a
 # five-minute floor, and switches itself off after 60 days without a commit. It
 # will not catch a two-minute outage and it will not page you at 3am. It is a
 # free, in-repo canary that catches sustained breakage and failed deploys. If
 # uptime ever matters commercially, put UptimeRobot or similar in front of it -
-# they poll every minute from several regions and actually notify.
+# the free tier polls every five minutes from several regions and actually
+# notifies.
 #
 # HOW YOU FIND OUT
 # The job fails, and GitHub emails the repository owner on a failed run.
@@ -22,7 +38,10 @@ name: uptime
 
 on:
   schedule:
-    - cron: "*/30 * * * *"    # every 30 minutes
+    # Four times a day, at 17 past. NOT on the hour: GitHub queues scheduled
+    # runs and the busiest slots are :00, so an on-the-hour job can be delayed
+    # by many minutes or dropped entirely.
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -42,25 +61,45 @@ jobs:
           set -u
           fail=0
 
+          # THREE ATTEMPTS, and only a total failure counts. A transient blip
+          # between an Azure runner and a shared host in another continent is
+          # not an outage, and treating it as one is what filled an inbox.
           probe () {          # probe <url> <expected-substring> <description>
             url="$1"; expect="$2"; what="$3"
-            code=$(curl -sS -L --max-time 25 -o body.tmp -w "%{http_code}" "$url" || echo "000")
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+              # curl's -w already prints 000 when it cannot connect, so the
+              # old '|| echo "000"' appended a SECOND one and the value became
+              # 000000. Harmless against a "= 200" test and NOT harmless in the
+              # API step below, where a status is compared against 401.
+              # Normalised to three digits in both places.
+              code=$(curl -sS -L --max-time 25 --retry 2 --retry-delay 2 --retry-all-errors \
+                       -o body.tmp -w "%{http_code}" "$url" 2>/dev/null || true)
+              code=$(printf "%s" "$code" | tr -dc "0-9" | tail -c 3)
+              [ -z "$code" ] && code="000"
+              if [ "$code" = "200" ] && grep -qF "$expect" body.tmp; then
+                [ "$attempt" -gt 1 ] && echo "ok    $what (on attempt $attempt)" \
+                                     || echo "ok    $what"
+                rm -f body.tmp
+                return 0
+              fi
+              attempt=$(( attempt + 1 ))
+              [ "$attempt" -le 3 ] && sleep 5
+            done
             if [ "$code" != "200" ]; then
-              echo "DOWN  $what -> HTTP $code  ($url)"
-              fail=1
-            elif ! grep -qF "$expect" body.tmp; then
-              echo "WRONG $what -> HTTP 200 but the page did not contain: $expect"
-              fail=1
+              echo "DOWN  $what -> HTTP $code after 3 attempts  ($url)"
             else
-              echo "ok    $what"
+              echo "WRONG $what -> HTTP 200 three times, but the page never contained: $expect"
             fi
             rm -f body.tmp
+            fail=1
           }
 
           probe "https://inmycalendar.com/"                  "scopeHost"     "the app"
           probe "https://inmycalendar.com/guide.html"         "<h1"           "the guide"
           probe "https://inmycalendar.com/holidays/index.html" "Holidays"     "the holiday index"
           probe "https://inmycalendar.com/holidays/IN-2027.html" "2027"       "a country-year page"
+          probe "https://inmycalendar.com/week-number/"       "What week is it" "the week-number hub"
           probe "https://inmycalendar.com/sitemap.xml"        "<urlset"       "the sitemap"
           probe "https://inmycalendar.com/manifest.webmanifest" "short_name"  "the web app manifest"
           probe "https://inmycalendar.com/robots.txt"         "Sitemap"       "robots.txt"
@@ -73,9 +112,27 @@ jobs:
           fail=0
           BASE="https://zkedkgzguhrrnsvetinl.supabase.co"
 
+          # Same rule as above: retried before it is believed. An edge function
+          # that has gone cold can take a few seconds on its first call.
+          try () {            # try <curl args...> -> echoes the final status code
+            code="000"
+            for attempt in 1 2 3; do
+              code=$(curl -sS --max-time 30 --retry 2 --retry-delay 2 --retry-all-errors \
+                       -o /dev/null -w "%{http_code}" "$@" 2>/dev/null || true)
+              # Three digits, always. The delete-account check below compares
+              # against 401 and treats 000 as "no answer" rather than as a
+              # security finding, so a malformed status there would raise a
+              # false alarm about the most serious check in this file.
+              code=$(printf "%s" "$code" | tr -dc "0-9" | tail -c 3)
+              [ -z "$code" ] && code="000"
+              case "$code" in 000|5*) sleep 5 ;; *) break ;; esac
+            done
+            echo "$code"
+          }
+
           # The REST root. 200 or 401 both prove PostgREST is alive; only a
           # timeout or a 5xx means the database is actually unreachable.
-          code=$(curl -sS --max-time 25 -o /dev/null -w "%{http_code}" "$BASE/rest/v1/" || echo "000")
+          code=$(try "$BASE/rest/v1/")
           case "$code" in
             2*|401|404) echo "ok    the database is answering (HTTP $code)" ;;
             *)          echo "DOWN  the database -> HTTP $code"; fail=1 ;;
@@ -83,19 +140,25 @@ jobs:
 
           # A dry run sends nothing and needs no secret, so it is a safe probe
           # that the email path still works end to end.
-          code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
-                   -X POST "$BASE/functions/v1/send-emails?dry=1" || echo "000")
+          code=$(try -X POST "$BASE/functions/v1/send-emails?dry=1")
           if [ "$code" = "200" ]; then echo "ok    send-emails answers"
           else echo "DOWN  send-emails -> HTTP $code"; fail=1; fi
 
           # Deleting an account must refuse an unauthenticated caller. This is
           # a live check of the security property, not just of availability:
           # anything other than 401 here is a serious problem.
-          code=$(curl -sS --max-time 30 -o /dev/null -w "%{http_code}" \
-                   -X POST "$BASE/functions/v1/delete-account" \
-                   -H "Content-Type: application/json" -d '{"confirm":"DELETE"}' || echo "000")
+          #
+          # Deliberately NOT retried into silence. A 401 is the answer we want
+          # and it arrives first time; retrying only guards against a blip
+          # producing a 000, never against a genuinely wrong answer.
+          code=$(try -X POST "$BASE/functions/v1/delete-account" \
+                   -H "Content-Type: application/json" -d '{"confirm":"DELETE"}')
           if [ "$code" = "401" ]; then
             echo "ok    delete-account refuses an unauthenticated caller (401)"
+          elif [ "$code" = "000" ]; then
+            echo "SKIP  delete-account did not answer at all after 3 attempts."
+            echo "      Treating as a network problem rather than a security"
+            echo "      finding: no answer is not the same as a wrong answer."
           else
             echo "ALARM delete-account answered HTTP $code to an unauthenticated"
             echo "      delete request. It must answer 401. Investigate now."
@@ -109,8 +172,14 @@ jobs:
           set -u
           # The build tag is bumped on every release, so it identifies the
           # version actually being served.
-          live=$(curl -sS -L --max-time 25 "https://inmycalendar.com/" \
-                   | grep -o 'assets/app\.js?v=[0-9]*' | head -1 | grep -o '[0-9]*$' || true)
+          live=""
+          for attempt in 1 2 3; do
+            live=$(curl -sS -L --max-time 25 --retry 2 --retry-delay 2 --retry-all-errors \
+                     "https://inmycalendar.com/" \
+                     | grep -o 'assets/app\.js?v=[0-9]*' | head -1 | grep -o '[0-9]*$' || true)
+            [ -n "$live" ] && break
+            sleep 5
+          done
           repo=$(grep -o 'assets/app\.js?v=[0-9]*' index.html | head -1 | grep -o '[0-9]*$' || true)
 
           echo "live build tag: ${live:-unknown}"
@@ -121,6 +190,10 @@ jobs:
           # drift that is not drift. That produced a red run and a "Run failed"
           # email for a deploy that was simply still in progress, which is the
           # fastest way to teach someone to ignore these emails.
+          #
+          # 45 minutes, not 20. Hostinger has taken well over half an hour, and
+          # with only four runs a day a genuinely failed deploy is still caught
+          # within six hours, which is soon enough for a free canary.
           age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
           echo "last commit was ${age}s ago"
 
@@ -128,11 +201,11 @@ jobs:
             echo "Could not read a build tag from one of them - check the markup."
             echo "deploy_fail=1" >> "$GITHUB_ENV"
           elif [ "$live" != "$repo" ]; then
-            if [ "$age" -lt 1200 ]; then
+            if [ "$age" -lt 2700 ]; then
               echo "The live site is serving v$live but main is at v$repo."
               echo "main changed ${age}s ago, so the deploy is probably still"
-              echo "running. Not treating this as a failure; the next run in"
-              echo "30 minutes will catch it if it really did not deploy."
+              echo "running. Not treating this as a failure; the next run will"
+              echo "catch it if it really did not deploy."
               echo "deploy_fail=0" >> "$GITHUB_ENV"
             else
               echo "The live site is serving v$live but main is at v$repo,"
@@ -155,9 +228,16 @@ jobs:
           # host re-encodes them, and a hash comparison reports every image as
           # stale for ever.
           age=$(( $(date +%s) - $(git log -1 --format=%ct) ))
+
+          # Run it twice before believing a failure, for the same reason every
+          # probe above retries: this fetches nineteen files, so it is the step
+          # most exposed to a single unlucky request.
           if node .github/scripts/check-assets.js; then
             echo "asset_fail=0" >> "$GITHUB_ENV"
-          elif [ "$age" -lt 1200 ]; then
+          elif sleep 15 && node .github/scripts/check-assets.js; then
+            echo "ok    passed on the second attempt; the first was a blip"
+            echo "asset_fail=0" >> "$GITHUB_ENV"
+          elif [ "$age" -lt 2700 ]; then
             # Same deploy window as the build-tag check above: for the few
             # minutes Hostinger takes to pull, the committed files legitimately
             # differ from the served ones. Reporting that is crying wolf.
@@ -175,5 +255,10 @@ jobs:
           [ "${api_fail:-0}"    = "1" ] && { echo "- the database or a function has a problem";  bad=1; }
           [ "${deploy_fail:-0}" = "1" ] && { echo "- the deployed version is not main";          bad=1; }
           [ "${asset_fail:-0}"  = "1" ] && { echo "- an asset on the server differs from main";  bad=1; }
-          if [ "$bad" = "1" ]; then exit 1; fi
+          if [ "$bad" = "1" ]; then
+            echo ""
+            echo "Every check above was retried before being believed, so this"
+            echo "is not a single unlucky request. Something is actually wrong."
+            exit 1
+          fi
           echo "Everything answered, and the live site matches main byte for byte."
