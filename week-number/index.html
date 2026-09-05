@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What week is it? Current week number - inmycalendar</title>
+<meta name="description" content="The current week number under both the ISO 8601 and US systems, with every week of 2026 and its dates. Four week-numbering rules and seven week starts, explained.">
+<meta property="og:title" content="What week is it? Current week number">
+<meta property="og:description" content="The current week number under both the ISO 8601 and US systems, with every week of 2026 and its dates. Four week-numbering rules and seven week starts, explained.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://inmycalendar.com/week-number/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="../assets/favicon.ico?v=62" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=62">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=62">
+<link rel="manifest" href="../manifest.webmanifest?v=62">
+<meta name="theme-color" content="#18181b">
+<link rel="canonical" href="https://inmycalendar.com/week-number/">
+<link rel="stylesheet" href="../assets/site.css?v=62">
+<style>
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:420px}
+th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--rule)}
+thead th{font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--soft);font-weight:500;background:var(--card2)}
+tbody tr:last-child td{border-bottom:none}
+td.n{font-family:var(--mono);font-weight:700}
+tr.nowrow{background:var(--accentBg)}
+tr.nowrow td{font-weight:600}
+.yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
+  border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
+.yearnav a:hover{background:var(--accentBg)}
+.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
+.answer{border:1px solid var(--rule);border-left:3px solid var(--accent);background:var(--card);
+  border-radius:var(--r);padding:14px 16px;margin:0 0 20px}
+.answer .big{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1.15;display:block;margin-bottom:4px}
+.answer .sub{color:var(--soft);font-size:13px}
+.cols{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 18px}
+.cols>div{flex:1 1 240px;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);padding:12px 14px}
+.cols h3{margin:0 0 6px;font-size:13px}
+.cols p{margin:0;font-size:13px;color:var(--soft)}</style>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "FAQPage",
+ "mainEntity": [
+  {
+   "@type": "Question",
+   "name": "What week number is it now?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "It depends which system you use. ISO 8601 starts weeks on Monday and gives week 1 to the first week with four or more days in the new year. The US convention starts weeks on Sunday and gives week 1 to the week containing 1 January. The two can differ by a full week for the same date."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "Why is ISO week 1 the week containing the first Thursday?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "Thursday is the fourth day of a Monday-start week, so the week containing the first Thursday is the same as the first week with four or more of its days in the new year. The two phrasings only match for a Monday start; the fourth day of a Sunday-start week is Wednesday."
+   }
+  },
+  {
+   "@type": "Question",
+   "name": "How many weeks are in a year?",
+   "acceptedAnswer": {
+    "@type": "Answer",
+    "text": "52 in most years and 53 in some, depending on the rule and on which day your week starts. The week containing 1 January rule produces a 53rd week far more often than the ISO rule does."
+   }
+  }
+ ]
+}
+</script>
+</head>
+<body>
+<header class="bar">
+ <div class="wrap">
+  <a class="brand" href="../index.html"><svg width="22" height="22" viewBox="0 0 128 128" aria-hidden="true"><rect x="39" y="12" width="7" height="18" rx="3.5" fill="#3f3f46"/><rect x="82" y="12" width="7" height="18" rx="3.5" fill="#3f3f46"/><rect x="10" y="22" width="108" height="94" rx="16" fill="#fff" stroke="#18181b" stroke-width="6"/><path d="M13 40 A13 13 0 0 1 26 25 H102 A13 13 0 0 1 115 40 V44 H13 Z" fill="#18181b"/><text x="64" y="98" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="700" font-size="58" fill="#18181b">imc</text></svg><span class="wordmark">in<b>my</b>calendar</span></a>
+  <div class="appzone"></div>
+  <nav class="sitenav">
+    <a href="../index.html#board"><span class="navlong">Kanban Board</span><span class="navshort">Board</span></a>
+    <a href="../index.html#calendar">Calendar</a>
+    <span class="gap"></span>
+    <a class="page" href="../about.html">About</a><a class="page" href="../guide.html">Guide</a><a class="page" href="../holidays/index.html">Holidays</a><a class="page" href="../contact.html">Contact</a><a class="page" href="../privacy.html">Privacy</a>
+  </nav>
+  <span class="authslot hidden" id="authSlot"></span>
+ </div>
+</header>
+
+<main class="wrap pagebody"><div class="body">
+<h1>What week is it?</h1>
+<div class="answer">
+  <span class="big" id="nowWeek">Week 2026-W__</span>
+  <span class="sub" id="nowSub">Loading today's date. The full table below is correct either way.</span>
+</div>
+<p>Two answers are possible for the same day, because two systems are in common use. Both are in the table below, side by side, for every week of 2026.</p>
+<div class="yearnav"><a href="2024.html">2024</a><a href="2025.html">2025</a><a href="2026.html">2026</a><a href="2027.html">2027</a><a href="2028.html">2028</a><a href="2029.html">2029</a><span class="on">Now</span></div>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Week</th><th>ISO 8601 (Monday start)</th><th>US (Sunday start)</th></tr></thead>
+  <tbody>
+    <tr data-iso-start="2025-12-29"><td class="n">1</td><td>29 Dec to 4 Jan</td><td>28 Dec to 3 Jan</td></tr>
+    <tr data-iso-start="2026-01-05"><td class="n">2</td><td>5 Jan to 11 Jan</td><td>4 Jan to 10 Jan</td></tr>
+    <tr data-iso-start="2026-01-12"><td class="n">3</td><td>12 Jan to 18 Jan</td><td>11 Jan to 17 Jan</td></tr>
+    <tr data-iso-start="2026-01-19"><td class="n">4</td><td>19 Jan to 25 Jan</td><td>18 Jan to 24 Jan</td></tr>
+    <tr data-iso-start="2026-01-26"><td class="n">5</td><td>26 Jan to 1 Feb</td><td>25 Jan to 31 Jan</td></tr>
+    <tr data-iso-start="2026-02-02"><td class="n">6</td><td>2 Feb to 8 Feb</td><td>1 Feb to 7 Feb</td></tr>
+    <tr data-iso-start="2026-02-09"><td class="n">7</td><td>9 Feb to 15 Feb</td><td>8 Feb to 14 Feb</td></tr>
+    <tr data-iso-start="2026-02-16"><td class="n">8</td><td>16 Feb to 22 Feb</td><td>15 Feb to 21 Feb</td></tr>
+    <tr data-iso-start="2026-02-23"><td class="n">9</td><td>23 Feb to 1 Mar</td><td>22 Feb to 28 Feb</td></tr>
+    <tr data-iso-start="2026-03-02"><td class="n">10</td><td>2 Mar to 8 Mar</td><td>1 Mar to 7 Mar</td></tr>
+    <tr data-iso-start="2026-03-09"><td class="n">11</td><td>9 Mar to 15 Mar</td><td>8 Mar to 14 Mar</td></tr>
+    <tr data-iso-start="2026-03-16"><td class="n">12</td><td>16 Mar to 22 Mar</td><td>15 Mar to 21 Mar</td></tr>
+    <tr data-iso-start="2026-03-23"><td class="n">13</td><td>23 Mar to 29 Mar</td><td>22 Mar to 28 Mar</td></tr>
+    <tr data-iso-start="2026-03-30"><td class="n">14</td><td>30 Mar to 5 Apr</td><td>29 Mar to 4 Apr</td></tr>
+    <tr data-iso-start="2026-04-06"><td class="n">15</td><td>6 Apr to 12 Apr</td><td>5 Apr to 11 Apr</td></tr>
+    <tr data-iso-start="2026-04-13"><td class="n">16</td><td>13 Apr to 19 Apr</td><td>12 Apr to 18 Apr</td></tr>
+    <tr data-iso-start="2026-04-20"><td class="n">17</td><td>20 Apr to 26 Apr</td><td>19 Apr to 25 Apr</td></tr>
+    <tr data-iso-start="2026-04-27"><td class="n">18</td><td>27 Apr to 3 May</td><td>26 Apr to 2 May</td></tr>
+    <tr data-iso-start="2026-05-04"><td class="n">19</td><td>4 May to 10 May</td><td>3 May to 9 May</td></tr>
+    <tr data-iso-start="2026-05-11"><td class="n">20</td><td>11 May to 17 May</td><td>10 May to 16 May</td></tr>
+    <tr data-iso-start="2026-05-18"><td class="n">21</td><td>18 May to 24 May</td><td>17 May to 23 May</td></tr>
+    <tr data-iso-start="2026-05-25"><td class="n">22</td><td>25 May to 31 May</td><td>24 May to 30 May</td></tr>
+    <tr data-iso-start="2026-06-01"><td class="n">23</td><td>1 Jun to 7 Jun</td><td>31 May to 6 Jun</td></tr>
+    <tr data-iso-start="2026-06-08"><td class="n">24</td><td>8 Jun to 14 Jun</td><td>7 Jun to 13 Jun</td></tr>
+    <tr data-iso-start="2026-06-15"><td class="n">25</td><td>15 Jun to 21 Jun</td><td>14 Jun to 20 Jun</td></tr>
+    <tr data-iso-start="2026-06-22"><td class="n">26</td><td>22 Jun to 28 Jun</td><td>21 Jun to 27 Jun</td></tr>
+    <tr data-iso-start="2026-06-29"><td class="n">27</td><td>29 Jun to 5 Jul</td><td>28 Jun to 4 Jul</td></tr>
+    <tr data-iso-start="2026-07-06"><td class="n">28</td><td>6 Jul to 12 Jul</td><td>5 Jul to 11 Jul</td></tr>
+    <tr data-iso-start="2026-07-13"><td class="n">29</td><td>13 Jul to 19 Jul</td><td>12 Jul to 18 Jul</td></tr>
+    <tr data-iso-start="2026-07-20"><td class="n">30</td><td>20 Jul to 26 Jul</td><td>19 Jul to 25 Jul</td></tr>
+    <tr data-iso-start="2026-07-27"><td class="n">31</td><td>27 Jul to 2 Aug</td><td>26 Jul to 1 Aug</td></tr>
+    <tr data-iso-start="2026-08-03"><td class="n">32</td><td>3 Aug to 9 Aug</td><td>2 Aug to 8 Aug</td></tr>
+    <tr data-iso-start="2026-08-10"><td class="n">33</td><td>10 Aug to 16 Aug</td><td>9 Aug to 15 Aug</td></tr>
+    <tr data-iso-start="2026-08-17"><td class="n">34</td><td>17 Aug to 23 Aug</td><td>16 Aug to 22 Aug</td></tr>
+    <tr data-iso-start="2026-08-24"><td class="n">35</td><td>24 Aug to 30 Aug</td><td>23 Aug to 29 Aug</td></tr>
+    <tr data-iso-start="2026-08-31"><td class="n">36</td><td>31 Aug to 6 Sep</td><td>30 Aug to 5 Sep</td></tr>
+    <tr data-iso-start="2026-09-07"><td class="n">37</td><td>7 Sep to 13 Sep</td><td>6 Sep to 12 Sep</td></tr>
+    <tr data-iso-start="2026-09-14"><td class="n">38</td><td>14 Sep to 20 Sep</td><td>13 Sep to 19 Sep</td></tr>
+    <tr data-iso-start="2026-09-21"><td class="n">39</td><td>21 Sep to 27 Sep</td><td>20 Sep to 26 Sep</td></tr>
+    <tr data-iso-start="2026-09-28"><td class="n">40</td><td>28 Sep to 4 Oct</td><td>27 Sep to 3 Oct</td></tr>
+    <tr data-iso-start="2026-10-05"><td class="n">41</td><td>5 Oct to 11 Oct</td><td>4 Oct to 10 Oct</td></tr>
+    <tr data-iso-start="2026-10-12"><td class="n">42</td><td>12 Oct to 18 Oct</td><td>11 Oct to 17 Oct</td></tr>
+    <tr data-iso-start="2026-10-19"><td class="n">43</td><td>19 Oct to 25 Oct</td><td>18 Oct to 24 Oct</td></tr>
+    <tr data-iso-start="2026-10-26"><td class="n">44</td><td>26 Oct to 1 Nov</td><td>25 Oct to 31 Oct</td></tr>
+    <tr data-iso-start="2026-11-02"><td class="n">45</td><td>2 Nov to 8 Nov</td><td>1 Nov to 7 Nov</td></tr>
+    <tr data-iso-start="2026-11-09"><td class="n">46</td><td>9 Nov to 15 Nov</td><td>8 Nov to 14 Nov</td></tr>
+    <tr data-iso-start="2026-11-16"><td class="n">47</td><td>16 Nov to 22 Nov</td><td>15 Nov to 21 Nov</td></tr>
+    <tr data-iso-start="2026-11-23"><td class="n">48</td><td>23 Nov to 29 Nov</td><td>22 Nov to 28 Nov</td></tr>
+    <tr data-iso-start="2026-11-30"><td class="n">49</td><td>30 Nov to 6 Dec</td><td>29 Nov to 5 Dec</td></tr>
+    <tr data-iso-start="2026-12-07"><td class="n">50</td><td>7 Dec to 13 Dec</td><td>6 Dec to 12 Dec</td></tr>
+    <tr data-iso-start="2026-12-14"><td class="n">51</td><td>14 Dec to 20 Dec</td><td>13 Dec to 19 Dec</td></tr>
+    <tr data-iso-start="2026-12-21"><td class="n">52</td><td>21 Dec to 27 Dec</td><td>20 Dec to 26 Dec</td></tr>
+    <tr data-iso-start="2026-12-28"><td class="n">53</td><td>28 Dec to 3 Jan</td><td>-</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout"><p style="margin:0"><strong>See it on a calendar.</strong> <a href="../index.html#calendar">Open the week calendar</a> for three years of week rows side by side, with your own leave, travel and deadlines marked on them. Free, no sign-up.</p></div>
+<h2>Why two systems disagree</h2>
+<p>Everyone agrees a year has weeks. Nobody agrees which one is week 1, and that is where the two numbers come from.</p>
+<p><strong>ISO 8601</strong>, used across Europe and by most software, starts weeks on Monday and gives week 1 to the first week with four or more of its days in the new year. That is usually described as "the week containing the first Thursday", which is the same rule said differently: Thursday is the fourth day of a Monday-start week.</p>
+<p><strong>The US convention</strong> starts weeks on Sunday and gives week 1 to whatever week holds 1 January. It is easier to explain and it produces a 53rd week far more often.</p>
+<p>The two can differ by a full week for the same date, which is exactly the sort of thing that goes unnoticed until two reports disagree at a year end.</p>
+<h2>The four rules, and why the Thursday one is not arbitrary</h2>
+<p>Thursday is not a magic day. It is the <em>fourth</em> day of a week that starts on Monday, so "the week containing the first Thursday" and "the first week with four or more days in the new year" are two ways of saying one thing.</p>
+<p>That equivalence dies the moment weeks do not start on Monday. The fourth day of a Sunday-start week is <strong>Wednesday</strong>. Keep the Thursday pivot with a Sunday start and week 1 can hold only three days of the new year, which several large retailers do deliberately for their reporting weeks.</p>
+<p>So there are four rules in real use, not one:</p>
+<ul>
+<li><strong>First week with 4+ days in the new year.</strong> The majority rule. With weeks starting Monday this is exactly ISO 8601.</li>
+<li><strong>Week containing the first Thursday.</strong> ISO's pivot kept whatever day your week starts on.</li>
+<li><strong>First week fully inside the new year.</strong> Week 1 never begins in December. Common in US federal payroll and in broadcast and retail calendars.</li>
+<li><strong>Week containing 1 January.</strong> The simplest to explain, and the one that most often produces a week 53.</li>
+</ul>
+<p>Combined with the seven possible week-start days, that is twenty-eight ways to number a year. <a href="../index.html#calendar">The calendar</a> does all of them, and shows three years side by side so you can see the effect rather than take it on trust.</p>
+<p>Other years: <a href="2024.html">2024</a> &middot; <a href="2025.html">2025</a> &middot; <a href="2026.html">2026</a> &middot; <a href="2027.html">2027</a> &middot; <a href="2028.html">2028</a> &middot; <a href="2029.html">2029</a></p>
+</div></main>
+<footer>
+  <div class="wrap">
+    <a href="../index.html#board">Kanban Board</a><a href="../index.html#calendar">Calendar</a>
+    <a href="../about.html">About</a><a href="../guide.html">Guide</a><a href="../holidays/index.html">Holidays</a><a href="../contact.html">Contact</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
+    <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
+  </div>
+</footer>
+<script src="../assets/errors.js?v=62"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/site.js?v=62"></script>
+<script src="../assets/auth.js?v=62"></script>
+<script src="week.js?v=62"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+[
+ {
+  "file": "index.html",
+  "loc": "https://inmycalendar.com/week-number/",
+  "pri": "0.9"
+ },
+ {
+  "file": "2024.html",
+  "loc": "https://inmycalendar.com/week-number/2024.html",
+  "pri": "0.5"
+ },
+ {
+  "file": "2025.html",
+  "loc": "https://inmycalendar.com/week-number/2025.html",
+  "pri": "0.5"
+ },
+ {
+  "file": "2026.html",
+  "loc": "https://inmycalendar.com/week-number/2026.html",
+  "pri": "0.8"
+ },
+ {
+  "file": "2027.html",
+  "loc": "https://inmycalendar.com/week-number/2027.html",
+  "pri": "0.8"
+ },
+ {
+  "file": "2028.html",
+  "loc": "https://inmycalendar.com/week-number/2028.html",
+  "pri": "0.5"
+ },
+ {
+  "file": "2029.html",
+  "loc": "https://inmycalendar.com/week-number/2029.html",
+  "pri": "0.5"
+ },
+ {
+  "file": "iso-week-numbers.html",
+  "loc": "https://inmycalendar.com/week-number/iso-week-numbers.html",
+  "pri": "0.7"
+ }
+]

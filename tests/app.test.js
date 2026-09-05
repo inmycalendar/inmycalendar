@@ -3488,6 +3488,124 @@ check(/growing one cell shrinks six others/.test(css),
       "the calendar grid is documented as a deliberate density tradeoff");
 }
 
+console.log("\n=== C64. The week-number pages, and the shell they share by hand ===");
+{
+/* WHY THESE PAGES EXIST.
+   The 1718 holiday pages compete with timeanddate.com and officeholidays.com,
+   twenty-year-old domains that will not be outranked. "What week is it" is
+   served by thin calculators handling two conventions. This app handles four
+   rules across seven week starts, verified daily from 1995 to 2035, and had no
+   page targeting any of it. */
+
+check(fs.existsSync(path.join(ROOT, "week-number", "index.html")),
+      "there is a page answering 'what week is it'");
+["2026","2027","iso-week-numbers"].forEach(function(p){
+  check(fs.existsSync(path.join(ROOT, "week-number", p + ".html")),
+        "and one for " + p);
+});
+
+/* CONTENT, NOT CHROME.
+   A page that only ranks if a search engine runs its JavaScript is a page that
+   mostly does not rank. The tables and the explanations are in the HTML. */
+{
+  const hub = readFile("week-number/index.html");
+  const words = hub.replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+  check(words > 800, "the hub carries real prose, not just an app frame (" + words + " words)");
+  check(/<h1>What week is it\?<\/h1>/.test(hub), "with the question as the h1, visible, not screen-reader-only");
+  check(/<table>/.test(hub) && /<tbody>/.test(hub),
+        "and the week table is in the HTML rather than built by script");
+  check(/ISO 8601/.test(hub) && /US \(Sunday start\)/.test(hub),
+        "showing both conventions people actually search for");
+}
+
+/* THE MATHS MUST MATCH THE APP.
+   A page telling somebody it is week 36 while the calendar says 37 is worse
+   than having no page. Both come from the same four rules, so both are checked
+   against the same arithmetic. */
+{
+  const p2 = n => String(n).padStart(2, "0");
+  function sow(d, ws){
+    const x = new Date(d.getTime());
+    x.setDate(x.getDate() - ((x.getDay() - ws + 7) % 7));
+    x.setHours(0,0,0,0); return x;
+  }
+  function firstDow(y, dow){
+    const d = new Date(y,0,1); d.setHours(0,0,0,0);
+    while (d.getDay() !== dow) d.setDate(d.getDate()+1);
+    return d;
+  }
+  /* independent reference: real ISO 8601 week 1 is the week holding 4 January */
+  function isoWeek1(y){ return sow(new Date(y,0,4), 1); }
+
+  const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  let checkedYears = 0, wrong = 0, firstWrong = null;
+  ["2024","2025","2026","2027","2028","2029"].forEach(function(ys){
+    const f = path.join(ROOT, "week-number", ys + ".html");
+    if (!fs.existsSync(f)) return;
+    checkedYears++;
+    const html = fs.readFileSync(f, "utf8");
+    const m = html.match(/<td class="n">1<\/td><td>([^<]*)<\/td>/);
+    if (!m){ wrong++; if (!firstWrong) firstWrong = ys + ": no week 1 row"; return; }
+    const want = isoWeek1(+ys);
+    const expect = want.getDate() + " " + MON[want.getMonth()];
+    if (m[1].indexOf(expect) !== 0){
+      wrong++;
+      if (!firstWrong) firstWrong = ys + ": page says '" + m[1] + "', ISO 8601 says '" + expect + "'";
+    }
+  });
+  check(checkedYears >= 5, "several year pages exist to check (" + checkedYears + ")");
+  check(wrong === 0,
+        "every page's ISO week 1 matches real ISO 8601" + (firstWrong ? "   " + firstWrong : ""));
+}
+
+/* THE SHELL IS DUPLICATED, DELIBERATELY, SO THE DRIFT IS TESTED.
+   Extracting it into a shared module was tried and abandoned: the slicing kept
+   going wrong and the risk of silently changing 1718 working pages was not
+   worth the tidiness. Two copies is a real cost, and this is what pays it - a
+   nav link added to one generator and not the other is invisible to a human
+   and obvious to this check. */
+{
+  const a = readFile("tools/build-holiday-pages.js");
+  const b = readFile("tools/build-week-pages.js");
+  const links = src => {
+    const nav = src.slice(src.indexOf('<nav class="sitenav">'), src.indexOf("</nav>"));
+    return (nav.match(/>([A-Za-z ]+)<\/a>/g) || []).sort().join("|");
+  };
+  check(links(a) === links(b),
+        "both generators render the same site nav" +
+        (links(a) === links(b) ? "" : "\n      holidays: " + links(a) + "\n      week:     " + links(b)));
+
+  /* the one thing that MUST differ: a page one directory deep cannot link to
+     the holidays index the same way a page inside it does */
+  check(/href="index\.html">Holidays<\/a>/.test(a),
+        "the holiday generator links to Holidays as a sibling");
+  check(/href="\.\.\/holidays\/index\.html">Holidays<\/a>/.test(b),
+        "and the week generator climbs out of its own directory to reach it");
+
+  /* same cache tag, or half the site busts and half does not */
+  const tag = src => (src.match(/const V\s*=\s*"(\d+)"/) || [])[1];
+  check(tag(a) === tag(b), "and both stamp the same asset version (" + tag(a) + " vs " + tag(b) + ")");
+}
+
+/* ONE SITEMAP.
+   Two sitemaps for one site is a way to have half of it silently unlisted. */
+{
+  const map = readFile("sitemap.xml");
+  check(/week-number\//.test(map), "the week pages are in the sitemap");
+  const n = (map.match(/week-number/g) || []).length;
+  check(n >= 8, "all of them, not just the hub (" + n + " URLs)");
+  check(!fs.existsSync(path.join(ROOT, "week-number", "sitemap.xml")),
+        "and there is only one sitemap for the whole site");
+}
+
+/* The helper script is an enhancement, never a dependency. */
+{
+  const js = readFile("week-number/week.js");
+  check(/complete and correct without this/.test(js),
+        "the script that fills in today says plainly that the page works without it");
+}
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],

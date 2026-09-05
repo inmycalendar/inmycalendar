@@ -315,6 +315,13 @@ const core = [
   ["https://inmycalendar.com/privacy.html", "yearly", "0.3"],
   ["https://inmycalendar.com/terms.html", "yearly", "0.3"]
 ];
+/* The week-number pages are built by tools/build-week-pages.js, which drops its
+   URL list here rather than writing a second sitemap. Two sitemaps for one site
+   is a way to have half of it silently unlisted. Missing file is not an error:
+   it just means that generator has not been run yet. */
+const weekFile = path.join(__dirname, "week-pages.json");
+const weekPages = fs.existsSync(weekFile) ? JSON.parse(fs.readFileSync(weekFile, "utf8")) : [];
+weekPages.forEach(w => core.push([w.loc, "weekly", w.pri]));
 const urls = core.map(([loc, cf, pr]) =>
     `  <url>\n    <loc>${loc}</loc>\n    <changefreq>${cf}</changefreq>\n    <priority>${pr}</priority>\n  </url>`)
   .concat(built.map(c =>
