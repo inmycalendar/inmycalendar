@@ -3681,6 +3681,72 @@ check(/cries wolf/.test(wf),
       "the reasoning is recorded, so the cadence is not innocently reverted");
 }
 
+console.log("\n=== C67. The SEO content lives on the pages that are for reading ===");
+{
+/* The first attempt put this material on the homepage. It made a clean, fast
+   tool page cluttered, and because it sat inside <main> it appeared on the
+   CALENDAR view as well, which was worse. Rolled back on the owner's call, and
+   he was right: about.html and guide.html already exist to be read.
+
+   THE HARD RULE: index.html is the app. It is not a landing page and nothing
+   here may treat it as one. */
+{
+  const home = readFile("index.html");
+  check(/<h1 class="sronly">/.test(home),
+        "index.html keeps its own heading arrangement, untouched by this work");
+  check(!/homecopy|class="hero"/.test(home),
+        "and carries no marketing block: the board and calendar stay clean");
+}
+
+/* ORPHANS DO NOT RANK.
+   The week-number pages were built, listed in the sitemap, and linked from
+   nowhere at all. A sitemap entry is the weakest signal there is; a page
+   nothing links to reads as a page nothing needs. */
+{
+  const linkers = [];
+  ["about.html", "guide.html"].forEach(function(f){
+    if (/href="week-number\//.test(readFile(f))) linkers.push(f);
+  });
+  check(linkers.length === 2,
+        "about and guide both link into the week-number pages (" + linkers.join(", ") + ")");
+
+  const hol = fs.readdirSync(path.join(ROOT, "holidays")).filter(f => f.endsWith(".html"));
+  const withLink = hol.filter(f =>
+    /href="\.\.\/week-number\//.test(fs.readFileSync(path.join(ROOT, "holidays", f), "utf8")));
+  check(withLink.length > 1000,
+        "and so does every holiday page (" + withLink.length + " of " + hol.length + ")");
+}
+
+/* The link has to be contextual, not a bare keyword dumped in a footer. */
+{
+  const gen = readFile("tools/build-holiday-pages.js");
+  check(/Planning around a reporting week rather than a month\?/.test(gen),
+        "the year-page link is a sentence someone might actually follow");
+  check(/Working to week numbers rather than months\?/.test(gen),
+        "and so is the country-page one");
+}
+
+/* Substance, not keyword padding. The week-numbering material is the one thing
+   this app does better than the incumbents, and about.html had none of it. */
+{
+  const a = readFile("about.html");
+  check(/four numbering rules across all seven week starts/.test(a),
+        "about.html explains the four rules, which is the actual differentiator");
+  check(/Thursday is the fourth day of a Monday week/.test(a),
+        "including why the Thursday phrasing and the four-day rule are the same sentence");
+  const words = a.replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]*>/g, " ")
+                 .split(/\s+/).filter(Boolean).length;
+  check(words > 1000, "and about.html is now " + words + " readable words (was 928)");
+}
+
+/* Claims must stay true, or the page is worse than empty. */
+{
+  const a = readFile("about.html");
+  check(/247 countries/.test(a), "the country count still matches the data");
+  check(/1995 to 2035/.test(a), "and the verified date range matches the verifier");
+}
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
