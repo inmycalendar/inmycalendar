@@ -267,7 +267,25 @@ main{padding:16px 0 0}
    wraps normally and is still clipped at three lines - a card is a summary,
    not the document. */
 .t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;white-space:pre-wrap;
-  max-height:calc(1.6em * 3);overflow:clip;overflow-wrap:anywhere}
+  max-height:calc(1.6em * 2);overflow:clip;overflow-wrap:anywhere}
+/* THE FIRST LINE IS THE TASK, THE REST IS DETAIL.
+   The card used to render the whole task and clip it at three lines, so a long
+   one was cut off mid-sentence with nothing to say it had been cut. Now the
+   first line is shown and the rest waits behind a control. Two lines rather
+   than three, because a single long sentence with no newline still needs to be
+   readable at a glance and three lines of a wall is not more useful than two. */
+.t.open .txt{max-height:none}
+.t .detail{display:none}
+.t.open .detail{display:block;font-size:12px;line-height:1.55;color:var(--soft);
+  white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px;padding-top:6px;
+  border-top:1px solid var(--rule2)}
+.t .more{display:block;background:transparent;border:0;padding:3px 0 0;margin:0;
+  font-family:var(--disp);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--soft);cursor:pointer}
+.t .more:hover{color:var(--ink)}
+/* While renaming, the textarea holds the WHOLE task, so a detail block below it
+   would be the same words twice. */
+.t.editing .detail,.t.editing .more{display:none}
 .t.s-done .txt{text-decoration:line-through;color:var(--soft)}
 /* Controls in the open, not behind a ⋯. Tried the menu, and one tap to reach
    Rename on a control used constantly was the wrong trade. The cost is that
@@ -629,7 +647,10 @@ main{padding:16px 0 0}
      first, controls on their own row underneath. Flex order does that without
      changing the source order the desktop float depends on. */
   .t{display:flex;flex-direction:column;row-gap:6px;padding:7px 9px}
-  .t .txt{order:1;float:none;font-size:14px;line-height:1.4;max-height:calc(1.4em * 3)}
+  .t .txt{order:1;float:none;font-size:14px;line-height:1.4;max-height:calc(1.4em * 2)}
+  .t.open .txt{max-height:none}
+  .t .detail{order:3;font-size:13.5px}
+  .t .more{order:4;min-height:32px;font-size:11px}
   /* WRAP, DO NOT SHRINK.
      Eight controls at 34px with seven 8px gaps needs 328px. On the narrowest
      phones the card is about 294px wide, and flex's default shrink quietly

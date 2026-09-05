@@ -665,8 +665,39 @@ function taskRow(task, st, idx, total){
   n.addEventListener("dragend", function(){ n.classList.remove("dragging"); dragId = null; });
   n.appendChild(mk("span","grip","\u2807"));
 
-  var txt = mk("span","txt", task.text);
-  txt.title = task.text + "\nTo do: " + (task.ts.todo || "-") +
+  /* THE FIRST LINE IS THE TASK. EVERYTHING AFTER IT IS DETAIL.
+
+     Reported by the owner about his own board: "one task I randomly typed lot
+     of words that it's difficult to figure out what the actual task was."
+
+     The card used to render the whole blob and clip it at three lines with
+     overflow:clip, so a long task was cut off mid-sentence with nothing to say
+     it had been cut. You could not tell what the task was without opening it,
+     which is the opposite of what a board is for.
+
+     Capturing and deciding are different jobs. You type fast because stopping
+     to phrase it properly is how a thought gets lost. So keep the brain-dump,
+     and stop making the board read it out every time you glance at it: the
+     first line is shown, the rest waits behind a control.
+
+     No migration and no new field. Multi-line tasks already worked - Shift
+     +Enter has always inserted a newline - so this only changes how what is
+     already stored gets drawn. A task that is one line is completely unchanged.
+
+     The "is there more" decision is made from the TEXT, never by measuring the
+     rendered box. This suite forbids layout measurement, correctly: layout is
+     CSS's job. Text length is a property of the content, which is ours. */
+  var full  = String(task.text == null ? "" : task.text);
+  var nl    = full.indexOf("\n");
+  var head  = nl < 0 ? full : full.slice(0, nl);
+  var rest  = nl < 0 ? "" : full.slice(nl + 1).replace(/^\n+/, "");
+  /* 90 characters is roughly two lines on the narrowest card, so a single
+     long sentence with no newline in it gets the same treatment. That case
+     matters: a wall of words typed in one go has no newline to split on. */
+  var expandable = !!rest || head.length > 90;
+
+  var txt = mk("span","txt", head);
+  txt.title = full + "\nTo do: " + (task.ts.todo || "-") +
               "  |  In progress: " + (task.ts.doing || "-") + "  |  Done: " + (task.ts.done || "-");
   /* click the text to rename. The old behaviour was double-click only, which
      is undiscoverable, and on touch it did nothing at all. */
@@ -760,6 +791,36 @@ function taskRow(task, st, idx, total){
 
   n.appendChild(ops);
   n.appendChild(txt);   /* after the floats, so the text flows around them */
+
+  /* The rest of the task, and the control that reveals it. Only built when
+     there is something to reveal, so a one-line task gains nothing at all -
+     no extra element, no extra pixel, no change of any kind. */
+  if (expandable){
+    /* Only when there IS a rest. A long single line has nothing extra to show:
+       expanding it just unclamps the line above, and appending a copy of the
+       same words underneath would be worse than useless. */
+    var det = rest ? mk("div","detail", rest) : null;
+    var more = mk("button","more");
+    more.type = "button";
+    var shut = rest ? ("+" + rest.split("\n").length + " more") : "more";
+    function paint(){
+      var open = n.classList.contains("open");
+      more.textContent = open ? "less" : shut;
+      more.title = open ? "Hide the rest of this task" : "Show the rest of this task";
+      more.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    more.addEventListener("click", function(e){
+      /* Not the row's click, which opens the rename box. Expanding to read
+         something and having it turn into an edit field is its own small
+         betrayal. */
+      e.stopPropagation();
+      n.classList.toggle("open");
+      paint();
+    });
+    paint();
+    if (det) n.appendChild(det);
+    n.appendChild(more);
+  }
   return n;
 }
 function opBtn(label,title,disabled,fn){

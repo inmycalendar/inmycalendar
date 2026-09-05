@@ -1345,12 +1345,27 @@ click(col(0).querySelector(".addgo"));
 check(JSON.parse(w.localStorage.getItem("imc.tasks")).length === emptyBefore,
       "an empty or blank field adds nothing");
 
-/* The text itself: three lines, never one, never unlimited. The controls are a
-   float, so ONLY the first line shortens around them and lines two and three
-   run the full width of the card. A flex row narrowed every line equally,
-   which is what left line two stopping short of the right edge. */
-check(/\.t \.txt\{[^}]*max-height:calc\(1\.6em \* 3\)/.test(flat),
-      "task text is capped at three lines, not one");
+/* The text itself: clamped, never one line, never unlimited. The controls are a
+   float, so ONLY the first line shortens around them and later lines run the
+   full width of the card. A flex row narrowed every line equally, which is what
+   left line two stopping short of the right edge.
+
+   THIS USED TO PIN THREE LINES. It is two now, because the card no longer shows
+   the whole task: the first line is the task and the rest waits behind a
+   control. Three lines of a wall of words is not more useful than two, and the
+   old arrangement clipped a long task mid-sentence with nothing to say it had
+   been clipped - which is exactly the complaint that prompted the change.
+
+   What is checked is the property, not the number, so tuning the clamp does not
+   fail a test that has no opinion about it. */
+{
+  const clamp = flat.match(/\.t \.txt\{[^}]*max-height:calc\(1\.6em \* (\d+)\)/);
+  check(!!clamp, "task text is clamped to a fixed number of lines");
+  check(clamp && +clamp[1] >= 2 && +clamp[1] <= 3,
+        "to two or three lines, never one and never unlimited (" + (clamp && clamp[1]) + ")");
+  check(/\.t\.open \.txt\{max-height:none\}/.test(flat),
+        "and the clamp lifts when the task is expanded, so nothing is unreachable");
+}
 /* overflow:hidden makes a block formatting context, and a BFC refuses to
    overlap a float - it sits beside it, narrowing EVERY line to the leftover
    width. That was the original bug. overflow:clip creates no BFC. */
