@@ -833,3 +833,34 @@ main{padding:16px 0 0}
   .catdot{width:32px;height:32px}
   .chk{min-height:32px;display:flex;align-items:center;gap:8px}
 }
+
+/* ===========================================================================
+   HOMEPAGE HEADLINE AND COPY
+   The h1 used to be .sronly - there for a screen reader, invisible to everyone
+   else, and a crawler saw a page with no readable heading. It is visible now.
+
+   Kept SMALL deliberately. This page is the app, and a tall hero would push
+   the board below the fold, which is the same fault already fixed on the
+   calendar. Two lines and then the tool.
+   =========================================================================== */
+.hero{margin:0 0 12px}
+.hero h1{font-family:var(--disp);font-size:clamp(19px,3.4vw,26px);line-height:1.15;
+  letter-spacing:-.01em;font-weight:600;color:var(--ink);margin:0 0 3px}
+.hero-sub{font-size:13px;color:var(--soft);margin:0;line-height:1.5}
+.hero-sub strong{color:var(--ink);font-weight:600}
+
+/* The prose sits BELOW the app, so it costs a visitor who wants the tool
+   nothing at all, and a crawler reads the whole document regardless. */
+.homecopy{max-width:62ch;margin:26px auto 0;padding:20px 0 4px;border-top:1px solid var(--rule);
+  font-size:14px;line-height:1.62;color:var(--ink)}
+.homecopy h2{font-family:var(--disp);font-size:14px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--soft);font-weight:500;margin:22px 0 6px}
+.homecopy h2:first-child{margin-top:0}
+.homecopy p{margin:0 0 11px}
+.homecopy a{color:var(--accent)}
+
+@media (max-width:640px){
+  .hero{margin-bottom:10px}
+  .hero-sub{font-size:12.5px}
+  .homecopy{margin-top:20px;font-size:14.5px}
+}
