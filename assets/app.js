@@ -1181,13 +1181,36 @@ function renderWeekGrid(o){
       var b = mk("button","wk", String(week.num));
       b.type = "button";
       b.title = "Week " + week.num + " of " + week.year + " - open it on the board";
+      /* WHICH MONTH THIS WEEK STARTS.
+         Only set on the week that contains a 1st, so it marks the boundary
+         rather than repeating. A desktop ignores it entirely - the cells there
+         still carry MM-DD - and a phone, where they no longer do, prints it in
+         the week column. See the calendar-cell block in app.css. */
+      var monthStart = false;
+      for (var mi=0; mi<week.days.length; mi++){
+        if (week.days[mi].getDate() === 1){
+          b.setAttribute("data-mo", MON3[week.days[mi].getMonth()]);
+          monthStart = true;
+          break;
+        }
+      }
       b.addEventListener("click", function(){ openWeek(week); });
       g.appendChild(b);
       for (var d=0;d<7;d++){
         (function(day){
           var ds = iso(day);
           var dow = day.getDay();
-          var cell = mk("button","dc" + (dow === 0 || dow === 6 ? " wknd" : ""), mmdd(day));
+          /* MM-DD IN TWO PIECES, so a phone can drop the month.
+             The rendered text is identical - two adjacent flex items with no
+             gap between them, checked - but "06-" is now addressable. It was
+             being printed 371 times a year to say something that changes
+             twelve times, and it is what forced the cell wide enough that the
+             date crowds the holiday stripe under it. On a phone the month is
+             hidden here and printed once per month in the week column. */
+          var cell = mk("button","dc" + (dow === 0 || dow === 6 ? " wknd" : "") +
+                                        (monthStart ? " mstart" : ""));
+          cell.appendChild(mk("span","cm", p2(day.getMonth()+1) + "-"));
+          cell.appendChild(mk("span","cd", p2(day.getDate())));
           cell.type = "button";
           cell.setAttribute("data-ds", ds);
           if (daySel[ds]) cell.className += " selected";

@@ -31,7 +31,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "week-number");
-const V    = "70";                    /* keep in step with the other pages */
+const V    = "71";                    /* keep in step with the other pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 2, THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3];
@@ -94,6 +94,28 @@ tr.nowrow td{font-weight:600}
   border-radius:var(--r);padding:14px 16px;margin:0 0 20px}
 .answer .big{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1.15;display:block;margin-bottom:4px}
 .answer .sub{color:var(--soft);font-size:13px}
+
+/* PHONE ONLY, and inside a max-width query, so the desktop page is untouched.
+
+   The page exists to answer one question, and on a phone it was set so that
+   the QUESTION was the biggest thing on it: the h1 "What week is it?" at 27px
+   above an answer at 26px. Whatever a page is for should be the thing you see
+   first, so on a phone the answer is 34px and the question steps back to 20px
+   - still the heading, no longer the headline.
+
+   A 64-row table also scrolls its heading away after about ten rows, and the
+   columns are unlabelled from there on, so the head sticks. */
+@media (max-width:640px){
+  /* .pagebody h1 in site.css is two selectors to this one's one, so a bare h1
+     here lost to it and the question stayed at 27px. */
+  .pagebody h1{font-size:20px}
+  .answer{padding:16px 14px}
+  .answer .big{font-size:34px;line-height:1.1;margin-bottom:6px}
+  .answer .sub{font-size:13.5px;line-height:1.5}
+  .tablewrap{overflow-x:visible}
+  table{min-width:0}
+  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}
 .cols{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 18px}
 .cols>div{flex:1 1 240px;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);padding:12px 14px}
 .cols h3{margin:0 0 6px;font-size:13px}

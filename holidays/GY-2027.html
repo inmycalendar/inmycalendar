@@ -2,20 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Public holidays in Guyana 2027 - inmycalendar</title>
 <meta name="description" content="All 19 national public holidays in Guyana in 2027, with the date and day of the week for each. Free, and you can see them on a year calendar.">
 <meta property="og:title" content="Public holidays in Guyana 2027">
 <meta property="og:description" content="All 19 national public holidays in Guyana in 2027, with the date and day of the week for each. Free, and you can see them on a year calendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/holidays/GY-2027.html">
-<link rel="icon" href="../assets/favicon.ico?v=70" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=70">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=70">
-<link rel="manifest" href="../manifest.webmanifest?v=70">
-<meta name="theme-color" content="#18181b">
+<link rel="icon" href="../assets/favicon.ico?v=71" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=71">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=71">
+<link rel="manifest" href="../manifest.webmanifest?v=71">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/holidays/GY-2027.html">
-<link rel="stylesheet" href="../assets/site.css?v=70">
+<link rel="stylesheet" href="../assets/site.css?v=71">
 <style>
 .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
 table{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px;font-family:var(--sans)}
@@ -27,6 +28,39 @@ tbody tr.reg td{color:var(--soft)}
 .ctrylist{columns:4 170px;column-gap:18px;font-family:var(--sans);font-size:13.5px;margin-top:8px}
 .ctrylist a{display:block;padding:2px 0;text-decoration:none;color:var(--ink);break-inside:avoid}
 .ctrylist a:hover{text-decoration:underline}
+
+/* PHONE ONLY. Every rule below is inside a max-width query, so the desktop
+   page is not overridden - these are never applied above 640px at all. */
+.ctryfind{display:none}
+@media (max-width:640px){
+  /* 246 links in a two-column list, 4.7 screens of it, and no way to reach a
+     country except to scan for it. A filter is the whole fix. */
+  .ctryfind{display:block;width:100%;margin:14px 0 4px;padding:12px 14px;
+    font-family:var(--sans);font-size:16px;   /* 16px, or iOS zooms on focus */
+    color:var(--ink);background:var(--card);
+    border:1px solid var(--rule);border-radius:10px}
+  .ctryfind:focus{outline:none;border-color:var(--accent)}
+  .ctrycount{font-family:var(--disp);font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);padding:8px 2px 0}
+  /* One column, and rows a thumb can hit: they were 27px. */
+  .ctrylist{columns:1;font-size:15px;margin-top:4px}
+  .ctrylist a{min-height:44px;display:flex;align-items:center;
+    border-top:1px solid var(--rule2);padding:4px 0}
+  .ctrylist a.nomatch{display:none}
+  /* A 64-row table scrolls the heading off after about ten, and then the
+     columns are unlabelled for the rest of the year.
+
+     .tablewrap has overflow-x:auto so a wide table can scroll sideways on a
+     desktop - and a box with overflow on either axis is a SCROLL CONTAINER,
+     which is what position:sticky measures against. Left alone, the heading
+     stuck to a box that never scrolls vertically, so it did not stick at all:
+     measured at -430 with the page 1,200px down. On a phone the fourth column
+     is already dropped and nothing overflows, so the wrapper can stop being a
+     scroller and the heading can stick to the page. */
+  .tablewrap{overflow-x:visible}
+  table{min-width:0}
+  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
 .yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
   border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
@@ -342,10 +376,10 @@ tbody tr.reg td{color:var(--soft)}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="../assets/errors.js?v=70"></script>
-<script src="../assets/vendor/supabase.js?v=70"></script>
-<script src="../assets/site.js?v=70"></script>
-<script src="../assets/auth.js?v=70"></script>
-<script src="../assets/stats.js?v=70"></script>
+<script src="../assets/errors.js?v=71"></script>
+<script src="../assets/vendor/supabase.js?v=71"></script>
+<script src="../assets/site.js?v=71"></script>
+<script src="../assets/auth.js?v=71"></script>
+<script src="../assets/stats.js?v=71"></script>
 </body>
 </html>

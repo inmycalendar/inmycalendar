@@ -33,7 +33,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "70";                        /* cache tag, keep in step with the pages */
+const V    = "71";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
@@ -89,6 +89,39 @@ tbody tr.reg td{color:var(--soft)}
 .ctrylist{columns:4 170px;column-gap:18px;font-family:var(--sans);font-size:13.5px;margin-top:8px}
 .ctrylist a{display:block;padding:2px 0;text-decoration:none;color:var(--ink);break-inside:avoid}
 .ctrylist a:hover{text-decoration:underline}
+
+/* PHONE ONLY. Every rule below is inside a max-width query, so the desktop
+   page is not overridden - these are never applied above 640px at all. */
+.ctryfind{display:none}
+@media (max-width:640px){
+  /* 246 links in a two-column list, 4.7 screens of it, and no way to reach a
+     country except to scan for it. A filter is the whole fix. */
+  .ctryfind{display:block;width:100%;margin:14px 0 4px;padding:12px 14px;
+    font-family:var(--sans);font-size:16px;   /* 16px, or iOS zooms on focus */
+    color:var(--ink);background:var(--card);
+    border:1px solid var(--rule);border-radius:10px}
+  .ctryfind:focus{outline:none;border-color:var(--accent)}
+  .ctrycount{font-family:var(--disp);font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);padding:8px 2px 0}
+  /* One column, and rows a thumb can hit: they were 27px. */
+  .ctrylist{columns:1;font-size:15px;margin-top:4px}
+  .ctrylist a{min-height:44px;display:flex;align-items:center;
+    border-top:1px solid var(--rule2);padding:4px 0}
+  .ctrylist a.nomatch{display:none}
+  /* A 64-row table scrolls the heading off after about ten, and then the
+     columns are unlabelled for the rest of the year.
+
+     .tablewrap has overflow-x:auto so a wide table can scroll sideways on a
+     desktop - and a box with overflow on either axis is a SCROLL CONTAINER,
+     which is what position:sticky measures against. Left alone, the heading
+     stuck to a box that never scrolls vertically, so it did not stick at all:
+     measured at -430 with the page 1,200px down. On a phone the fourth column
+     is already dropped and nothing overflows, so the wrapper can stop being a
+     scroller and the heading can stick to the page. */
+  .tablewrap{overflow-x:visible}
+  table{min-width:0}
+  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
 .yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
   border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
@@ -322,7 +355,12 @@ const listBody = `
 <h1>Public holidays by country</h1>
 <div class="eyebrow">${built.length} countries and territories &middot; ${YEARS[0]} to ${YEARS[YEARS.length-1]}</div>
 <p>Pick a country for its public holiday dates, year by year, national and regional. Every one can be opened on a year-at-a-glance calendar to plan leave, travel and deadlines around. Free, and no sign-up needed.</p>
-<div class="ctrylist">
+<!-- Phone only, hidden by CSS above 640px. -->
+<input type="search" class="ctryfind" id="ctryFind" autocomplete="off"
+       placeholder="Find a country" aria-label="Find a country"
+       aria-controls="ctryList">
+<div class="ctrycount" id="ctryCount" aria-live="polite"></div>
+<div class="ctrylist" id="ctryList">
 ${built.map(c => `<a href="${c.code}.html">${esc(c.name)}</a>`).join("\n")}
 </div>`;
 fs.writeFileSync(path.join(OUT, "index.html"),

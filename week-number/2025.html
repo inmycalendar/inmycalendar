@@ -2,20 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Week numbers 2025 - inmycalendar</title>
 <meta name="description" content="Every week of 2025 with its dates, under both ISO 8601 and the US convention. Week 1 starts 2024-12-30 under ISO.">
 <meta property="og:title" content="Week numbers 2025">
 <meta property="og:description" content="Every week of 2025 with its dates, under both ISO 8601 and the US convention. Week 1 starts 2024-12-30 under ISO.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/week-number/2025.html">
-<link rel="icon" href="../assets/favicon.ico?v=70" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=70">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=70">
-<link rel="manifest" href="../manifest.webmanifest?v=70">
-<meta name="theme-color" content="#18181b">
+<link rel="icon" href="../assets/favicon.ico?v=71" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=71">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=71">
+<link rel="manifest" href="../manifest.webmanifest?v=71">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/week-number/2025.html">
-<link rel="stylesheet" href="../assets/site.css?v=70">
+<link rel="stylesheet" href="../assets/site.css?v=71">
 <style>
 .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
 table{border-collapse:collapse;width:100%;font-size:13px;min-width:420px}
@@ -35,6 +36,28 @@ tr.nowrow td{font-weight:600}
   border-radius:var(--r);padding:14px 16px;margin:0 0 20px}
 .answer .big{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1.15;display:block;margin-bottom:4px}
 .answer .sub{color:var(--soft);font-size:13px}
+
+/* PHONE ONLY, and inside a max-width query, so the desktop page is untouched.
+
+   The page exists to answer one question, and on a phone it was set so that
+   the QUESTION was the biggest thing on it: the h1 "What week is it?" at 27px
+   above an answer at 26px. Whatever a page is for should be the thing you see
+   first, so on a phone the answer is 34px and the question steps back to 20px
+   - still the heading, no longer the headline.
+
+   A 64-row table also scrolls its heading away after about ten rows, and the
+   columns are unlabelled from there on, so the head sticks. */
+@media (max-width:640px){
+  /* .pagebody h1 in site.css is two selectors to this one's one, so a bare h1
+     here lost to it and the question stayed at 27px. */
+  .pagebody h1{font-size:20px}
+  .answer{padding:16px 14px}
+  .answer .big{font-size:34px;line-height:1.1;margin-bottom:6px}
+  .answer .sub{font-size:13.5px;line-height:1.5}
+  .tablewrap{overflow-x:visible}
+  table{min-width:0}
+  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}
 .cols{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 18px}
 .cols>div{flex:1 1 240px;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);padding:12px 14px}
 .cols h3{margin:0 0 6px;font-size:13px}
@@ -134,11 +157,11 @@ tr.nowrow td{font-weight:600}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="../assets/errors.js?v=70"></script>
-<script src="../assets/vendor/supabase.js?v=70"></script>
-<script src="../assets/site.js?v=70"></script>
-<script src="../assets/auth.js?v=70"></script>
-<script src="../assets/stats.js?v=70"></script>
-<script src="week.js?v=70"></script>
+<script src="../assets/errors.js?v=71"></script>
+<script src="../assets/vendor/supabase.js?v=71"></script>
+<script src="../assets/site.js?v=71"></script>
+<script src="../assets/auth.js?v=71"></script>
+<script src="../assets/stats.js?v=71"></script>
+<script src="week.js?v=71"></script>
 </body>
 </html>

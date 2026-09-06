@@ -1258,3 +1258,42 @@ main{padding:16px 0 0}
   #sov{align-items:flex-start;padding:0}
   .ov .md.search{max-height:100vh;border-radius:0;box-shadow:none}
 }
+
+/* ==========================================================================
+   CALENDAR CELLS ON A PHONE: THE DAY, NOT THE DATE
+
+   Every cell printed MM-DD. That is the month repeated seven times across a
+   row and 371 times down a year, to say something that changes twelve times,
+   and it is what set the cell's width: five characters of monospace at a size
+   small enough to fit seven of them across a 393px screen.
+
+   So on a phone the month comes out of the cell and is printed once, in the
+   week column, on the week where it changes. Two characters instead of five,
+   which is what buys the room for a bigger tap target and stops the date
+   crowding the holiday stripe beneath it.
+
+   Desktop is untouched: the cells there still read MM-DD in full, and the
+   data-mo attribute the week button carries is simply never drawn.
+   ========================================================================== */
+@media (max-width:640px){
+  .wg .dc .cm{display:none}
+  /* Two characters where there were five, so the cell can be read at a size
+     worth tapping rather than merely fitted. */
+  .wg .dc{font-size:13px}
+  .wg.c .dc{font-size:11px}
+  #calView.dense .wg .dc{font-size:10.5px}
+
+  /* The month, once, where the week number already is. Stacked under it so it
+     costs no width - the week column is the narrowest thing on the grid and
+     seven day cells are waiting on every pixel of it. */
+  .wg .wk{flex-direction:column;justify-content:center;line-height:1.05}
+  .wg .wk[data-mo]::after{content:attr(data-mo);display:block;
+    font-family:var(--disp);font-size:8px;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--soft)}
+  /* A rule across the grid at the boundary, so the month reads as a division
+     of the year rather than as a label stuck on one cell. The class is set in
+     JS on that week's own seven cells: a "~" sibling selector would have
+     matched every cell after it, which on a year grid is the whole rest of the
+     year, because .wg is one flat grid and not a row per week. */
+  .wg .wk[data-mo],.wg .dc.mstart{border-top-color:var(--rule)}
+}

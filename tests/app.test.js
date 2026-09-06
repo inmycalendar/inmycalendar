@@ -1983,7 +1983,11 @@ check(w3.imcErrors.pending().length === 0, "and the queue is dropped rather than
    "Nothing is collected" for signed-out visitors; that stopped being true the
    moment this script shipped, because a crash report is sent either way. */
 const priv = readFile("privacy.html");
-check(priv.indexOf("<h2>Crash reports</h2>") >= 0,
+/* The heading now carries an id, because the page has a contents list on
+   phones and a list needs something to aim at. Matched on the text rather than
+   on the exact tag so that adding an attribute to a heading is not a test
+   failure. */
+check(/<h2[^>]*>Crash reports<\/h2>/.test(priv),
       "the privacy policy discloses crash reporting in a section of its own");
 check(priv.indexOf("Nothing is collected") < 0,
       "and no longer claims nothing at all is collected from signed-out visitors");
@@ -4038,7 +4042,11 @@ check(fs.existsSync(path.join(ROOT, "assets", "vendor", "supabase.js")),
    it: 24 controls under 32px on about.html, none on the board. That is why it
    kept being reported as fixed and kept not being. */
 {
-  const phone = site.slice(site.lastIndexOf("@media (max-width:640px)"));
+  /* EVERY phone block, not the last one. This sliced from the final
+     "@media (max-width:640px)" in the file, which was fine while site.css had
+     one - and reported three correct rules as missing the moment a second was
+     added below them. The rules being checked did not move. */
+  const phone = site.split("@media (max-width:640px)").slice(1).join("");
   check(/\.sitenav a\{min-height:32px/.test(phone),
         "site.css gives navigation links a 32px minimum on phones");
   check(/footer a\{min-height:32px/.test(phone), "and the footer links too");
@@ -4400,6 +4408,94 @@ check(/<span class="mx">&times;<\/span><span class="mdone">Done<\/span>/.test(ht
       "labelled Done on a phone and a cross on a desktop, from one button");
 check(/\.mh button \.mdone\{display:none\}/.test(oneline),
       "with the word hidden at desktop width");
+}
+
+/* ==========================================================================
+   C74. THE CONTENT PAGES, AND THE CALENDAR CELL
+
+   The 1,732 pages that are not the app had drifted away from it: the phone
+   work all lived in app.css, which only index.html loads. Measured at 393x852:
+   a 128px sticky header on pages that exist to be read, the guide 7.8 screens
+   of sixteen sections with no way to reach one, 246 country links at 27px with
+   no way to find one, a 64-row table whose heading scrolls away, and a page
+   whose entire job is answering one question setting the QUESTION larger than
+   the answer.
+
+   Every rule below is inside a max-width query. The desktop reading experience
+   is not part of this pass.
+   ========================================================================== */
+{
+const siteFlat = siteCss.replace(/\s*\n\s*/g, "");
+const sitePhone = siteFlat.split("@media (max-width:640px)").slice(1).join("");
+const appFlat = readFile("assets/app.css").replace(/\s*\n\s*/g, "");
+const appPhone = appFlat.split("@media (max-width:640px)").slice(1).join("");
+const holGen = readFile("tools/build-holiday-pages.js");
+const wkGen  = readFile("tools/build-week-pages.js");
+
+/* ---- the header behaves the same on both halves of the site ---- */
+check(/\.bar\{position:static\}/.test(sitePhone),
+      "content pages let the header scroll away too, as the app already did");
+
+/* ---- a contents list on the three long pages ---- */
+["guide.html", "privacy.html", "terms.html"].forEach(f => {
+  const src = readFile(f);
+  const links = (src.match(/<nav class="toc"[\s\S]*?<\/nav>/) || [""])[0];
+  const hrefs = links.match(/href="#([a-z0-9-]+)"/g) || [];
+  check(hrefs.length >= 5, f + ": has a contents list (" + hrefs.length + " sections)");
+  /* Every entry has to land somewhere. A slug that does not match an id is a
+     link that silently does nothing. */
+  const missing = hrefs.map(h => h.slice(7, -1))
+                       .filter(id => src.indexOf('<h2 id="' + id + '">') < 0);
+  check(missing.length === 0, f + ": every entry points at a real heading" +
+        (missing.length ? " - missing " + missing.join(", ") : ""));
+});
+check(/^\.toc\{display:none\}/m.test(siteFlat) || /\.toc\{display:none\}/.test(siteFlat),
+      "and it is phone-only, so the desktop pages are unchanged");
+check(/\.toc a\{[^}]*min-height:44px/.test(sitePhone),
+      "with 44px rows - the only links on these pages not inside a sentence");
+
+/* ---- finding one of 246 countries ---- */
+check(/\.ctryfind\{display:none\}/.test(holGen),
+      "the country filter is declared hidden at desktop width");
+check(/\.ctryfind\{display:block[^}]*font-size:16px/.test(holGen.replace(/\s*\n\s*/g,"")),
+      "and 16px on a phone, or iOS zooms the page on focus");
+check(/\.ctrylist a\{min-height:44px/.test(holGen.replace(/\s*\n\s*/g,"")),
+      "with the country rows themselves at 44px, up from 27");
+check(/normalize\("NFD"\)/.test(readFile("assets/site.js")),
+      "matching ignores accents, so \"turkiye\" finds \"Turkiye\"");
+
+/* ---- a 64-row table keeps its column headings ---- */
+[["build-holiday-pages.js", holGen], ["build-week-pages.js", wkGen]].forEach(([name, src]) => {
+  const flat = src.replace(/\s*\n\s*/g, "");
+  check(/thead th\{position:sticky;top:0/.test(flat), name + ": the table heading sticks");
+  /* THE TRAP: .tablewrap has overflow-x:auto so a wide table can scroll
+     sideways, and a box with overflow on either axis is a scroll container -
+     which is what sticky measures against. Measured at -430 with the page
+     1,200px down, i.e. not sticking at all. */
+  check(/\.tablewrap\{overflow-x:visible\}/.test(flat),
+        name + ": with its wrapper no longer a scroll container on phones");
+});
+
+/* ---- the answer is the headline ---- */
+check(/\.answer \.big\{font-size:34px/.test(wkGen.replace(/\s*\n\s*/g,"")),
+      "on week-number the answer is 34px on a phone");
+check(/\.pagebody h1\{font-size:20px\}/.test(wkGen.replace(/\s*\n\s*/g,"")),
+      "and the question steps back to 20px - .pagebody, or site.css outranks it");
+
+/* ---- the calendar cell says the day, not the date ---- */
+check(/cell\.appendChild\(mk\("span","cm"/.test(js) && /mk\("span","cd"/.test(js),
+      "a calendar cell is the month and the day in separate spans");
+check(/\.wg \.dc \.cm\{display:none\}/.test(appPhone),
+      "so a phone can drop the month, which it printed 371 times a year");
+check(!/\.wg \.dc \.cm\{display:none\}/.test(appFlat.split("@media")[0]),
+      "and a desktop still reads MM-DD in full");
+check(/b\.setAttribute\("data-mo", MON3\[/.test(js),
+      "the month is printed once, on the week where it changes");
+check(/monthStart \? " mstart" : ""/.test(js),
+      "with the boundary marked on that week's own seven cells");
+check(/\.wg \.dc\.mstart\{border-top-color/.test(appPhone) ||
+      /\.wg \.wk\[data-mo\],\.wg \.dc\.mstart\{border-top-color/.test(appPhone),
+      "rather than by a sibling selector, which would match the rest of the year");
 }
 
 let docFail = 0;

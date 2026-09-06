@@ -489,3 +489,46 @@ footer a:hover{color:var(--ink)}
 .bar{padding-top:env(safe-area-inset-top)}
 .wrap{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
 footer{padding-bottom:calc(30px + env(safe-area-inset-bottom))}
+
+/* ==========================================================================
+   CONTENT PAGES ON A PHONE
+
+   Everything here is inside a max-width query. The desktop reading experience
+   is not part of this pass and does not change: a rule inside a max-width
+   query is never applied above that width, so there is nothing to override.
+   ========================================================================== */
+
+/* The contents list is phone-only. On a desktop these pages are two or three
+   screens and the eye does the navigating; on a phone the guide is 7.8
+   screens of sixteen sections, privacy 4.2 of nine, terms 3.6 of ten, and
+   there was no way to reach a section except to scroll for it. */
+.toc{display:none}
+
+@media (max-width:640px){
+  /* THE HEADER SCROLLS AWAY, as it already does in the app.
+     It is 128px on a phone because seven nav links wrap onto two rows, and
+     sticky it took 15% of every screen of a page that exists to be read. The
+     app page fixed this in app.css, which only index.html loads, so the two
+     halves of the same site behaved differently. */
+  .bar{position:static}
+
+  .toc{display:block;margin:18px 0 8px;padding:12px 14px;
+    background:var(--card);border:1px solid var(--rule);border-radius:var(--r)}
+  .tochead{margin:0 0 8px;font-family:var(--disp);font-size:10px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--soft)}
+  .toc ol{margin:0;padding:0;list-style:none;counter-reset:toc}
+  .toc li{counter-increment:toc;border-top:1px solid var(--rule2)}
+  .toc li:first-child{border-top:0}
+  /* 44px rows. These are the only links on the page that are not inside a
+     sentence, so they are the only ones a target-size rule applies to. */
+  .toc a{display:flex;align-items:center;gap:10px;min-height:44px;
+    font-family:var(--sans);font-size:14px;line-height:1.35;
+    color:var(--ink);text-decoration:none;padding:4px 0}
+  .toc a::before{content:counter(toc);flex:none;min-width:20px;
+    font-family:var(--mono);font-size:11px;color:var(--faint)}
+  .toc a:hover{color:var(--accent)}
+
+  /* Landing on a section should not put its heading against the very top edge
+     of the screen. Harmless where nothing is sticky; correct if it ever is. */
+  .pagebody h2{scroll-margin-top:12px}
+}
