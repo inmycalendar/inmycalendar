@@ -16,14 +16,14 @@
 <meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
 <meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512-v2.png">
-<link rel="icon" href="assets/favicon.ico?v=68" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=68">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=68">
-<link rel="manifest" href="manifest.webmanifest?v=68">
+<link rel="icon" href="assets/favicon.ico?v=69" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=69">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=69">
+<link rel="manifest" href="manifest.webmanifest?v=69">
 <meta name="theme-color" content="#18181b">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=68">
-<link rel="stylesheet" href="assets/app.css?v=68">
+<link rel="stylesheet" href="assets/site.css?v=69">
+<link rel="stylesheet" href="assets/app.css?v=69">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -111,6 +111,12 @@
                none of those, so the mode needs a button. -->
           <button class="btn selstart" id="selStart" type="button"
                   title="Select several days, then colour them all at once">Select days</button>
+          <!-- Phone only, hidden by CSS above 640px. Fifty-three week rows at
+               the thumb size a phone needs is the longest scroll in the app,
+               on the one view whose whole point is seeing a year at once. -->
+          <button class="btn densepick" id="calDense" type="button"
+                  aria-pressed="false"
+                  title="Fit more weeks on the screen">Fit year</button>
           <span class="sp"></span>
           <button class="yarr" id="cyPrev" aria-label="Earlier years">&#9664;</button>
           <span class="yrs" id="cyLabel"></span>
@@ -280,11 +286,11 @@
   </div>
 </div>
 
-<script src="assets/errors.js?v=68"></script>
-<script src="assets/vendor/supabase.js?v=68"></script>
-<script src="assets/app.js?v=68"></script>
-<script src="assets/auth.js?v=68"></script>
-<script src="assets/sync.js?v=68"></script>
-<script src="assets/stats.js?v=68"></script>
+<script src="assets/errors.js?v=69"></script>
+<script src="assets/vendor/supabase.js?v=69"></script>
+<script src="assets/app.js?v=69"></script>
+<script src="assets/auth.js?v=69"></script>
+<script src="assets/sync.js?v=69"></script>
+<script src="assets/stats.js?v=69"></script>
 </body>
 </html>

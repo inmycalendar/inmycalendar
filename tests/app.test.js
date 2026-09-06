@@ -52,7 +52,12 @@ const key = (k,t) => (t||d).dispatchEvent(new w.KeyboardEvent("keydown",{key:k,b
 w.confirm = () => true; w.alert = () => {};
 const iso = dt => dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");
 const TODAY = iso(new Date()), cy = new Date().getFullYear();
-const col = i => $("scopeHost").children[i];
+/* Select the columns rather than counting children. The kanban host now also
+   holds the phone column switcher, so children[0] is no longer To do - and an
+   index into children was always going to break the first time anything else
+   was added to the host. ".rc" is the read-only view's column, so the same
+   helper works for day, week and month scope. */
+const col = i => $("scopeHost").querySelectorAll(".col,.rc")[i];
 const add = (i,text) => { const n = col(i).querySelector(".cadd"); n.value = text;
   n.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",bubbles:true})); };
 const toBoard = () => click(qa(".sitenav a[data-view='board']")[0]);
@@ -2885,7 +2890,7 @@ const tgt = qa("#rail .dc").find(c => c.title.startsWith(cy+"-03-1"));
 const tds = tgt.title.split(/\s/)[0];
 click(tgt);
 check(!$("ov").classList.contains("hidden") && $("mDate").textContent === tds, "day popup opens on the right date");
-check($("mKb").children.length === 3, "with the editable board embedded");
+check($("mKb").querySelectorAll(".col").length === 3, "with the editable board embedded");
 click($("mClose"));
 check($("isoOut").textContent === tds, "board follows the popup");
 toCal();
@@ -4133,6 +4138,129 @@ check(/txt\.addEventListener\("click", function\(\)\{ inlineEdit/.test(js),
 check(/max-height:calc\(1\.45em \* 3\)/.test(phone),
       "the phone shows three lines, so an ordinary task needs no 'more' at all");
 check(/THREE LINES, NOT TWO/.test(css), "with the measurement that decided it recorded");
+}
+
+/* ==========================================================================
+   C72. THE PHONE IS NOT A NARROW DESKTOP
+
+   Measured at 400x710 on the live site before this work: the board was 6.0
+   screens, the first task 290px down, the To do lane 227px tall holding 392px,
+   the calendar box 520px holding 1,882px, and Year at a glance 2,069px. One
+   cause: desktop's panel layout - fixed-height boxes that scroll inside
+   themselves - stacked on a phone, where there is no side-by-side arrangement
+   left for them to protect. Three nested scrolls were live at once.
+
+   These checks exist mostly to protect the DESKTOP. Everything added is inside
+   a max-width query, and the point of testing it is that a later edit could
+   move one rule out of that block and quietly change the desktop board, which
+   is the one thing that must not happen.
+   ========================================================================== */
+{
+const sheet  = readFile("assets/app.css");
+const oneline = sheet.replace(/\s*\n\s*/g, "");
+const ph = (oneline.match(/@media \(max-width:640px\)\{[^@]*/g) || []).join("");
+
+/* ---- the three nested scrolls are gone on a phone ---- */
+check(/\.lane,\.rlist\{max-height:none;overflow:visible\}/.test(ph),
+      "a phone lane scrolls with the page, not inside itself");
+check(/\.calbox\{max-height:none;overflow:visible\}/.test(ph),
+      "and so does the calendar, which held 1,882px inside a 520px box");
+
+/* ---- but the desktop keeps every one of them ---- */
+check(/max-height:var\(--laneMax\);overflow-y:auto/.test(oneline),
+      "the desktop lane cap still exists");
+check(/\.calbox\{overflow:auto;max-height:calc\(100vh - 190px\)/.test(oneline),
+      "and so does the desktop calendar box - the phone overrides it, nothing removed it");
+{
+  const at = oneline.indexOf(".lane,.rlist{max-height:none");
+  const q  = oneline.lastIndexOf("@media", at);
+  check(at > 0 && /max-width:\s*640px/.test(oneline.slice(q, at)),
+        "the removal is inside a phone query, so above 640px it is never applied");
+}
+
+/* ---- the bar scrolls away, and only on a phone ----
+   It is 180px on a phone because the ribbon wraps onto three rows, and it hid
+   the calendar's own title row 24px behind it. The week grid already has a
+   sticky year header, so nothing is lost by letting the bar go. */
+check(/\.bar\{position:static\}/.test(ph), "the app bar scrolls away on a phone");
+check(/\.bar\{position:sticky;top:0/.test(siteCss.replace(/\s*\n\s*/g, "")),
+      "while staying sticky everywhere else, which is where it belongs");
+check(/\.wg \.yh\{[^}]*position:sticky;top:0/.test(oneline),
+      "and the grid's own year header is what sticks instead - it already did");
+
+/* THE TRAP THAT COST AN HOUR. position:sticky measures against the nearest
+   SCROLL CONTAINER, and overflow:hidden makes one. .gridbox clips with
+   overflow:hidden for its rounded corners, so the moment .calbox stopped
+   scrolling the year header started sticking to a box that never moves -
+   measured at -945 with the page 1,200px down, i.e. not sticking at all.
+   overflow:clip clips the same way without being a scroll container. */
+check(/\.gridbox\{overflow:clip\}/.test(ph),
+      "the box around it clips without becoming a scroll container");
+check(/\.gridbox\{[^}]*overflow:hidden/.test(oneline),
+      "while the desktop keeps overflow:hidden, where .calbox is still the scrollport");
+
+/* ---- one column at a time ---- */
+check(/\.colpick,\.densepick\{display:none\}/.test(oneline),
+      "the phone furniture is declared hidden at desktop width");
+check(!ph.includes(".colpick,.densepick{display:none}"),
+      "outside any phone query, so it applies at every width a phone rule does not reach");
+check(/\.kb\[data-only\] \.col\{display:none\}/.test(ph),
+      "a phone shows one column");
+check(/\.kb\[data-only=todo\]  \.col\[data-s=todo\]/.test(ph),
+      "the selected one, named by an attribute on the host");
+check(/\.colpick\{display:flex/.test(ph), "with the switcher visible only there");
+
+toBoard();
+dom.window.eval('cfg.phoneCol="todo"; commit("cfg"); renderAll();');
+const pick = $("scopeHost").querySelector(".colpick");
+check(!!pick, "the switcher is rendered into the board");
+check(pick.querySelectorAll("button").length === 3, "one button per column");
+check($("scopeHost").getAttribute("data-only") === "todo",
+      "and the host names the column on show");
+check(pick.getAttribute("role") === "tablist", "announced as tabs to a screen reader");
+
+/* THE COUNTS ARE THE POINT. Showing one column is only acceptable because the
+   other two still tell you how much is waiting in them. */
+add(0,"c72 alpha"); add(1,"c72 beta"); add(1,"c72 gamma");
+const counts = [...$("scopeHost").querySelectorAll(".colpick button .n")].map(n => n.textContent);
+check(counts[0] >= "1" && counts[1] === "2",
+      "each tab carries its own count, so nothing is hidden by showing one column");
+
+/* SWITCHING MUST NOT RE-RENDER. A re-render here would destroy an open editor
+   and throw away the scroll position - the fault repaintIfHeld() exists for. */
+const keep = $("scopeHost").querySelector(".t");
+click($("scopeHost").querySelectorAll(".colpick button")[2]);
+check($("scopeHost").getAttribute("data-only") === "done", "tapping a tab switches column");
+check(d.contains(keep), "without rebuilding the cards, so an open editor survives");
+check($("scopeHost").querySelectorAll(".colpick button")[2].getAttribute("aria-selected") === "true",
+      "and says which tab is current");
+check(dom.window.eval("cfg.phoneCol") === "done", "the choice is remembered");
+
+/* Garbage from localStorage must not blank the board. */
+check(dom.window.eval('cfg.phoneCol="nonsense"; phoneCol()') === "todo",
+      "an unknown column falls back to To do rather than showing nothing");
+dom.window.eval('cfg.phoneCol="todo"; commit("cfg"); renderAll();');
+
+/* ---- the calendar density switch ---- */
+check(/#calView\.dense \.wg \.dc\{min-height:23px/.test(ph),
+      "dense drops the calendar row from 34px to 23px");
+{
+  const at = oneline.indexOf("#calView.dense .wg .dc{");
+  const q  = oneline.lastIndexOf("@media", at);
+  check(at > 0 && /max-width:\s*640px/.test(oneline.slice(q, at)),
+        "and it cannot reach the desktop calendar, being inside a phone query");
+}
+check(/function applyDensity/.test(js), "a class and nothing else, so no cell is rebuilt");
+check(!/renderCalendar\(\);?\s*\}\s*$/.test(String(dom.window.applyDensity || "")) ||
+      !/renderCalendar/.test(String(dom.window.applyDensity || "")),
+      "applyDensity does not re-render, which is what keeps the scroll position");
+dom.window.eval("cfg.calDense=true; applyDensity();");
+check($("calView").classList.contains("dense"), "the switch adds the class");
+check($("calDense").getAttribute("aria-pressed") === "true", "and reports its state");
+check($("calDense").textContent === "Bigger rows", "the label says what pressing it does next");
+dom.window.eval("cfg.calDense=false; applyDensity();");
+check(!$("calView").classList.contains("dense") && $("calDense").textContent === "Fit year",
+      "and back again");
 }
 
 let docFail = 0;

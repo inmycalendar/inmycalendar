@@ -918,3 +918,136 @@ main{padding:16px 0 0}
   .catdot{width:32px;height:32px}
   .chk{min-height:32px;display:flex;align-items:center;gap:8px}
 }
+
+/* ===========================================================================
+   PHONE: ONE SCROLL, ONE COLUMN, AND A BAR THAT EARNS ITS PLACE
+
+   Measured on the live site at 400x710, which is a common phone once the
+   browser's own chrome is taken off the top and bottom:
+
+     the board            6.0 screens long
+     first task           290px down - 41% of the screen used before content
+     To do lane           227px tall, holding 392px of tasks
+     the calendar box     520px tall, holding 1,882px of weeks
+     Year at a glance     2,069px, about half the whole board page
+
+   One cause under all of it. The desktop layout is PANELS: fixed-height boxes
+   that scroll inside themselves, sitting side by side so the page itself
+   barely moves. That is correct on a desktop. On a phone the panels stack, so
+   there is no side-by-side arrangement left to protect, and every internal
+   scroll becomes a trap - a box that scrolls inside a page that also scrolls,
+   where a thumb cannot tell which of the two it is moving. Three were live at
+   once.
+
+   The whole block is inside max-width:640px. A rule inside a max-width query
+   is not overridden above that width, it is never applied at all, so nothing
+   here can reach the desktop board or the desktop calendar. That is checked by
+   measurement rather than trusted - see the phone section of tests/app.test.js
+   and the before/after numbers in the commit.
+   =========================================================================== */
+
+/* The column switcher and the calendar density control are phone furniture.
+   They are declared hidden here, at desktop width, so that adding them to the
+   markup cannot change the desktop layout even for one frame. */
+.colpick,.densepick{display:none}
+
+@media (max-width:640px){
+
+  /* ---- 1. ONE SCROLL PER PAGE ------------------------------------------
+     The lane cap and the calendar box height exist to hold a desktop layout
+     still. Stacked on a phone they hold nothing still and only steal the
+     page's own scroll. */
+  .lane,.rlist{max-height:none;overflow:visible}
+  .calbox{max-height:none;overflow:visible}
+
+  /* ---- 2. THE STICKY THING IS THE CONTEXT, NOT THE CHROME ---------------
+     The app bar is 180px on a phone because the ribbon wraps onto three rows:
+     a quarter of the screen, permanently, for controls used a few times a
+     session. It also hid whatever scrolled under it - the calendar's title
+     row, carrying the year and the arrows, sat 24px behind it and could not
+     be read while browsing the very thing it labels.
+
+     So the bar scrolls away. Nothing is lost: the week grid already has a
+     sticky year header of its own (.wg .yh, and .dh under it), and with the
+     calendar box no longer a scrollport those now stick to the page instead
+     of to the inside of a box. You keep the year and the weekday letters
+     pinned while you scroll, which is the context that actually matters, and
+     the bar is one short flick back up. */
+  .bar{position:static}
+
+  /* And the year header has to be ABLE to stick. .gridbox clips with
+     overflow:hidden so the grid cannot escape its rounded corners, but a box
+     with overflow:hidden is a scroll container, and a scroll container is what
+     position:sticky measures against. With .calbox no longer scrolling, the
+     nearest one became .gridbox - which never moves - so the header quietly
+     stopped sticking at all. Measured: at 1200px down it was at -945, i.e.
+     scrolled off. overflow:clip clips identically and is NOT a scroll
+     container, so the header sticks to the page as intended. */
+  .gridbox{overflow:clip}
+
+  /* ---- 3. ONE COLUMN AT A TIME -----------------------------------------
+     Three stacked columns pay the same 36px title and 38px add row THREE
+     times - 222px of overhead before a single task, on a 710px screen. Side
+     by side on a desktop that overhead is paid once, which is why it was
+     never a problem there.
+
+     So a phone shows one column and a switcher, which is what every mobile
+     Kanban does. Nothing is hidden from you: the switcher carries the count
+     for all three, and moving a task between them never needed drag anyway -
+     the forward arrow is one of the two controls kept in the open on a phone
+     card. */
+  /* The host stops being a grid when it is showing one column: as a grid the
+     switcher is a grid ITEM and collects the 12px row gap under it, which put
+     the first task further down than the column header it replaced. */
+  .kb[data-only]{display:block}
+  .colpick{display:flex;gap:6px;position:sticky;top:0;z-index:30;
+    /* --page, not --bg: there is no --bg, and a background that resolves to
+       nothing is transparent, which let task text scroll through the 6px gaps
+       between the pinned tabs. Caught in a screenshot, not in a rule. */
+    background:var(--page);padding:4px 0;margin:0 0 6px}
+  .colpick button{flex:1 1 0;min-height:38px;min-width:0;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    background:var(--card);color:var(--soft);cursor:pointer;
+    border:1px solid var(--rule);border-radius:9px;
+    font-family:var(--disp);font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;padding:0 6px}
+  .colpick button .n{font-size:11px;font-weight:700;opacity:.75}
+  .colpick button[aria-selected=true]{background:var(--card);color:var(--ink);
+    border-color:var(--ink)}
+  /* The status colour lives on the top edge, matching the column border it
+     stands for, so the tab and the column read as the same thing. */
+  .colpick button[data-s=todo]{border-top:2px solid var(--todo)}
+  .colpick button[data-s=doing]{border-top:2px solid var(--doing)}
+  .colpick button[data-s=done]{border-top:2px solid var(--done)}
+
+  .kb[data-only] .col{display:none}
+  .kb[data-only=todo]  .col[data-s=todo],
+  .kb[data-only=doing] .col[data-s=doing],
+  .kb[data-only=done]  .col[data-s=done]{display:flex}
+
+  /* The column's own title row is now the switcher's job. Measured: it was
+     36px repeating the name, the count and the status colour that the selected
+     tab is already showing, directly under it. Leaving both in cost more than
+     the switcher saved, and put the first task 66px FURTHER down than before -
+     which is the opposite of the point. The colour moves to the column's top
+     edge so the panel still reads as To do, In progress or Done. */
+  .kb[data-only] .col .ch{display:none}
+  .kb[data-only] .col{border-top-width:3px;padding-top:2px}
+
+  /* ---- 4. A YEAR YOU CAN ACTUALLY LOOK AT -------------------------------
+     53 week rows at the 34px thumb size is 1,882px - the longest scroll in
+     the app, on the view whose whole promise is seeing a year. No layout fits
+     a legible year on one phone screen, so this does not pretend to: it is a
+     density switch. Comfortable stays the 34px default for picking a day;
+     dense drops the row to 23px, which takes a year to about 1.2 screens and
+     keeps every colour, holiday stripe and week number intact.
+
+     Only the row height changes. The cell keeps its date text, so nothing has
+     to be re-rendered to switch and the JS knows nothing about it. */
+  .densepick{display:inline-flex;align-items:center;justify-content:center;
+    min-height:32px;min-width:64px}
+  #calView.dense .wg .dc{min-height:23px;font-size:9.5px}
+  #calView.dense .wg .wk{min-height:23px;font-size:9px}
+  #calView.dense .wg .dc .task{width:3px;height:3px;top:2px;right:2px}
+  #calView.dense .wg .dc .pen{font-size:6px}
+}

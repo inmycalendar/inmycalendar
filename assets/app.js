@@ -27,6 +27,10 @@ var holWanted = null;
 
 var WEEK_RULES = ["majority","thursday","firstfull","jan1"];
 var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, shift:0, view:"board", scope:"day", ads:false,
+            /* Phone only, both of them. A desktop reads them and ignores them:
+               the rules they drive live inside the max-width:640px block, which
+               is never applied above that width. */
+            phoneCol:"todo", calDense:false,
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
             /* Display order only. The colour stored on a day is an INDEX into
@@ -531,9 +535,72 @@ function delTask(id){
 }
 
 /* ---------- KANBAN ---------- */
+
+/* WHICH COLUMN A PHONE IS SHOWING.
+
+   Three stacked columns on a 710px screen pay the same 36px title and 38px
+   add row three times over - 222px of overhead before a single task appears.
+   Side by side on a desktop that overhead is paid once, which is why it was
+   never a problem there and why the fix is phone-only.
+
+   Stored in cfg so the choice survives a reload. It is read on every screen,
+   but it can only MATTER on a phone: the attribute it sets is consulted by a
+   rule inside the max-width:640px block, and a rule in a max-width query is
+   never applied above that width. A desktop shows all three columns whatever
+   this says. Validated against ST rather than trusted, because it arrives
+   from localStorage. */
+function phoneCol(){
+  for (var i=0;i<ST.length;i++) if (ST[i].k === cfg.phoneCol) return cfg.phoneCol;
+  return ST[0].k;
+}
+
+/* The switcher. One button per status carrying its count, so looking at one
+   column never hides how much is waiting in the other two - which is the only
+   thing three columns give you that one column does not.
+
+   Moving a task between columns needs no drag: the forward arrow is already
+   one of the two controls kept in the open on a phone card. */
+function colPick(ds){
+  var box = mk("div","colpick");
+  box.setAttribute("role","tablist");
+  box.setAttribute("aria-label","Which column to show");
+  var cur = phoneCol();
+  for (var i=0;i<ST.length;i++){
+    (function(st){
+      var b = mk("button", null, st.label);
+      b.type = "button";
+      b.setAttribute("data-s", st.k);
+      b.setAttribute("role","tab");
+      b.setAttribute("aria-selected", st.k === cur ? "true" : "false");
+      b.appendChild(mk("span","n", String(lane(ds, st.k).length)));
+      b.addEventListener("click", function(){
+        /* Swap one attribute and the selected states. Deliberately NOT a
+           re-render: none of the markup changes, and re-rendering here would
+           destroy an open editor and throw away the scroll position - the
+           same fault repaintIfHeld() exists to prevent elsewhere. */
+        cfg.phoneCol = st.k; commit("cfg");
+        /* Every board at once, not just this one. The day popup embeds a
+           second kanban, so leaving the other one on its old column would
+           show To do in the popup and Done behind it. */
+        var hosts = document.querySelectorAll(".kb[data-only]");
+        for (var h=0;h<hosts.length;h++) hosts[h].setAttribute("data-only", st.k);
+        var tabs = document.querySelectorAll(".colpick button");
+        for (var j=0;j<tabs.length;j++){
+          tabs[j].setAttribute("aria-selected",
+            tabs[j].getAttribute("data-s") === st.k ? "true" : "false");
+        }
+      });
+      box.appendChild(b);
+    })(ST[i]);
+  }
+  return box;
+}
+
 function renderKanban(host, ds){
   host.className = "kb";
   host.innerHTML = "";
+  host.setAttribute("data-only", phoneCol());
+  host.appendChild(colPick(ds));
   for (var s=0;s<ST.length;s++){
     (function(st){
       var col = mk("div","col");
@@ -1276,6 +1343,23 @@ function stepCal(d){
   if (d > 0 && r.to   >= cy+CAP) return;
   cfg.shift = Math.min(CAP, Math.max(-CAP, cfg.shift + d));
   commit("cfg"); renderCalendar();
+}
+/* A YEAR YOU CAN ACTUALLY LOOK AT, on a phone.
+   Comfortable rows are 34px because that is what a thumb needs to pick a day,
+   and 53 of them is 1,882px - the longest scroll in the app, on the view whose
+   whole promise is seeing a year. Dense drops the row to 23px, which takes a
+   year to roughly 1.2 screens.
+
+   A class and nothing else. No cell is rebuilt, no grid re-rendered, so the
+   switch cannot lose the scroll position or a day left open, and the desktop
+   never sees it - the rules the class drives are all inside the phone query. */
+function applyDensity(){
+  if (!el.calView) return;
+  el.calView.classList.toggle("dense", !!cfg.calDense);
+  if (el.calDense){
+    el.calDense.setAttribute("aria-pressed", cfg.calDense ? "true" : "false");
+    el.calDense.textContent = cfg.calDense ? "Bigger rows" : "Fit year";
+  }
 }
 function renderCalendar(){
   /* KEEP THE READER'S PLACE.
@@ -2220,7 +2304,7 @@ function cacheEls(){
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
     "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","bnoteCancel","bnoteX","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
     "ov","mDate","mWk","mClose","mDone","mCancel","mClear","sov","sInput","sOut","sClose","searchBtn","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor",
-    "selBar","selCount","selSw","selClear","selStart","catsHide",
+    "selBar","selCount","selSw","selClear","selStart","calDense","catsHide",
     "undoBar","undoText","undoGo","undoX"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
@@ -2327,6 +2411,14 @@ function wire(){
 
   /* --- selecting several days --- */
   if (el.selStart) el.selStart.addEventListener("click", function(){ setSelMode(!selMode); });
+
+  /* CALENDAR DENSITY, phone only.
+     Nothing is re-rendered and no cell is rebuilt - the class changes the row
+     height in CSS and that is the whole mechanism, which is why switching is
+     instant and cannot lose the scroll position or an open day. */
+  if (el.calDense) el.calDense.addEventListener("click", function(){
+    cfg.calDense = !cfg.calDense; commit("cfg"); applyDensity();
+  });
   if (el.selClear) el.selClear.addEventListener("click", function(){ clearDaySel(); setSelMode(false); });
 
   /* The drag ends wherever the button comes up, which is often outside the
@@ -2520,6 +2612,7 @@ function init(){
   cfg.fwd   = Math.min(CAP, Math.max(0, cfg.fwd|0));
   cfg.shift = 0;   /* the calendar opens on today, exactly as the glance does */
   if (typeof cfg.glanceOpen !== "boolean") cfg.glanceOpen = true;
+  if (typeof cfg.calDense !== "boolean") cfg.calDense = false;
   if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
 
   tasks = load(LS.tasks, []); if (!Array.isArray(tasks)) tasks = [];
@@ -2576,6 +2669,7 @@ function init(){
       try { markOverflowing(el.scopeHost); } catch (e){}
     });
   }
+  applyDensity();   /* the saved row height, before the calendar is first shown */
   setView(view);
   if (cfg.country) loadHolidays(cfg.country);
 }
