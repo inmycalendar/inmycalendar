@@ -266,17 +266,10 @@ main{padding:16px 0 0}
 /* pre-wrap, so a task written with Shift+Enter keeps its line breaks. It still
    wraps normally and is still clipped at three lines - a card is a summary,
    not the document. */
-/* HOW MANY CHARACTERS FIT BEFORE THE TEXT IS CLIPPED.
-   CSS owns this number because CSS owns the breakpoint. It was a single
-   constant in app.js, which cannot be right for both widths: 90 is about two
-   lines on a desktop card and about three on a phone, and lowering it to 55
-   for the phone made the "more" control appear on 29 of 30 realistic tasks on
-   DESKTOP, where nothing was hidden at all. That is noise on every card.
-
-   Reading a declared custom property is not measuring layout - no box is
-   consulted and nothing reflows - so this stays on the right side of the rule
-   that layout belongs to CSS. */
-:root{--taskClamp:90}
+/* The character clamp that used to live here is gone. It was wrong at 90, wrong
+   at 55, and still wrong split per breakpoint - 27 controls for 2 genuinely
+   clipped tasks. Overflow is measured now, once per render, by markOverflowing()
+   in app.js. See the note there. */
 
 .t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;white-space:pre-wrap;
   max-height:calc(1.6em * 2);overflow:clip;overflow-wrap:anywhere}
@@ -322,6 +315,11 @@ main{padding:16px 0 0}
    to fix. Change one of these two numbers and you must change the other. */
 .op{background:var(--card);border:1px solid var(--rule);width:20px;height:17px;border-radius:5px;
   font-size:10.5px;line-height:1;padding:0;color:var(--soft)}
+/* THE MENU BUTTON IS A PHONE CONTROL ONLY.
+   On a wide card all seven controls are in the open, which is the right trade
+   for a mouse, so a button whose whole job is to reveal them has nothing to do
+   and would just be an eighth thing to look at. The phone block turns it on. */
+.op.menu{display:none}
 .op:hover:not(:disabled){background:var(--card2);color:var(--ink)}
 .op:disabled{opacity:.3;cursor:not-allowed}
 .op.x:hover{background:#fdf3f3;color:var(--danger);border-color:#f0d5d5}
@@ -662,11 +660,29 @@ main{padding:16px 0 0}
      about 60px for the first line. So here the row becomes a column, text
      first, controls on their own row underneath. Flex order does that without
      changing the source order the desktop float depends on. */
-  .t{display:flex;flex-direction:column;row-gap:6px;padding:7px 9px}
-  .t .txt{order:1;float:none;font-size:14px;line-height:1.4;max-height:calc(1.4em * 2)}
+  /* A PHONE CARD IS A LINE OF TEXT, NOT A CONTROL PANEL.
+
+     It used to be a flex column: text, then a full-width row of seven buttons
+     underneath. Measured with 30 realistic tasks at 390px, that made every card
+     137px tall for two lines of text and put the whole board at 5.4 screens.
+     Two tasks visible at a time.
+
+     So the card goes back to the desktop arrangement - a block with the
+     controls floated right, text flowing around them - and only two controls
+     are in the open. The card is then as tall as its text and nothing more.
+
+     Renaming still costs one tap: it has always been on the text itself. */
+  .t{padding:8px 10px}
+  /* THREE LINES, NOT TWO.
+     At two lines, 27 of 30 realistic tasks were clipped and each grew a "more"
+     row - a full 32px on almost every card, which gave back most of the height
+     the redesign had just saved. A phone card is about 27 characters a line, so
+     a third line covers the ordinary case and leaves "more" for the genuinely
+     long ones, which is what it is for. */
+  .t .txt{float:none;font-size:14px;line-height:1.45;max-height:calc(1.45em * 3)}
   .t.open .txt{max-height:none}
-  .t .detail{order:3;font-size:13.5px}
-  .t .more{order:4;min-height:32px;font-size:11px}
+  .t .detail{font-size:13.5px}
+  .t .more{min-height:32px;font-size:11px}
   /* WRAP, DO NOT SHRINK.
      Eight controls at 34px with seven 8px gaps needs 328px. On the narrowest
      phones the card is about 294px wide, and flex's default shrink quietly
@@ -674,10 +690,25 @@ main{padding:16px 0 0}
      to guarantee. Measured at 344px wide, which is a folded Galaxy Flip.
      A second row of buttons costs a few pixels of height; shrinking them costs
      the thumb, so the row wraps and flex:none holds the size. */
-  .t .ops{order:2;float:none;width:100%;justify-content:flex-start;gap:8px;margin:0;
-    flex-wrap:wrap;row-gap:6px}
-  /* a phone card is about half the width, so half the characters fit */
-  :root{--taskClamp:55}
+  /* Collapsed: a compact pair, floated right, sharing the first line with the
+     text exactly as on desktop. */
+  .t .ops{float:right;width:auto;gap:6px;margin:0 0 2px 8px;flex-wrap:nowrap}
+  .t .ops .op{display:none}
+  .t .ops .op.adv,.t .ops .op.menu{display:inline-flex;align-items:center;justify-content:center}
+  .t .ops .op.menu{font-size:16px;line-height:1}
+
+  /* Expanded by the menu: the old full-width row comes back, below the text
+     rather than above it, which is what the ordering is for. The wrap rule
+     from the previous pass still applies - eight controls at 34px need more
+     width than the narrowest phone has, and shrinking them costs the thumb. */
+  .t.acts{display:flex;flex-direction:column;row-gap:6px}
+  .t.acts .txt{order:1}
+  .t.acts .ops{order:2;float:none;width:100%;justify-content:flex-start;gap:8px;
+    margin:0;flex-wrap:wrap;row-gap:6px}
+  .t.acts .detail{order:3}
+  .t.acts .more{order:4}
+  .t.acts .ops .op{display:inline-flex;align-items:center;justify-content:center}
+  .t.acts .ops .op.menu{background:var(--card2);color:var(--ink)}
   .op{width:34px;height:32px;font-size:13px;flex:none}
   .t .edit{order:1;width:100%;font-size:16px;padding:6px 8px}
   .t::after{display:none}

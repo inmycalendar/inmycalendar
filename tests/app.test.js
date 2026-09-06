@@ -568,8 +568,23 @@ check(/\.bar \.wrap\{[^}]*flex-wrap:wrap/.test(flat),
    fit overlap instead of moving down, which is what happened at every width
    below 1280px. Wrapping is the safety net for a breakpoint that guesses low:
    a second row is untidy, overlapping text is broken. */
-check(!/flex-wrap:nowrap/.test(flat.replace(/\/\*[\s\S]*?\*\//g, "")),
-      "and flex-wrap:nowrap appears in no actual rule, since it turns a tight fit into overlapping text");
+/* nowrap was banned outright because on the RIBBON it turned a tight fit into
+   overlapping text at every width below 1280px. That reasoning is about a row
+   of unknown width. The one place it is now used is the collapsed phone card,
+   which holds exactly two 34px buttons in a 75px float - a fit that cannot get
+   tight because nothing else can join it. So: still banned on the ribbon,
+   allowed in that one measured place. */
+{
+  const code = flat.replace(/\/\*[\s\S]*?\*\//g, "");
+  const uses = (code.match(/flex-wrap:nowrap/g) || []).length;
+  check(uses <= 1, "flex-wrap:nowrap is used at most once, got " + uses);
+  if (uses === 1){
+    check(/\.t \.ops\{float:right;width:auto;gap:6px;margin:0 0 2px 8px;flex-wrap:nowrap\}/.test(code),
+          "and only on the collapsed phone card, which holds two fixed-width buttons");
+  }
+  check(!/\.ribbon[^}]*flex-wrap:nowrap/.test(code),
+        "never on the ribbon, where it caused overlapping text below 1280px");
+}
 check(/@media \(max-width:1499px\)\{\.meta\{display:none\}\}/.test(flat),
       "the date meta is dropped first when space runs short, being 150 fixed pixels and duplicated nearby");
 check(/@media \(max-width:1249px\)\{[^@]*\.navlong\{display:none\}/.test(flat),
@@ -1462,10 +1477,27 @@ check(/\.wg \.dc\{min-height:34px/.test(phoneCss),
       "calendar days are 34px tall rather than 21px, so they can be hit with a thumb");
 check(/\.op\{width:34px;height:32px/.test(phoneCss),
       "the row controls are thumb-sized rather than 20px");
-check(/\.t\{display:flex;flex-direction:column/.test(phoneCss),
-      "on a phone the row is a column, since a float would leave 60px for the first line");
-check(/\.t \.txt\{order:1;float:none/.test(phoneCss),
-      "text first, controls under it, via flex order so the desktop source order is untouched");
+/* THIS USED TO REQUIRE A COLUMN, and the reason it gave was measured and true:
+   with SEVEN controls floated right, the float was about 270px of a 345px card
+   and left roughly 60px for the first line of text. A column was the only way
+   out of that.
+
+   There are two controls on a phone now, not seven. Measured at 390px: the
+   float is 75px and the first line gets 235px. The finding was correct for its
+   time and the thing it described is gone, so the column is gone with it - and
+   with it 73px of height per card, which is what made the board 5.4 screens
+   long for thirty tasks.
+
+   The column is still there, on demand: tapping the menu adds .acts and the old
+   full-width row comes back underneath the text. */
+check(/\.t\{padding:8px 10px\}/.test(phoneCss),
+      "on a phone the card is a block again, so it is as tall as its text");
+check(/\.t \.ops\{float:right/.test(phoneCss),
+      "with the controls floated beside the text rather than stacked under it");
+check(/\.t\.acts\{display:flex;flex-direction:column/.test(phoneCss),
+      "and the column comes back when the menu is opened, not before");
+check(/\.t\.acts \.ops\{order:2/.test(phoneCss),
+      "text first and controls under it in that state, via flex order");
 /* min-height as well as height: the add field is a textarea that grows as you
    type, so height alone would be a ceiling rather than a floor. 38px is the
    tap target it starts at. */
@@ -3505,8 +3537,8 @@ const css = readFile("assets/app.css");
    button under the size the phone pass exists to guarantee - the rule said 34
    and the browser drew 27.8, which is exactly the kind of gap a source read
    never catches. */
-check(/\.t \.ops\{[^}]*flex-wrap:wrap/.test(css),
-      "the task controls wrap onto a second row instead of shrinking");
+check(/\.t\.acts \.ops\{[^}]*flex-wrap:wrap/.test(css),
+      "the expanded controls wrap onto a second row instead of shrinking");
 check(/\.op\{[^}]*flex:none/.test(css),
       "and flex:none stops the browser overriding their size");
 
@@ -4049,24 +4081,58 @@ check(/table\{min-width:0\}/.test(gen),
         "no character-count guess is left deciding whether text was cut");
   check(/classList\.toggle\("overflowing"/.test(js),
         "the row is marked from a real measurement instead");
-  check(/--taskClamp:90/.test(css) && /--taskClamp:55/.test(css),
-        "90 on a wide card, 55 on a phone, both declared by the stylesheet");
-  {
-    /* Find the query that ENCLOSES the 55, not the last one in the file. The
-       stylesheet has several max-width blocks and the first version of this
-       check looked at the wrong one, reporting a correct rule as broken. */
-    const at = css.indexOf("--taskClamp:55");
-    const query = css.lastIndexOf("@media", at);
-    check(at > 0 && query > 0 && /max-width:\s*640px/.test(css.slice(query, at)),
-          "and the 55 is inside a phone query, so a wide card never uses it");
-    check(css.indexOf("--taskClamp:90") < query,
-          "with the 90 declared before it, as the default a phone overrides");
-  }
-  check(/taskClampChars = 0; renderAll\(\)/.test(js),
-        "the cached value is cleared when the board crosses the breakpoint");
-  check(/consults no box and triggers no reflow/.test(js),
-        "with a note that reading a custom property is not the layout measurement the suite bans");
+  check(!/--taskClamp/.test(css),
+        "and the per-breakpoint character clamp is gone too, measurement replaced it");
+  check(!/clampChars/.test(js),
+        "and the helper that read it is gone, rather than left behind unused");
 }
+}
+
+console.log("\n=== C71. A phone card that is a task, not a control panel ===");
+{
+const js  = readFile("assets/app.js");
+const css = readFile("assets/app.css");
+const phone = css.slice(css.indexOf("PHONE PASS"));
+
+/* Measured with 30 realistic tasks at 390px. Before: every card 137px for two
+   lines of text, 33px of that a row of seven always-on controls, 2 tasks
+   visible in a lane. After: 80px, 3.4 visible, nothing truncated.
+   Todoist fits six in the same space by putting every action behind a gesture. */
+
+check(/adv\.className = "op adv"/.test(js),
+      "move right is tagged, being the primary verb of a Kanban board");
+check(/menu\.className = "op menu"/.test(js), "and there is a menu for the rest");
+check(/n\.classList\.toggle\("acts"\)/.test(js), "which reveals them in place");
+check(/aria-expanded/.test(js), "and says whether it is open, for a screen reader");
+
+/* Two in the open, five behind the menu - on the phone only. */
+check(/\.t \.ops \.op\{display:none\}/.test(phone), "the phone hides the controls by default");
+check(/\.t \.ops \.op\.adv,\.t \.ops \.op\.menu\{display:inline-flex/.test(phone),
+      "leaving exactly two: move right, and the menu");
+check(/\.t\.acts \.ops \.op\{display:inline-flex/.test(phone),
+      "and the menu brings all of them back");
+
+/* THE HARD CONSTRAINT: the desktop board must not change. */
+check(/\.op\.menu\{display:none\}/.test(css.slice(0, css.indexOf("PHONE PASS"))),
+      "the menu button does not exist above the breakpoint");
+{
+  const at = css.indexOf(".t .ops .op{display:none}");
+  const q  = css.lastIndexOf("@media", at);
+  check(at > 0 && /max-width:\s*640px/.test(css.slice(q, at)),
+        "every rule that hides a control is inside a phone query");
+}
+
+/* RENAMING MUST STILL COST ONE TAP. It was the reason a menu was rejected the
+   first time it was tried, and the reason is still good - it is just that the
+   text itself has always been the rename target, so nothing was lost. */
+check(/txt\.addEventListener\("click", function\(\)\{ inlineEdit/.test(js),
+      "tapping the text still opens the editor, so rename is untouched");
+
+/* Three lines rather than two: at two, 27 of 30 tasks clipped and each grew a
+   'more' row, giving back most of the height the redesign had saved. */
+check(/max-height:calc\(1\.45em \* 3\)/.test(phone),
+      "the phone shows three lines, so an ordinary task needs no 'more' at all");
+check(/THREE LINES, NOT TWO/.test(css), "with the measurement that decided it recorded");
 }
 
 let docFail = 0;

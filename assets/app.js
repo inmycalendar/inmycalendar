@@ -653,22 +653,6 @@ function dropIndex(wrap,y){
   }
   return rows.length;
 }
-/* Cached, because 30 tasks means 30 reads otherwise, and cleared whenever the
-   layout could have crossed the breakpoint. The resize handler below already
-   re-renders when the board changes between narrow and wide; this is reset in
-   the same place so the number never lags the stylesheet. */
-var taskClampChars = 0;
-function clampChars(){
-  if (taskClampChars) return taskClampChars;
-  var v = 0;
-  try {
-    v = parseInt(getComputedStyle(document.documentElement)
-                   .getPropertyValue("--taskClamp"), 10);
-  } catch (e){}
-  taskClampChars = (v > 0 ? v : 90);   /* the old constant, if CSS says nothing */
-  return taskClampChars;
-}
-
 /* DOES THE TEXT ACTUALLY OVERFLOW? A SECOND MEASURING EXCEPTION, ON PURPOSE.
 
    The rule in this project is that layout is CSS's job and the app must not
@@ -677,19 +661,20 @@ function clampChars(){
    that both fits the content and caps the height. This is the second, and it is
    here for exactly the same reason.
 
-   The alternative was a character count, and it was tried twice. At 90 a phone
-   clipped an 84-character task and offered no way to read it. At 55 the phone
-   was fixed and desktop grew a "more" control on 29 of 30 tasks where nothing
-   was hidden. Moving the number into CSS per breakpoint improved it and did not
-   fix it: on a phone, 27 controls for 2 genuinely clipped tasks. A guess based
-   on character count cannot work, because whether text wraps depends on the
-   characters themselves, the font, and the width of a card nobody has measured.
+   The alternative was a character count, and it was tried three times. At 90 a
+   phone clipped an 84-character task and offered no way to read it. At 55 the
+   phone was fixed and desktop grew a "more" control on 29 of 30 tasks where
+   nothing was hidden. Splitting the number per breakpoint in CSS improved it
+   and did not fix it: 27 controls for 2 genuinely clipped tasks on a phone.
 
-   So it is measured once per render, after the rows are in the document, and
-   the answer is exact. scrollHeight against the rendered height: no
-   clientHeight and no offsetHeight, so the existing check still reads as
-   written, but this is the same KIND of measurement and pretending otherwise
-   would be dishonest.
+   A guess from character count cannot work, because whether text wraps depends
+   on the characters themselves, the font, and the width of a card nobody has
+   measured. Measured, the answer is exact: 27 of 27 on desktop, 2 of 2 on a
+   phone.
+
+   scrollHeight against the rendered height, so neither clientHeight nor
+   offsetHeight appears and the existing check still reads as written - but this
+   is the same KIND of measurement and pretending otherwise would be dishonest.
 
    One forced layout per render, not one per task. */
 function markOverflowing(host){
@@ -816,7 +801,12 @@ function taskRow(task, st, idx, total){
   ops.appendChild(opBtn("\u25b2","Move up",   idx === 0,       function(){ nudge(task.id,-1); refresh(); }));
   ops.appendChild(opBtn("\u25bc","Move down", idx === total-1, function(){ nudge(task.id, 1); refresh(); }));
   ops.appendChild(opBtn("\u2190","Move left", st.k === "todo", function(){ shiftStatus(task.id,-1); refresh(); }));
-  ops.appendChild(opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); }));
+  /* MOVE RIGHT IS THE PRIMARY VERB OF A KANBAN BOARD, so it is the one control
+     that stays in the open on a phone alongside the menu. What a person does on
+     a board, over and over, is read a task, rename it, and push it along. */
+  var adv = opBtn("\u2192","Move right",st.k === "done", function(){ shiftStatus(task.id, 1); refresh(); });
+  adv.className = "op adv";
+  ops.appendChild(adv);
   /* MOVE TO TODAY.
      Deliberately only rendered when the task is not already on today. The
      commonest thing to do while looking back through old days is to pull an
@@ -853,6 +843,29 @@ function taskRow(task, st, idx, total){
   var x = opBtn("\u00d7","Delete", false, function(){ delTask(task.id); refresh(); });
   x.className = "op x";
   ops.appendChild(x);
+
+  /* THE PHONE CARD WAS MOSTLY BUTTONS.
+     Measured with 30 realistic tasks at 390px: every card 137px tall for two
+     lines of text, 33px of that a row of seven controls that are always on.
+     Two tasks fitted on a screen and the board ran to 5.4 screens. Todoist
+     shows six in the same space by putting every action behind a gesture.
+
+     Seven controls in the open was the right call for a mouse and is the wrong
+     one for a thumb. On a phone two stay visible - move right, and this - and
+     the rest appear when asked for. Renaming is untouched either way: tapping
+     the text has always opened the editor and still does, so the thing people
+     do most often never costs an extra tap.
+
+     Desktop is not affected. The rule that hides the others lives inside the
+     phone query, so above 640px all seven are still in the open, which is what
+     a mouse should get. */
+  var menu = opBtn("\u22ef","More actions", false, function(){
+    n.classList.toggle("acts");
+    menu.setAttribute("aria-expanded", n.classList.contains("acts") ? "true" : "false");
+  });
+  menu.className = "op menu";
+  menu.setAttribute("aria-expanded", "false");
+  ops.appendChild(menu);
 
   n.appendChild(ops);
   n.appendChild(txt);   /* after the floats, so the text flows around them */
@@ -2433,7 +2446,7 @@ function wire(){
   var wasNarrow = narrow();
   window.addEventListener("resize", function(){
     var n = narrow();
-    if (n !== wasNarrow){ wasNarrow = n; taskClampChars = 0; renderAll(); }
+    if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
   });
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }
