@@ -31,7 +31,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "week-number");
-const V    = "65";                    /* keep in step with the other pages */
+const V    = "66";                    /* keep in step with the other pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 2, THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3];
@@ -111,9 +111,6 @@ function shell({ title, desc, canonical, ld, body }){
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${canonical}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon.ico?v=${V}" sizes="any">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=${V}">
@@ -150,7 +147,7 @@ ${body}
   </div>
 </footer>
 <script src="../assets/errors.js?v=${V}"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/vendor/supabase.js?v=${V}"></script>
 <script src="../assets/site.js?v=${V}"></script>
 <script src="../assets/auth.js?v=${V}"></script>
 <script src="../assets/stats.js?v=${V}"></script>

@@ -9,16 +9,13 @@
 <meta property="og:description" content="All 9 national and 11 regional public holidays in Germany in 2027, with the date and day of the week for each. Free, and you can see them on a year calendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/holidays/DE-2027.html">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="icon" href="../assets/favicon.ico?v=65" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=65">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=65">
-<link rel="manifest" href="../manifest.webmanifest?v=65">
+<link rel="icon" href="../assets/favicon.ico?v=66" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=66">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=66">
+<link rel="manifest" href="../manifest.webmanifest?v=66">
 <meta name="theme-color" content="#18181b">
 <link rel="canonical" href="https://inmycalendar.com/holidays/DE-2027.html">
-<link rel="stylesheet" href="../assets/site.css?v=65">
+<link rel="stylesheet" href="../assets/site.css?v=66">
 <style>
 .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
 table{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px;font-family:var(--sans)}
@@ -34,7 +31,30 @@ tbody tr.reg td{color:var(--soft)}
 .yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
   border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
 .yearnav a:hover{background:var(--accentBg)}
-.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}</style>
+.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
+
+/* THE FOURTH COLUMN DOES NOT FIT ON A PHONE.
+   Measured at 390px: the table is 420px inside a wrapper that scrolls, so 56px
+   is hidden to the right - the whole National/Regional column. Nothing on
+   screen said it scrolled, so it did not read as scrollable, it read as broken:
+   the heading cut to "TY" and every row ending in a clipped N or R.
+
+   A scroll shadow was tried first. It made the scrolling discoverable and left
+   the column exactly as unreadable, which is solving the wrong half.
+
+   So the column comes out below 640px and the table then fits with no sideways
+   scrolling at all. Nothing is lost: regional rows already carry .reg, so a
+   small grey marker after the holiday name says the same thing in the space
+   that exists. National days get no marker because they are the default and the
+   majority, and labelling the common case is noise.
+
+   Inside a max-width query, so the four-column desktop table is untouched. */
+@media (max-width:640px){
+  table{min-width:0}
+  thead th:nth-child(4),tbody td:nth-child(4){display:none}
+  tbody tr.reg td:nth-child(3)::after{content:" · regional";color:var(--soft);
+    font-size:11px;white-space:nowrap}
+}</style>
 <script type="application/ld+json">
 {
  "@context": "https://schema.org",
@@ -213,10 +233,10 @@ tbody tr.reg td{color:var(--soft)}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="../assets/errors.js?v=65"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../assets/site.js?v=65"></script>
-<script src="../assets/auth.js?v=65"></script>
-<script src="../assets/stats.js?v=65"></script>
+<script src="../assets/errors.js?v=66"></script>
+<script src="../assets/vendor/supabase.js?v=66"></script>
+<script src="../assets/site.js?v=66"></script>
+<script src="../assets/auth.js?v=66"></script>
+<script src="../assets/stats.js?v=66"></script>
 </body>
 </html>

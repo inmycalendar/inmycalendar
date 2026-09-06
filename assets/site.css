@@ -1,3 +1,60 @@
+/* SELF-HOSTED FONTS, and why they are not loaded from Google.
+   ---------------------------------------------------------------------------
+   These two typefaces used to come from fonts.googleapis.com, which meant every
+   visitor to any of the 1733 pages had their IP address sent to Google in the
+   United States before they had agreed to anything. privacy.html disclosed it
+   honestly, and disclosure is not a lawful basis: it is the single most
+   litigated GDPR issue there is for a small site.
+
+   Serving them from this domain removes the transfer completely. It is also
+   faster - one fewer DNS lookup, one fewer TLS handshake, and no render-blocking
+   request to a third party.
+
+   Only the latin and latin-ext subsets are kept, 12 files of the 33 Google
+   offers. The interface is English and latin-ext covers the accented country
+   names (Turkiye, Cote dIvoire, Curacao). Greek, Cyrillic and Vietnamese would
+   be weight for nothing. unicode-range means a browser downloads latin-ext only
+   when a page actually uses one of those characters.
+
+   font-display:swap matches what the Google link requested, so text is readable
+   immediately in the fallback and reflows once when the face arrives. */
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/jetbrains-mono-400-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/jetbrains-mono-400-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/jetbrains-mono-500-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/jetbrains-mono-500-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;
+  src:url(fonts/jetbrains-mono-700-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;
+  src:url(fonts/jetbrains-mono-700-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/oswald-400-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/oswald-400-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/oswald-500-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:500;font-display:swap;
+  src:url(fonts/oswald-500-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/oswald-600-latin-ext.woff2) format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;}
+@font-face{font-family:'Oswald';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/oswald-600-latin.woff2) format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;}
+
 /* ==========================================================================
    inmycalendar - site.css
    Shared shell: design tokens, ribbon, controls strip, footer, content pages.
@@ -254,6 +311,19 @@ footer a:hover{color:var(--ink)}
   .sitenav a{padding:6px 8px;font-size:10.5px}
   .sitenav .gap{margin:0 4px}
   .pagebody .body{font-size:14px}
+
+  /* THUMB TARGETS ON EVERY PAGE, not just the app.
+     A phone pass was done a while ago and every line of it went into app.css,
+     which ONLY index.html loads. The other 1,732 pages load this file and got
+     none of it. Measured at 390px on about.html: 24 controls under 32px, all of
+     them navigation. The board had none, which is exactly why the problem kept
+     being reported as fixed and kept not being.
+
+     32px is the floor used throughout the app's own phone pass. Padding rather
+     than a fixed height, so a link that wraps still grows instead of clipping. */
+  .sitenav a{min-height:32px;display:inline-flex;align-items:center}
+  .brand{min-height:32px;display:inline-flex;align-items:center;gap:6px}
+  footer a{min-height:32px;display:inline-flex;align-items:center;padding:2px 0}
 }
 
 /* account settings panel, hung off the initials */

@@ -664,6 +664,21 @@ main{padding:16px 0 0}
   .t .edit{order:1;width:100%;font-size:16px;padding:6px 8px}
   .t::after{display:none}
 
+  /* THE APP HEADER IS TOO TALL ON A PHONE.
+     Measured at 390x844: the header was 217px and the first task started at
+     319px, 38% of the screen gone before anything you came for. The navigation
+     alone was 73px because seven links wrap onto two rows, leaving PRIVACY
+     alone on a line of its own.
+
+     The five content links come out on phones. Board and Calendar are what the
+     app itself needs; About, Guide, Holidays, Contact and Privacy are all still
+     in the footer of every page, one scroll away. Simulated before committing:
+     header 217px to 179px, first task 319px to 281px, nav back to one row.
+
+     Inside a max-width query, so it does not exist on desktop at all - the
+     desktop header is not overridden, this rule is simply never applied. */
+  .sitenav a.page,.sitenav .gap{display:none}
+
   /* everything else a thumb has to hit */
   .nub,.iso,.seg button,.sitenav a,.authslot .btn{min-height:36px}
   .seg button{padding-left:12px;padding-right:12px}

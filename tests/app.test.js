@@ -670,7 +670,17 @@ check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox").length === 3,
 check(/signInWithOAuth/.test(au) && /id:"google"/.test(au), "Google is wired as a provider");
 check(/signOut/.test(au), "and there is a way back out");
 const ih2 = readFile("index.html");
-check(/supabase-js@2/.test(ih2), "the Supabase library is loaded from a CDN");
+/* THIS USED TO REQUIRE A CDN. The library was pulled from cdn.jsdelivr.net on
+   all 1,733 pages, which sent every visitor's IP address to a third party -
+   and unlike the Google Fonts link, that one was disclosed nowhere in
+   privacy.html at all. It is vendored and served from this domain now.
+
+   What the check was ever really for is that the library is loaded; where from
+   was incidental to it and is now the point. */
+check(/assets\/vendor\/supabase\.js/.test(ih2),
+      "the Supabase library is served from this domain, not a third-party CDN");
+check(!/cdn\.jsdelivr\.net/.test(ih2),
+      "and no request to jsdelivr remains to leak a visitor's IP");
 check(ih2.indexOf("assets/app.js") < ih2.indexOf("assets/auth.js"),
       "auth.js loads after app.js, so the app is already up when the button paints");
 check(/Sign in to sync it across your devices/.test(ih2),
@@ -1653,7 +1663,8 @@ check(/index\.html#calendar\/JP/.test(jp), "and it links into the app preloaded 
    these pages were first generated, the same class of bug as the widget styles
    living in a stylesheet three of the pages never loaded. */
 check(/assets\/auth\.js\?v=\d+/.test(jp), "a country page can sign you in, like every other page");
-check(/supabase-js/.test(jp), "loading the library it needs to do that");
+check(/\.\.\/assets\/vendor\/supabase\.js/.test(jp),
+      "loading the library it needs to do that, from this domain rather than a CDN");
 /* Regional holidays earn their place: more countries have them than not, and
    they are what someone in a particular state actually searches for. */
 const usPage = fs.readFileSync(path.join(HOLDIR, "US.html"), "utf8");
@@ -3895,6 +3906,109 @@ check(/create table if not exists/.test(sql) && /create index if not exists/.tes
       "the table and indexes are still created only if missing");
 check(/select 1 from pg_policies/.test(sql) && /if not exists \(/.test(sql),
       "and the policy is guarded by an existence check rather than by dropping it");
+}
+
+console.log("\n=== C70. No third parties, and a phone pass that reaches every page ===");
+{
+const site = readFile("assets/site.css");
+const app  = readFile("assets/app.css");
+const gen  = readFile("tools/build-holiday-pages.js");
+
+/* ---- GDPR: nothing is fetched from anywhere else ------------------------- */
+/* Google Fonts on 1733 pages sent every visitor's IP to Google in the US, and
+   cdn.jsdelivr.net sent it to another third party that privacy.html did not
+   mention at all. Both are served from this domain now. Disclosing a transfer
+   is not the same as having a reason to make it. */
+PAGES.concat(["holidays/UK-2026.html", "week-number/index.html"]).forEach(function(p){
+  const h = readFile(p);
+  check(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(h), p + " loads no font from Google");
+  check(!/cdn\.jsdelivr\.net/.test(h), p + " loads no script from a CDN");
+});
+check(/@font-face/.test(site) && /url\(fonts\//.test(site),
+      "the typefaces are declared locally with @font-face");
+check(fs.existsSync(path.join(ROOT, "assets", "vendor", "supabase.js")),
+      "and the Supabase library is vendored into the repo");
+{
+  const files = fs.readdirSync(path.join(ROOT, "assets", "fonts"));
+  check(files.length >= 12, "the font files are present (" + files.length + ")");
+  check(files.every(f => /\.woff2$/.test(f)), "all woff2, the only format any current browser needs");
+  /* Only latin and latin-ext are shipped. Greek, Cyrillic and Vietnamese would
+     be weight for nothing on an English interface. */
+  check(files.every(f => /-(latin|latin-ext)\.woff2$/.test(f)),
+        "and only the latin subsets, not all 33 faces Google offers");
+  check(/unicode-range/.test(site),
+        "with unicode-range, so latin-ext downloads only when a page needs it");
+}
+/* A promise on the privacy page has to match what the code does. */
+{
+  const p = readFile("privacy.html");
+  check(!/load from Google Fonts/.test(p), "privacy.html no longer says fonts come from Google");
+  check(/Nothing is loaded from anywhere else/.test(p),
+        "it states plainly that no third party is contacted");
+  check(/deleted automatically after 180 days/.test(p),
+        "and gives the page counts a retention period");
+  check(fs.existsSync(path.join(ROOT, "supabase-retention.sql")),
+        "with the SQL that actually enforces both periods shipped alongside it");
+}
+
+/* ---- the phone pass that only ever reached one page ---------------------- */
+/* Every touch-target fix from the earlier mobile pass went into app.css, which
+   only index.html loads. The other 1,732 pages load site.css and got none of
+   it: 24 controls under 32px on about.html, none on the board. That is why it
+   kept being reported as fixed and kept not being. */
+{
+  const phone = site.slice(site.lastIndexOf("@media (max-width:640px)"));
+  check(/\.sitenav a\{min-height:32px/.test(phone),
+        "site.css gives navigation links a 32px minimum on phones");
+  check(/footer a\{min-height:32px/.test(phone), "and the footer links too");
+  check(/\.brand\{min-height:32px/.test(phone), "and the brand");
+  check(/THUMB TARGETS ON EVERY PAGE/.test(site),
+        "with the reason recorded, so it is not moved back into app.css");
+}
+
+/* ---- the app header on a phone ------------------------------------------- */
+/* 217px of an 844px screen, and the first task at 319px. Seven nav links wrap
+   onto two rows leaving PRIVACY alone on the second. Measured after: 180px and
+   282px, nav back to one row. */
+check(/\.sitenav a\.page,\.sitenav \.gap\{display:none\}/.test(app),
+      "the app header drops the content links on phones");
+{
+  const i = app.indexOf(".sitenav a.page,.sitenav .gap{display:none}");
+  const before = app.slice(0, i);
+  const lastQuery = before.lastIndexOf("@media");
+  check(/max-width:\s*640px/.test(before.slice(lastQuery, lastQuery + 60)),
+        "inside a max-width query, so the desktop header cannot be affected by it");
+}
+
+/* ---- the fourth column on a phone ---------------------------------------- */
+/* 56px hidden to the right with nothing saying the table scrolled. It read as
+   broken, not scrollable: the heading cut to "TY" and rows ending in a clipped
+   N or R. A scroll shadow was tried and made the scrolling discoverable while
+   leaving the column just as unreadable. */
+check(/thead th:nth-child\(4\),tbody td:nth-child\(4\)\{display:none\}/.test(gen),
+      "the Type column comes out below 640px so the table fits");
+check(/content:" · regional"/.test(gen),
+      "with regional days marked inline instead, in the space that exists");
+check(/table\{min-width:0\}/.test(gen),
+      "and the min-width is released, or dropping the column would change nothing");
+{
+  const page = readFile("holidays/UK-2026.html");
+  check(/nth-child\(4\)/.test(page), "the rule reaches the generated pages");
+  check(/<th>Type<\/th>/.test(page) || /Type/.test(page),
+        "while the column itself is still in the HTML for desktop and for search engines");
+}
+
+/* ---- the threshold from the day before ----------------------------------- */
+/* 90 characters is two lines on a desktop card and three on a phone. Measured
+   on the live site at 390px: an 84-character task was clipped, scrollHeight 59
+   against clientHeight 39, and showed no control because 84 is under 90. */
+{
+  const js = readFile("assets/app.js");
+  check(/head\.length > 55/.test(js),
+        "the more-control threshold is tuned to the narrowest card, not the widest");
+  check(/TUNED TO THE NARROWEST CARD/.test(js),
+        "and says why, so it is not raised again to suit a desktop screenshot");
+}
 }
 
 let docFail = 0;

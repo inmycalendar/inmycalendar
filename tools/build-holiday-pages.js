@@ -33,7 +33,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "65";                        /* cache tag, keep in step with the pages */
+const V    = "66";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
@@ -93,7 +93,30 @@ tbody tr.reg td{color:var(--soft)}
 .yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
   border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
 .yearnav a:hover{background:var(--accentBg)}
-.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}`;
+.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
+
+/* THE FOURTH COLUMN DOES NOT FIT ON A PHONE.
+   Measured at 390px: the table is 420px inside a wrapper that scrolls, so 56px
+   is hidden to the right - the whole National/Regional column. Nothing on
+   screen said it scrolled, so it did not read as scrollable, it read as broken:
+   the heading cut to "TY" and every row ending in a clipped N or R.
+
+   A scroll shadow was tried first. It made the scrolling discoverable and left
+   the column exactly as unreadable, which is solving the wrong half.
+
+   So the column comes out below 640px and the table then fits with no sideways
+   scrolling at all. Nothing is lost: regional rows already carry .reg, so a
+   small grey marker after the holiday name says the same thing in the space
+   that exists. National days get no marker because they are the default and the
+   majority, and labelling the common case is noise.
+
+   Inside a max-width query, so the four-column desktop table is untouched. */
+@media (max-width:640px){
+  table{min-width:0}
+  thead th:nth-child(4),tbody td:nth-child(4){display:none}
+  tbody tr.reg td:nth-child(3)::after{content:" · regional";color:var(--soft);
+    font-size:11px;white-space:nowrap}
+}`;
 
 function shell({ title, desc, canonical, ld, body }){
   return `<!DOCTYPE html>
@@ -107,9 +130,6 @@ function shell({ title, desc, canonical, ld, body }){
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${canonical}">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" href="../assets/favicon.ico?v=${V}" sizes="any">
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=${V}">
@@ -146,7 +166,7 @@ ${body}
   </div>
 </footer>
 <script src="../assets/errors.js?v=${V}"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/vendor/supabase.js?v=${V}"></script>
 <script src="../assets/site.js?v=${V}"></script>
 <script src="../assets/auth.js?v=${V}"></script>
 <script src="../assets/stats.js?v=${V}"></script>

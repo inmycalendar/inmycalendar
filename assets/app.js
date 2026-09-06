@@ -691,10 +691,18 @@ function taskRow(task, st, idx, total){
   var nl    = full.indexOf("\n");
   var head  = nl < 0 ? full : full.slice(0, nl);
   var rest  = nl < 0 ? "" : full.slice(nl + 1).replace(/^\n+/, "");
-  /* 90 characters is roughly two lines on the narrowest card, so a single
-     long sentence with no newline in it gets the same treatment. That case
-     matters: a wall of words typed in one go has no newline to split on. */
-  var expandable = !!rest || head.length > 90;
+  /* TUNED TO THE NARROWEST CARD, NOT THE WIDEST.
+     This was 90, which is about two lines on a DESKTOP card and about three on
+     a phone. Measured on the live site at 390px: an 84-character task wrapped
+     to three lines, only two showed, and no control appeared because 84 is
+     under 90. scrollHeight 59 against clientHeight 39 - cut off mid-sentence
+     with nothing to say so, which is the exact fault this was written to fix.
+
+     55 is roughly two lines on the narrowest phone. Erring low is the right
+     way round: a control that appears when little is hidden costs a line of
+     grey text on a wide screen, while one that fails to appear when text IS
+     cut is the bug. */
+  var expandable = !!rest || head.length > 55;
 
   var txt = mk("span","txt", head);
   txt.title = full + "\nTo do: " + (task.ts.todo || "-") +
