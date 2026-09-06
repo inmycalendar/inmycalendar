@@ -42,7 +42,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "75";                        /* cache tag, keep in step with the pages */
+const V    = "76";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 
@@ -153,10 +153,19 @@ tbody tr.reg td{color:var(--soft)}
   /* Full width, and 16px or iOS zooms the page the moment it is focused. */
   .ctryfind{max-width:none;font-size:16px;padding:12px 14px;margin-bottom:4px}
   .ctrycount{padding-top:8px}
-  /* One column, and rows a thumb can hit: they were 27px. */
-  .ctrylist{columns:1;font-size:15px;margin-top:4px}
+  /* TWO columns, and rows a thumb can hit.
+
+     One column at 44px was the first attempt and it made this page 13.5
+     screens long - 246 rows of 44px is 10,800px. Two columns halves that to
+     about 6.4 while leaving each row 180px wide and 44 tall, which is still a
+     comfortable target: the 44 that matters here is the height.
+
+     The filter above is the fast path and this is the browsing one, so the
+     browsing one should not be a five-minute scroll. break-inside keeps a
+     two-line country name whole. */
+  .ctrylist{columns:2;column-gap:14px;font-size:14px;margin-top:4px}
   .ctrylist a{min-height:44px;display:flex;align-items:center;
-    border-top:1px solid var(--rule2);padding:4px 0}
+    border-top:1px solid var(--rule2);padding:4px 0;break-inside:avoid}
 }
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
 /* THIRTY-ONE YEARS, not six.

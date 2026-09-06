@@ -4669,6 +4669,75 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
       "and it is opened AFTER setView, which closes the sheet on its way past");
 }
 
+/* ==========================================================================
+   C76. EVERY var(--x) RESOLVES TO SOMETHING
+
+   Found by a full pass with 59 tasks, 12 coloured days and US regional
+   holidays loaded: the carry bar - "3 tasks still open from 2 earlier days" -
+   was drawing with no fill at all. Its background was var(--doingF), and there
+   is no such token. CSS drops a declaration whose custom property is unknown,
+   silently, so the bar had a border and nothing behind it in both themes.
+   Measured as rgba(0, 0, 0, 0).
+
+   Nothing catches that by reading: --doingF is one letter from --doingE, which
+   IS a token, and the bar looked plausible. So this checks the whole surface
+   rather than that one spot.
+   ========================================================================== */
+{
+  /* Comments stripped first. A note EXPLAINING that var(--doingF) was the bug
+     is not a use of it, and without this the fix fails its own test. */
+  const decomment = s => s.replace(/\/\*[\s\S]*?\*\//g, "");
+  const css = decomment(siteCss + readFile("assets/app.css"));
+  const sources = [css, decomment(readFile("assets/app.js")), readFile("index.html")];
+
+  /* Declared anywhere: in a stylesheet, or set from JS via setProperty. */
+  const declared = new Set();
+  (css.match(/(^|[;{\s])(--[A-Za-z0-9_-]+)\s*:/g) || [])
+    .forEach(m => declared.add(m.match(/--[A-Za-z0-9_-]+/)[0]));
+  /* The day-colour tints are built at runtime: --k0b, --k0f ... --k7f. */
+  for (let i = 0; i < 8; i++){ declared.add("--k" + i + "b"); declared.add("--k" + i + "f"); }
+
+  const used = new Set();
+  sources.forEach(src => (src.match(/var\(\s*--[A-Za-z0-9_-]+/g) || [])
+    .forEach(m => used.add(m.match(/--[A-Za-z0-9_-]+/)[0])));
+
+  /* A var() with a fallback - var(--x, #fff) - is allowed to name an unknown
+     property, because the fallback is what it is for. Those are excluded. */
+  const withFallback = new Set();
+  sources.forEach(src => (src.match(/var\(\s*(--[A-Za-z0-9_-]+)\s*,/g) || [])
+    .forEach(m => withFallback.add(m.match(/--[A-Za-z0-9_-]+/)[0])));
+
+  const orphans = [...used].filter(v => !declared.has(v) && !withFallback.has(v)).sort();
+  check(orphans.length === 0,
+        "every var(--x) names a token that exists" +
+        (orphans.length ? " - orphaned: " + orphans.join(", ") : ""));
+  check(declared.has("--doingBg"), "including the one the carry bar wanted all along");
+}
+
+/* ---- and the fixes that pass found ---- */
+{
+  const appFlat = readFile("assets/app.css").replace(/\s*\n\s*/g, "");
+  const appPh   = appFlat.split("@media (max-width:640px)").slice(1).join("");
+  const holGen2 = readFile("tools/build-holiday-pages.js").replace(/\s*\n\s*/g, "");
+
+  check(/\.carrybar\{[^}]*background:var\(--doingBg\)/.test(appFlat),
+        "the carry bar is filled with the amber the In progress column uses");
+  check(/var bar = mk\("div","carrybar"\)/.test(js) &&
+        !/--doingF/.test(js.replace(/\/\*[\s\S]*?\*\//g, "")),
+        "and is styled from the stylesheet, not from an inline string JS cannot re-reach");
+  check(/\.carrybar \.btn\{min-height:36px/.test(appPh),
+        "its buttons are 36px on a phone - it moves every stale task at once");
+  check(/\.op\{width:36px;height:36px\}/.test(appPh),
+        "and the two controls left in the open on a card are 36px, which costs no height");
+
+  /* One column at 44px made the country list 13.5 screens - 246 rows of 44px
+     is 10,800px. Two columns halves it without shrinking the target. */
+  check(/\.ctrylist\{columns:2/.test(holGen2),
+        "the country list is two columns on a phone, not one 13.5-screen column");
+  check(/\.ctrylist a\{min-height:44px/.test(holGen2),
+        "with the rows still 44px tall");
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],

@@ -1368,9 +1368,17 @@ function renderCarry(){
   for (var oi=0; oi<open.length; oi++) days[open[oi].date] = 1;
   var dayCount = Object.keys(days).length;
 
-  var bar = mk("div");
-  bar.style.cssText = "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;" +
-    "padding:5px 9px;background:var(--doingF);border:1px solid var(--doingE);border-left:3px solid var(--doing)";
+  /* Styled from the stylesheet, not from here.
+
+     It used to carry its own inline cssText, and that hid a bug for a long
+     time: the fill was var(--doingF), which is not a token and never has been.
+     An unknown custom property makes the whole declaration invalid, so the bar
+     has been drawing with no fill at all - a border and nothing behind it -
+     in both themes. Measured: rgba(0, 0, 0, 0).
+
+     Inline styles also cannot be overridden by a media query without
+     !important, which is why the buttons stayed at 28px on a phone. */
+  var bar = mk("div","carrybar");
   bar.appendChild(mk("span", null,
     open.length + (open.length === 1 ? " task" : " tasks") + " still open from " +
     (dayCount === 1 ? oldest : dayCount + " earlier days, back to " + oldest)));

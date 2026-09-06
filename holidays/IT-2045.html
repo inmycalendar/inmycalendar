@@ -9,16 +9,16 @@
 <meta property="og:description" content="All 14 national and 87 regional public holidays in Italy in 2045, with the date and day of the week for each. Free, and you can see them on a year calendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/holidays/IT-2045.html">
-<link rel="icon" href="../assets/favicon.ico?v=75" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=75">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=75">
-<link rel="manifest" href="../manifest.webmanifest?v=75">
+<link rel="icon" href="../assets/favicon.ico?v=76" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=76">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=76">
+<link rel="manifest" href="../manifest.webmanifest?v=76">
 <script>/* theme before first paint - see the dark block in site.css */
 try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/holidays/IT-2045.html">
-<link rel="stylesheet" href="../assets/site.css?v=75">
+<link rel="stylesheet" href="../assets/site.css?v=76">
 <style>
 /* THE HEADING STICKS AT EVERY WIDTH.
    These tables run to sixty-five rows. On a laptop that is about two screens,
@@ -60,10 +60,19 @@ tbody tr.reg td{color:var(--soft)}
   /* Full width, and 16px or iOS zooms the page the moment it is focused. */
   .ctryfind{max-width:none;font-size:16px;padding:12px 14px;margin-bottom:4px}
   .ctrycount{padding-top:8px}
-  /* One column, and rows a thumb can hit: they were 27px. */
-  .ctrylist{columns:1;font-size:15px;margin-top:4px}
+  /* TWO columns, and rows a thumb can hit.
+
+     One column at 44px was the first attempt and it made this page 13.5
+     screens long - 246 rows of 44px is 10,800px. Two columns halves that to
+     about 6.4 while leaving each row 180px wide and 44 tall, which is still a
+     comfortable target: the 44 that matters here is the height.
+
+     The filter above is the fast path and this is the browsing one, so the
+     browsing one should not be a five-minute scroll. break-inside keeps a
+     two-line country name whole. */
+  .ctrylist{columns:2;column-gap:14px;font-size:14px;margin-top:4px}
   .ctrylist a{min-height:44px;display:flex;align-items:center;
-    border-top:1px solid var(--rule2);padding:4px 0}
+    border-top:1px solid var(--rule2);padding:4px 0;break-inside:avoid}
 }
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
 /* THIRTY-ONE YEARS, not six.
@@ -433,10 +442,10 @@ tbody tr.reg td{color:var(--soft)}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="../assets/errors.js?v=75"></script>
-<script src="../assets/vendor/supabase.js?v=75"></script>
-<script src="../assets/site.js?v=75"></script>
-<script src="../assets/auth.js?v=75"></script>
-<script src="../assets/stats.js?v=75"></script>
+<script src="../assets/errors.js?v=76"></script>
+<script src="../assets/vendor/supabase.js?v=76"></script>
+<script src="../assets/site.js?v=76"></script>
+<script src="../assets/auth.js?v=76"></script>
+<script src="../assets/stats.js?v=76"></script>
 </body>
 </html>

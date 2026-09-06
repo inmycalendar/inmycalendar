@@ -1374,3 +1374,34 @@ main{padding:16px 0 0}
   #glanceBox .wg.c .dc .cm{display:none}
   #glanceBox .wg.c .dc .task{width:3px;height:3px;top:2px;right:2px}
 }
+
+/* ==========================================================================
+   THE CARRY BAR - "3 tasks still open from 2 earlier days"
+
+   It used to be styled inline from app.js, which hid a real bug: the fill was
+   var(--doingF), and there is no such token. An unknown custom property makes
+   the whole declaration invalid, so the bar drew with a border and nothing
+   behind it - measured as rgba(0,0,0,0) in both themes. The token it wanted is
+   --doingBg, the same amber wash the In progress column uses, which is exactly
+   the right meaning here: these are tasks that were started and not finished.
+
+   Inline styles also cannot be overridden by a media query without !important,
+   which is why its buttons stayed at 28px on a phone while everything else
+   around them grew.
+   ========================================================================== */
+.carrybar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;
+  padding:5px 9px;background:var(--doingBg);
+  border:1px solid var(--doingE);border-left:3px solid var(--doing)}
+
+@media (max-width:640px){
+  /* A bulk action that moves every stale task onto today deserves a target you
+     cannot miss by accident, in both directions. */
+  .carrybar{padding:8px 10px;gap:8px}
+  .carrybar .btn{min-height:36px;padding-left:12px;padding-right:12px}
+
+  /* The two controls left in the open on a card were 34x32. The card's height
+     is set by its three lines of text and the controls float beside them, so
+     36x36 costs no height at all - it is free, and it is the size a thumb is
+     entitled to. */
+  .op{width:36px;height:36px}
+}
