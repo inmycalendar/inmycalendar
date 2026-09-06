@@ -4232,8 +4232,28 @@ const ph = (oneline.match(/@media \(max-width:640px\)\{[^@]*/g) || []).join("");
    the page 5,400px at 322x710: 7.6 screens, against 6.0 before any of this.
    Reported from real use, then reproduced. The cap is back, sized to the
    screen instead of to a fraction of it. */
-check(/\.lane,\.rlist\{max-height:max\(260px, calc\(100vh - 104px\)\);overflow-y:auto\}/.test(ph),
-      "a phone lane is one screen tall, not three cards and not twenty");
+/* THE SUBTRAHEND WAS WRONG AND SO WAS THE UNIT.
+
+   104px was meant to be the tabs plus the add field, but the lane does not
+   start at 104: the header is above it too. Measured at 322x710 the lane began
+   at 215 and ended at 821 - 111px below the fold - so its bottom edge was
+   never on screen and nothing said it was a box with more inside it. It was
+   capping correctly and looking exactly like it was not.
+
+   And 100vh on a phone is the LARGE viewport, the height the page would have
+   with the address bar hidden, which overshoots again on a real device. The
+   number is now the chrome that is always on screen - 46 of pinned tabs, 38 of
+   add field, 56 of tab bar - and the unit is dvh, with vh underneath as the
+   fallback. */
+check(/\.lane,\.rlist\{max-height:max\(260px, calc\(100vh  - 150px\)\);overflow-y:auto\}/.test(ph),
+      "a phone lane is sized to the screen it is actually on");
+check(/\.lane,\.rlist\{max-height:max\(260px, calc\(100dvh - 150px\)\)\}/.test(ph),
+      "in dvh, so the address bar does not push its bottom edge off the screen");
+{
+  const at = ph.indexOf("calc(100dvh - 150px)");
+  const vh = ph.indexOf("calc(100vh  - 150px)");
+  check(vh >= 0 && at > vh, "with the vh fallback declared first, so dvh wins where it is known");
+}
 {
   /* 46px of pinned tabs plus a 38px add field is 84; the rest of the 104 is
      the padding around them. The point of tying it to 100vh rather than to a

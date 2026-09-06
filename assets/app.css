@@ -238,11 +238,18 @@ main{padding:16px 0 0}
    supposed to scroll instead. Without this line, adding a task silently
    shrinks all the others. */
 .t{display:block;flex:none;min-width:0;min-height:28px;padding:4px 8px;
-  border:1px solid var(--rule);border-radius:8px;background:var(--card)}
+  border:1px solid var(--rule);border-radius:8px;background:var(--card);
+  /* the containing block for the collapsed "more" - see below */
+  position:relative}
 .t::after{content:"";display:block;clear:both}
-.t.s-todo{background:var(--todoBg);border-color:var(--todoE)}
-.t.s-doing{background:var(--doingBg);border-color:var(--doingE)}
-.t.s-done{background:var(--doneBg);border-color:var(--doneE)}
+/* --tbg names whatever this card's background actually is, so the fade behind
+   the collapsed "more" can be built from it. A card has four possible
+   backgrounds - three statuses and the plain default - times two themes, and
+   background:inherit gives a hard edge that cuts a character in half. */
+.t{--tbg:var(--card)}
+.t.s-todo{background:var(--todoBg);border-color:var(--todoE);--tbg:var(--todoBg)}
+.t.s-doing{background:var(--doingBg);border-color:var(--doingE);--tbg:var(--doingBg)}
+.t.s-done{background:var(--doneBg);border-color:var(--doneE);--tbg:var(--doneBg)}
 .t .grip{float:left;margin:1px 6px 0 0;color:var(--faint);font-size:11px;cursor:grab;letter-spacing:-1px}
 /* Three lines, then clip. One line hid all but the first few words; unlimited
    lines would let a single task eat the lane. Three fits about 150 characters,
@@ -291,6 +298,24 @@ main{padding:16px 0 0}
 .t .more{display:block;background:transparent;border:0;padding:3px 0 0;margin:0;
   font-family:var(--disp);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--soft);cursor:pointer}
+
+/* AT THE END OF THE LAST LINE, NOT ON A LINE OF ITS OWN.
+
+   It used to sit under the text as a block, which cost a whole line of the
+   card to a five-letter word - on a phone, a third line for two lines of task.
+   Collapsed, it now sits at the bottom right corner, which IS the end of the
+   last visible line, and the card is only as tall as its text again.
+
+   background:inherit rather than a colour: the card is one of four different
+   backgrounds depending on status and theme, and inherit takes whichever one
+   this card actually has. The left padding is the gap that stops a long line
+   running into the word.
+
+   Expanded it goes back into the flow, below the detail, where "less" belongs
+   underneath what it will collapse. */
+.t:not(.open) .more{position:absolute;right:8px;bottom:3px;
+  padding:0 0 0 26px;line-height:1.6;
+  background:linear-gradient(90deg,transparent 0,var(--tbg) 22px)}
 .t .more:hover{color:var(--ink)}
 /* While renaming, the textarea holds the WHOLE task, so a detail block below it
    would be the same words twice. */
@@ -683,7 +708,14 @@ main{padding:16px 0 0}
   .t .txt{float:none;font-size:14px;line-height:1.45;max-height:calc(1.45em * 3)}
   .t.open .txt{max-height:none}
   .t .detail{font-size:13.5px}
-  .t .more{min-height:32px;font-size:11px}
+  /* Collapsed it is a corner chip, not a row. min-height goes with it: the
+     32px was there to make a full-width row worth tapping, and a 32px box in
+     the corner would reach up into the two floated controls above it. The
+     generous left padding keeps the target wide instead of tall, and the card
+     itself is still tappable for rename. */
+  .t .more{font-size:11px}
+  .t:not(.open) .more{right:10px;bottom:6px;padding-left:20px;line-height:1.45}
+  .t.open .more{min-height:32px}
   /* WRAP, DO NOT SHRINK.
      Eight controls at 34px with seven 8px gaps needs 328px. On the narrowest
      phones the card is about 294px wide, and flex's default shrink quietly
@@ -969,7 +1001,28 @@ main{padding:16px 0 0}
 
      The floor matters for a phone held sideways, where 100vh is about 380px
      and the arithmetic would otherwise leave a lane too short to use. */
-  .lane,.rlist{max-height:max(260px, calc(100vh - 104px));overflow-y:auto}
+  /* THE ARITHMETIC WAS WRONG, twice over.
+
+     104px was meant to be "the tabs plus the add field". But the lane does not
+     start at 104px: the header sits above it too, so at 322x710 the lane began
+     at 215 and, being 606 tall, ENDED AT 821 - a hundred and eleven pixels
+     below the fold. You could never see its bottom edge, so nothing on screen
+     ever said it was a box with more inside it. It was capping correctly and
+     looking exactly like it was not, which is what was reported.
+
+     And 100vh on a phone is the LARGE viewport - the height the page would
+     have if the browser's address bar were hidden - so on a real device it
+     overshoots by another 60-90px on top of that. 100dvh is the height the
+     screen actually has right now. The vh line stays underneath as the
+     fallback for a browser too old to know dvh.
+
+     The number is now the chrome that is ALWAYS on screen, which is what the
+     lane has to share the screen with: 46px of pinned column tabs, 38px of add
+     field, 56px of tab bar, and a little air. So once the header has scrolled
+     away - the state you are in while working down a long list - the lane runs
+     from under the tabs to just above the tab bar and stops there, visibly. */
+  .lane,.rlist{max-height:max(260px, calc(100vh  - 150px));overflow-y:auto}
+  .lane,.rlist{max-height:max(260px, calc(100dvh - 150px))}
 
   /* The calendar is the exception, and deliberately: a year should scroll
      continuously, and with no box scrolling inside it the grid's own year
