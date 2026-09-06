@@ -93,6 +93,33 @@
   --holNat:#dc2626;
   --holReg:#2563eb;
 
+  /* COLOURS THAT USED TO BE WRITTEN INTO RULES.
+     Each of these was a literal hex somewhere below, which is fine while there
+     is one theme and fatal the moment there are two: a rule that hard-codes
+     #2b2f38 text keeps painting near-black on a near-black page. They are
+     tokens now so the dark block at the foot of this file can answer for all
+     of them in one place. */
+  --bodyInk:#2b2f38;        /* long-form reading text on content pages */
+  --dangerBg:#fdf3f3;       /* the wash behind a destructive control   */
+  --dangerLine:#f0d5d5;
+  --dangerInk:#991b1b;      /* the confirmed-delete button             */
+  --wkInk:#c3c7ce;          /* week numbers down the calendar's left   */
+  --cellInk:#374151;        /* the date inside a calendar cell         */
+  --wkndBg:#fafbfc;         /* the faint Saturday/Sunday tint          */
+  --outInk:#c9ced6;         /* a day belonging to the neighbouring year*/
+  --chipLine:rgba(0,0,0,.12);
+  /* The toast is deliberately the INVERSE of the page in both themes - that
+     is what makes it read as a system message rather than as another panel -
+     so it cannot be built from --ink and --card. */
+  --toastBg:#111318;
+  --toastInk:#ffffff;
+  --toastLine:rgba(255,255,255,.45);
+  --toastHover:rgba(255,255,255,.14);
+  --toastSoft:rgba(255,255,255,.6);
+  --overlay:rgba(17,19,24,.4);
+  --shadow:rgba(17,19,24,.14);
+  --shadowStrong:rgba(0,0,0,.22);
+
   --wrap:1320px; --gut:20px; --rail:240px;
   --hBar:52px;
   --wIso:96px; --wMeta:150px; --wYrs:88px;
@@ -216,8 +243,8 @@ input,select,textarea{font:inherit;color:inherit}
   font-size:11.5px;border-radius:7px;white-space:nowrap}
 .btn:hover{background:var(--card2)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.danger{color:var(--danger);border-color:#f0d5d5}
-.btn.danger:hover{background:#fdf3f3}
+.btn.danger{color:var(--danger);border-color:var(--dangerLine)}
+.btn.danger:hover{background:var(--dangerBg)}
 .sel{background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:7px;
   padding:4px 8px;font-size:11.5px;height:29px}
 
@@ -230,7 +257,7 @@ footer a:hover{color:var(--ink)}
 
 /* ---------------- content pages (about / contact / privacy) ---------------- */
 .pagebody{padding:30px 0 50px}
-.pagebody .body{max-width:660px;font-family:var(--sans);font-size:14.5px;line-height:1.7;color:#2b2f38}
+.pagebody .body{max-width:660px;font-family:var(--sans);font-size:14.5px;line-height:1.7;color:var(--bodyInk)}
 .pagebody h1{font-family:var(--disp);font-weight:500;font-size:27px;letter-spacing:.04em;
   text-transform:uppercase;color:var(--ink);margin:0 0 6px}
 .pagebody h2{font-family:var(--disp);font-weight:500;font-size:15px;letter-spacing:.09em;
@@ -269,7 +296,7 @@ footer a:hover{color:var(--ink)}
 
 .authslot{position:relative}
 .authmenu{position:absolute;right:0;top:calc(100% + 8px);z-index:80;width:250px;background:var(--card);
-  border:1px solid var(--rule);border-radius:var(--r);box-shadow:0 12px 30px rgba(17,19,24,.14);
+  border:1px solid var(--rule);border-radius:var(--r);box-shadow:0 12px 30px var(--shadow);
   padding:10px;display:flex;flex-direction:column;gap:6px;text-align:left}
 .amrow{background:var(--card);border:1px solid var(--rule);border-radius:8px;padding:9px 11px;
   font-size:12.5px;color:var(--ink);text-align:left}
@@ -334,16 +361,16 @@ footer a:hover{color:var(--ink)}
 .pfemail{font-size:12px;color:var(--ink);word-break:break-all;margin:-2px 0 4px}
 .pflabel{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:2px}
 .signoutrow{margin-top:8px;text-align:center;font-weight:600}
-.signoutrow:hover{background:#fdf3f3;color:var(--danger);border-color:#f0d5d5}
+.signoutrow:hover{background:var(--dangerBg);color:var(--danger);border-color:var(--dangerLine)}
 
 /* Deleting the account. Deliberately NOT styled like the primary action: it
    reads as a plain row until it is opened, so it cannot be hit on the way to
    Sign out, which sits directly above it. */
-.deleterow{text-align:center;color:var(--danger);border-color:#f0d5d5}
-.deleterow:hover{background:#fdf3f3}
+.deleterow{text-align:center;color:var(--danger);border-color:var(--dangerLine)}
+.deleterow:hover{background:var(--dangerBg)}
 .delbox{margin-top:8px;display:flex;flex-direction:column;gap:8px}
 .delbox .amsend.deletego{background:var(--danger);border-color:var(--danger)}
-.delbox .amsend.deletego:hover{background:#991b1b;border-color:#991b1b}
+.delbox .amsend.deletego:hover{background:var(--dangerInk);border-color:var(--dangerInk)}
 .delbox .amsend.deletego:disabled{opacity:.45}
 
 /* reminder controls in the account panel */
@@ -352,3 +379,113 @@ footer a:hover{color:var(--ink)}
 .pfcheck input{width:16px;height:16px;flex:none;cursor:pointer}
 .pffreq{width:100%;height:32px;font-size:12.5px}
 .pffreq:disabled{opacity:.5}
+
+/* ==========================================================================
+   DARK MODE
+
+   Every colour above is a token and every rule below reads one, so the whole
+   theme is this one block: nothing is restyled, the values are simply
+   answered differently. That is also why it took a pass through both
+   stylesheets first - a rule holding a literal #2b2f38 would have gone on
+   painting near-black text on a near-black page, and no amount of theming
+   here would have reached it.
+
+   Keyed to the OS setting rather than to a switch in the app. The phone and
+   the laptop already know whether it is night, both platforms expect an app
+   to follow, and a switch is one more thing to find, set and store.
+
+   Three rules held while choosing the values:
+
+   1. Not inverted. A true inversion makes white text on pure black, which
+      smears on an OLED phone. The page is #0f1115 and the text #e8eaee.
+   2. The chrome stays neutral. The whole point of the light theme is that
+      every colour left on screen means something - a category, a holiday, a
+      status - so the dark chrome is grey too, and the meaningful colours are
+      LIFTED rather than dimmed: a #2563eb that reads well on white is muddy
+      on #0f1115, so it becomes #60a5fa.
+   3. Surfaces get lighter as they come forward. --page is darkest, --card
+      sits above it, --card2 above that. In light they run the other way.
+      This is what replaces the shadows, which do almost nothing on a dark
+      ground.
+   ========================================================================== */
+@media (prefers-color-scheme: dark){
+  :root{
+    --page:#0f1115;
+    --card:#181b21;
+    --card2:#242830;
+    --ink:#e8eaee;
+    --soft:#a2a9b6;
+    --faint:#79808d;
+    --rule:#2c313b;
+    --rule2:#232830;
+
+    /* Inverted deliberately: --accent is the "active" fill and --onAccent the
+       text on it, so in the dark they swap ends rather than staying put. */
+    --accent:#e8eaee;
+    --accent2:#a2a9b6;
+    --accentBg:#242830;
+    --onAccent:#0f1115;
+    --danger:#f87171;
+
+    /* Lifted, not dimmed - see rule 2 above. */
+    --todo:#60a5fa;  --todoBg:#141c2b;  --todoE:#22314c;
+    --doing:#fbbf24; --doingBg:#241a0e; --doingE:#412f13;
+    --done:#34d399;  --doneBg:#0e2019;  --doneE:#17392b;
+
+    --holNat:#f87171;
+    --holReg:#60a5fa;
+
+    --bodyInk:#c8cede;
+    --dangerBg:#2a1a1c;
+    --dangerLine:#4b2c30;
+    --dangerInk:#ef4444;
+    --wkInk:#5b626e;
+    --cellInk:#c4cad6;
+    --wkndBg:#14171d;
+    --outInk:#484e59;
+    --chipLine:rgba(255,255,255,.16);
+
+    /* The toast is the inverse of the page in BOTH themes, which is what makes
+       it read as a system message rather than as one more panel. So in the
+       dark it is the light one, and everything drawn on it flips with it. */
+    --toastBg:#e8eaee;
+    --toastInk:#0f1115;
+    --toastLine:rgba(0,0,0,.32);
+    --toastHover:rgba(0,0,0,.10);
+    --toastSoft:rgba(0,0,0,.55);
+
+    --overlay:rgba(0,0,0,.62);
+    --shadow:rgba(0,0,0,.55);
+    --shadowStrong:rgba(0,0,0,.65);
+  }
+
+  /* Tell the browser the page is dark, so form controls, scrollbars and the
+     text-selection colour come from the dark set rather than being drawn light
+     on top of it. One line, and it fixes every native widget at once. */
+  :root{color-scheme:dark}
+
+  /* The logo is a white tile with near-black artwork, drawn inline in the
+     markup where no token can reach it. On a dark page a bright white tile is
+     the loudest thing on screen, which is not what a wordmark is for. */
+  .brand svg{opacity:.9}
+}
+
+/* ==========================================================================
+   SAFE AREAS - the notch, the rounded corners and the home indicator
+
+   The viewport meta now carries viewport-fit=cover, which is what an installed
+   app needs to reach the edges of the screen instead of being letterboxed
+   inside white bars. It also means the operating system's own furniture is now
+   ON TOP of the page rather than beside it, so anything at an edge has to keep
+   out of its way itself.
+
+   env(safe-area-inset-*) is exactly zero on a desktop, in a normal mobile
+   browser tab, and on any phone without a notch - the browser's own chrome is
+   already doing the job there. It only becomes a real number in an installed,
+   full-screen app on a device that needs it, which is precisely where these
+   rules should act and nowhere else. So this block cannot move a desktop
+   pixel: the arithmetic is "+ 0".
+   ========================================================================== */
+.bar{padding-top:env(safe-area-inset-top)}
+.wrap{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+footer{padding-bottom:calc(30px + env(safe-area-inset-bottom))}

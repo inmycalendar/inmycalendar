@@ -212,7 +212,7 @@ main{padding:16px 0 0}
   resize:none;overflow-y:auto;display:block}
 .addgo{flex:none;width:30px;height:30px;border:1px solid var(--rule);border-radius:7px;
   background:var(--card);color:var(--soft);font-size:16px;line-height:1;padding:0;cursor:pointer}
-.addgo:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.addgo:hover{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
 .addgo:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .cadd::placeholder{color:var(--faint)}
 .cadd:focus{outline:none;border-color:var(--accent)}
@@ -322,7 +322,7 @@ main{padding:16px 0 0}
 .op.menu{display:none}
 .op:hover:not(:disabled){background:var(--card2);color:var(--ink)}
 .op:disabled{opacity:.3;cursor:not-allowed}
-.op.x:hover{background:#fdf3f3;color:var(--danger);border-color:#f0d5d5}
+.op.x:hover{background:var(--dangerBg);color:var(--danger);border-color:var(--dangerLine)}
 /* While editing, the floated controls are hidden so the field gets the whole
    card. Sharing the row with them left the field about a third width, which is
    unusable for a task that renders over three lines. */
@@ -429,17 +429,17 @@ main{padding:16px 0 0}
   display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--rule2)}
 .wg .dh.wknd{color:var(--soft)}
 .wg.c .dh{position:static}
-.wg .wk{font-size:9px;color:#c3c7ce;background:transparent;border:0;border-top:1px solid var(--rule2);
+.wg .wk{font-size:9px;color:var(--wkInk);background:transparent;border:0;border-top:1px solid var(--rule2);
   display:flex;align-items:center;justify-content:center;padding:0;font-family:var(--mono)}
 .wg .wk:hover{color:var(--accent);background:var(--card2)}
 
 .wg .dc{min-height:23px;border:0;border-top:1px solid var(--rule2);display:flex;align-items:center;
   justify-content:center;font-size:10px;background:transparent;padding:0;position:relative;
-  font-family:var(--mono);color:#374151;border-radius:0}
+  font-family:var(--mono);color:var(--cellInk);border-radius:0}
 .wg.c .dc{min-height:21px;font-size:9.5px}
-.wg .dc.wknd{background:#fafbfc}
+.wg .dc.wknd{background:var(--wkndBg)}
 .wg .dc:hover{background:var(--accentBg);color:var(--ink)}
-.wg .dc.out{color:#c9ced6}
+.wg .dc.out{color:var(--outInk)}
 /* four independent visual channels so nothing ever collides:
    fill = category · stripe = holiday · ring = today · dot = has tasks */
 /* Driven from JS so the four day colours can actually be changed. The values
@@ -495,7 +495,7 @@ main{padding:16px 0 0}
 .ad-anchor{display:none;position:sticky;bottom:0;z-index:50;min-height:50px}
 
 /* ---------------- modal ---------------- */
-.ov{position:fixed;inset:0;background:rgba(17,19,24,.4);z-index:100;display:flex;
+.ov{position:fixed;inset:0;background:var(--overlay);z-index:100;display:flex;
   align-items:flex-start;justify-content:center;padding:32px 14px;overflow:auto}
 .md{width:min(900px,100%);background:var(--page);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
 .mh{display:flex;align-items:center;gap:10px;background:var(--card);color:var(--ink);padding:12px 14px;
@@ -529,7 +529,7 @@ main{padding:16px 0 0}
 
 .mnote{width:100%;min-height:60px;background:var(--card);border:1px solid var(--rule);border-radius:8px;
   padding:8px;font-size:12.5px;resize:vertical;margin:10px 0 12px}
-.dab{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.1);padding:0}
+.dab{width:24px;height:24px;border-radius:6px;border:1px solid var(--chipLine);padding:0}
 .mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;
   border-top:1px solid var(--rule)}
 .mfoot .btn{padding:7px 22px;font-size:12.5px}
@@ -762,12 +762,12 @@ main{padding:16px 0 0}
 .selbar{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:70;
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
   background:var(--card);border:1px solid var(--rule);border-radius:12px;
-  padding:9px 14px;box-shadow:0 6px 24px rgba(0,0,0,.16);max-width:calc(100vw - 24px)}
+  padding:9px 14px;box-shadow:0 6px 24px var(--shadowStrong);max-width:calc(100vw - 24px)}
 .selbar.hidden{display:none}
 .selcount{font-family:var(--disp);font-size:11px;letter-spacing:.06em;
   text-transform:uppercase;color:var(--soft);white-space:nowrap}
 .selsw{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.selsw .dab{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.12);
+.selsw .dab{width:22px;height:22px;border-radius:6px;border:1px solid var(--chipLine);
   cursor:pointer;padding:0}
 .selsw .dab:hover{transform:scale(1.12)}
 .selsw .btn{padding:3px 9px;font-size:10.5px}
@@ -801,20 +801,20 @@ main{padding:16px 0 0}
    that just pressed delete. */
 .toast{position:fixed;left:16px;bottom:16px;z-index:75;
   display:flex;align-items:center;gap:10px;
-  background:var(--ink);color:#fff;border-radius:10px;
-  padding:9px 10px 9px 14px;box-shadow:0 6px 24px rgba(0,0,0,.22);
+  background:var(--toastBg);color:var(--toastInk);border-radius:10px;
+  padding:9px 10px 9px 14px;box-shadow:0 6px 24px var(--shadowStrong);
   max-width:calc(100vw - 32px);font-size:12.5px}
 .toast.hidden{display:none}
 /* When the day-selection bar is up, stack above it instead of overlapping. */
 .toast.above{bottom:76px}
 .toasttext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.toast .undogo{flex:none;background:transparent;border:1px solid rgba(255,255,255,.45);
-  color:#fff;font-family:var(--disp);font-size:10.5px;letter-spacing:.08em;
+.toast .undogo{flex:none;background:transparent;border:1px solid var(--toastLine);
+  color:var(--toastInk);font-family:var(--disp);font-size:10.5px;letter-spacing:.08em;
   text-transform:uppercase;padding:4px 10px;border-radius:7px;cursor:pointer}
-.toast .undogo:hover{background:rgba(255,255,255,.14)}
-.toastx{flex:none;background:transparent;border:0;color:rgba(255,255,255,.6);
+.toast .undogo:hover{background:var(--toastHover)}
+.toastx{flex:none;background:transparent;border:0;color:var(--toastSoft);
   font-size:16px;line-height:1;padding:0 2px;cursor:pointer}
-.toastx:hover{color:#fff}
+.toastx:hover{color:var(--toastInk)}
 
 @media (max-width:640px){
   /* Full width, clear of the anchor ad slot, and thumb-sized. */

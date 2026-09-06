@@ -104,7 +104,7 @@ function shell({ title, desc, canonical, ld, body }){
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${esc(title)} - inmycalendar</title>
 <meta name="description" content="${esc(desc)}">
 <meta property="og:title" content="${esc(title)}">
@@ -115,7 +115,8 @@ function shell({ title, desc, canonical, ld, body }){
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=${V}">
 <link rel="manifest" href="../manifest.webmanifest?v=${V}">
-<meta name="theme-color" content="#18181b">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="${canonical}">
 <link rel="stylesheet" href="../assets/site.css?v=${V}">
 <style>${STYLE}</style>

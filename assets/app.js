@@ -1911,9 +1911,38 @@ function applyCatColours(){
       continue;
     }
     var c = catColour(i);
-    root.style.setProperty("--k" + i + "b", blend(c,  0.88));   /* pale fill  */
-    root.style.setProperty("--k" + i + "f", blend(c, -0.32));   /* legible text */
+    /* THE TINTS HAVE TO KNOW WHICH THEME THEY ARE ON.
+       A day colour is drawn as a pale wash with the same hue, darkened, as its
+       text. On a dark page both halves of that are wrong: blending 88% towards
+       WHITE puts a near-white block on a #0f1115 grid, which is the brightest
+       thing on screen for what is only a marker, and the darkened text then
+       sits on it at the wrong end of the contrast.
+
+       So the blend runs the other way in the dark: the fill goes towards the
+       page and the text away from it. Same rule, opposite direction, and the
+       hue - which is the whole point of a category colour - is untouched. */
+    if (isDark()){
+      root.style.setProperty("--k" + i + "b", blend(c, -0.60));  /* deep fill  */
+      root.style.setProperty("--k" + i + "f", blend(c,  0.55));  /* light text */
+    } else {
+      root.style.setProperty("--k" + i + "b", blend(c,  0.88));  /* pale fill  */
+      root.style.setProperty("--k" + i + "f", blend(c, -0.32));  /* dark text  */
+    }
   }
+}
+
+/* WHICH THEME IS ON.
+   The OS setting, not a switch in the app: the phone and the laptop already
+   know whether it is night, both platforms expect an app to follow, and a
+   switch is one more control to find, set and store. Everything visual follows
+   from CSS tokens; this exists only for the handful of colours that are
+   COMPUTED - the day-category tints above - which CSS cannot derive from a
+   user-chosen hex on its own.
+
+   Reading a media query is not the layout measurement this codebase bans: no
+   box is consulted and nothing reflows. */
+function isDark(){
+  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
 }
 
 /* ---------- selecting several days at once ----------------------------------
@@ -2540,6 +2569,17 @@ function wire(){
     var n = narrow();
     if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
   });
+
+  /* FOLLOW THE OS WHEN IT CHANGES, not only when the page loads.
+     Phones switch theme on a schedule, so this fires while the app is open and
+     in front of you. Everything else re-themes on its own because it is a CSS
+     token; only the computed day-category tints need telling. */
+  if (window.matchMedia){
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    var onScheme = function(){ applyCatColours(); };
+    if (mq.addEventListener) mq.addEventListener("change", onScheme);
+    else if (mq.addListener) mq.addListener(onScheme);   /* older Safari */
+  }
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }
     if (e.key === "Escape" && !el.ov.classList.contains("hidden")){ closeDay(); return; }

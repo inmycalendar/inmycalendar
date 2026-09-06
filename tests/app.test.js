@@ -380,7 +380,11 @@ toCal();
 check(/^\d{2}-\d{2}$/.test(qa("#rail .dc")[0].textContent), "cells still MM-DD (" + qa("#rail .dc")[0].textContent + ")");
 const appFlat2 = appCss.replace(/\s*\n\s*/g,"");
 check(/\.wg \.dh\.wknd\{color:var\(--soft\)\}/.test(appFlat2), "weekend day-of-week headers are distinguished");
-check(/\.wg \.dc\.wknd\{background:#fafbfc\}/.test(appFlat2), "weekend cells get a subtle neutral fill");
+/* A token rather than the literal it used to be. The value is unchanged in the
+   light theme - the dark block at the foot of site.css answers it differently,
+   which a hard-coded #fafbfc could never have allowed. */
+check(/\.wg \.dc\.wknd\{background:var\(--wkndBg\)\}/.test(appFlat2), "weekend cells get a subtle neutral fill");
+check(/--wkndBg:#fafbfc/.test(siteCss), "and in the light theme it is still exactly the colour it was");
 check(/\.wg \.dc\.now\{[^}]*border-radius:6px/.test(appFlat2), "today is a rounded ring");
 check(/\.wg \.yh \.sub\{/.test(appFlat2), "each block header has room for a week-range sublabel");
 toBoard();
@@ -394,7 +398,8 @@ check(/^\d{2}-\d{2}$/.test(qa("#rail .dc")[0].textContent), "day cells still sho
 const flatApp = appCss.replace(/\s*\n\s*/g,"");
 check(/\.wg \.dh\{[^}]*background:var\(--card\)/.test(flatApp), "the Wk/day-of-week header is white, not a filled bar");
 check(/\.wg \.dc\.now\{[^}]*box-shadow:inset/.test(flatApp), "today is a single ring accent");
-check(/\.wg \.dc\.out\{color:#c9ced6\}/.test(flatApp), "edge days are softened, not hatched");
+check(/\.wg \.dc\.out\{color:var\(--outInk\)\}/.test(flatApp), "edge days are softened, not hatched");
+check(/--outInk:#c9ced6/.test(siteCss), "with the light value unchanged by the move to a token");
 check(/\.wg \.dc\{[^}]*border-top:1px solid var\(--rule2\)/.test(flatApp), "cell borders are a single hairline");
 check(/\.wg \.dc\.hol-nat::after\{/.test(flatApp) && /\.wg \.dc\.hol-reg::after\{/.test(flatApp),
       "two holiday stripe classes are reserved for the next feature");
@@ -2113,8 +2118,16 @@ PAGES.forEach(f => {
   const src = readFile(f);
   check(/<link rel="manifest" href="manifest\.webmanifest\?v=\d+">/.test(src),
         f + ": links the manifest with a cache tag");
-  check(/<meta name="theme-color" content="#18181b">/.test(src),
-        f + ": sets theme-color, so the browser chrome matches the header");
+  /* TWO theme-colors now, one per scheme, and the values are the PAGE rather
+     than the header. The single #18181b was near-black on an app that was
+     light everywhere, so an installed app drew a dark status bar above a light
+     screen - a seam, not a match. */
+  check(/<meta name="theme-color" media="\(prefers-color-scheme: light\)" content="#f6f7f9">/.test(src),
+        f + ": sets a light theme-color matching the light page");
+  check(/<meta name="theme-color" media="\(prefers-color-scheme: dark\)" content="#0f1115">/.test(src),
+        f + ": and a dark one matching the dark page");
+  check(/viewport-fit=cover/.test(src),
+        f + ": lets an installed app reach the edges of the screen");
   check(src.indexOf("apple-touch-icon") >= 0,
         f + ": has an apple-touch-icon, or an iOS home screen tile comes out blank");
 });
