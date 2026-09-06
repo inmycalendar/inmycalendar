@@ -1498,16 +1498,18 @@ check(/\.op\{width:34px;height:32px/.test(phoneCss),
    with it 73px of height per card, which is what made the board 5.4 screens
    long for thirty tasks.
 
-   The column is still there, on demand: tapping the menu adds .acts and the old
-   full-width row comes back underneath the text. */
+   The column that briefly replaced it is gone too, for a related reason:
+   unfolding eight glyphs into a full-width row inside the card is still eight
+   unlabelled glyphs, and their labels only ever existed as tooltips, which a
+   touch screen does not have. The menu opens a labelled sheet now. */
 check(/\.t\{padding:8px 10px\}/.test(phoneCss),
       "on a phone the card is a block again, so it is as tall as its text");
 check(/\.t \.ops\{float:right/.test(phoneCss),
       "with the controls floated beside the text rather than stacked under it");
-check(/\.t\.acts\{display:flex;flex-direction:column/.test(phoneCss),
-      "and the column comes back when the menu is opened, not before");
-check(/\.t\.acts \.ops\{order:2/.test(phoneCss),
-      "text first and controls under it in that state, via flex order");
+check(!/\.t\.acts/.test(phoneCss),
+      "and the in-card expansion is gone, replaced by the action sheet");
+check(/\.actrow\{[^}]*min-height:48px/.test(phoneCss),
+      "whose rows are 48px, above the 44 a thumb is entitled to");
 /* min-height as well as height: the add field is a textarea that grows as you
    type, so height alone would be a ceiling rather than a floor. 38px is the
    tap target it starts at. */
@@ -3555,8 +3557,8 @@ const css = readFile("assets/app.css");
    button under the size the phone pass exists to guarantee - the rule said 34
    and the browser drew 27.8, which is exactly the kind of gap a source read
    never catches. */
-check(/\.t\.acts \.ops\{[^}]*flex-wrap:wrap/.test(css),
-      "the expanded controls wrap onto a second row instead of shrinking");
+check(/\.actlist\{display:flex;flex-direction:column/.test(css),
+      "the actions are a labelled column, so nothing has to wrap or shrink");
 check(/\.op\{[^}]*flex:none/.test(css),
       "and flex:none stops the browser overriding their size");
 
@@ -4120,15 +4122,24 @@ const phone = css.slice(css.indexOf("PHONE PASS"));
 check(/adv\.className = "op adv"/.test(js),
       "move right is tagged, being the primary verb of a Kanban board");
 check(/menu\.className = "op menu"/.test(js), "and there is a menu for the rest");
-check(/n\.classList\.toggle\("acts"\)/.test(js), "which reveals them in place");
+/* IT USED TO REVEAL THEM IN PLACE, and in place they were still eight glyphs
+   at 34x32 whose meaning lived in a title tooltip - and a touch screen has no
+   tooltips, so on a phone there was no way to learn what any of them did
+   except by pressing it. One of them deletes, six pixels from "move right".
+   The menu opens a labelled sheet now. */
+check(/openActs\(n\)/.test(js), "which opens a labelled action sheet");
+check(/menu\.setAttribute\("aria-haspopup", "dialog"\)/.test(js),
+      "announced as a dialog, since it no longer expands the card");
+check(!/classList\.toggle\("acts"\)/.test(js),
+      "and the in-place expansion is gone rather than left behind unused");
 check(/aria-expanded/.test(js), "and says whether it is open, for a screen reader");
 
 /* Two in the open, five behind the menu - on the phone only. */
 check(/\.t \.ops \.op\{display:none\}/.test(phone), "the phone hides the controls by default");
 check(/\.t \.ops \.op\.adv,\.t \.ops \.op\.menu\{display:inline-flex/.test(phone),
       "leaving exactly two: move right, and the menu");
-check(/\.t\.acts \.ops \.op\{display:inline-flex/.test(phone),
-      "and the menu brings all of them back");
+check(/openActs\(card\)/.test(js) && /card\.querySelectorAll\("\.ops \.op"\)/.test(js),
+      "and the menu lists every one of them, read from the card itself");
 
 /* THE HARD CONSTRAINT: the desktop board must not change. */
 check(/\.op\.menu\{display:none\}/.test(css.slice(0, css.indexOf("PHONE PASS"))),
@@ -4289,6 +4300,106 @@ check($("calDense").textContent === "Bigger rows", "the label says what pressing
 dom.window.eval("cfg.calDense=false; applyDensity();");
 check(!$("calView").classList.contains("dense") && $("calDense").textContent === "Fit year",
       "and back again");
+}
+
+/* ==========================================================================
+   C73. THE PHONE STOPS BEING A NARROW DESKTOP
+
+   Measured at 393x852 before this pass, on the board page:
+
+     header      180px    5%
+     THE BOARD   496px   12%    the thing the app is for
+     settings    848px   21%    country picker, countdowns, colour rows
+     year grid  2069px   52%    too small to read, open by default
+                4120px  = 4.8 screens
+
+   The board was an eighth of the board page and settings were nearly twice
+   the board. None of that is a styling problem: it is a question of what
+   belongs in the main scroll and what belongs behind a tab.
+
+   As with every phone rule in this file, the checks that matter most are the
+   ones proving the desktop cannot see any of it.
+   ========================================================================== */
+{
+const sheet   = readFile("assets/app.css");
+const oneline = sheet.replace(/\s*\n\s*/g, "");
+const ph      = (oneline.match(/@media \(max-width:640px\)\{[^@]*/g) || []).join("");
+const html    = readFile("index.html");
+
+/* ---- everything new is hidden at desktop width BEFORE it is shown ---- */
+/* Brace-balance rather than a regex over the media blocks. The phone-block
+   extractor used everywhere else stops at the next "@", which overshoots a
+   query's closing brace and swallows whatever rule follows it - so it reported
+   these top-level rules as being inside a query. Counting braces from the
+   start of the file cannot be fooled that way: balanced means top level. */
+const atTopLevel = (css, idx) => {
+  const head = css.slice(0, idx);
+  return (head.match(/\{/g) || []).length === (head.match(/\}/g) || []).length;
+};
+["\\.tabbar,\\.sheethead", "\\.actsheet"].forEach(sel => {
+  const re = new RegExp(sel + "\\{display:none\\}");
+  const m  = oneline.match(re);
+  check(!!m, "declared display:none outside any query: " + sel);
+  if (m) check(atTopLevel(oneline, oneline.indexOf(m[0])),
+               "  and at top level, so it applies before any phone rule could");
+});
+
+/* ---- the tab bar ---- */
+check(/\.tabbar\{display:flex;position:fixed;left:0;right:0;bottom:0/.test(ph),
+      "a phone gets a tab bar pinned to the bottom, where the thumb is");
+check(/\.tabbar \.tab\{[^}]*min-height:56px/.test(ph),
+      "with 56px targets, comfortably past the 44 Apple asks for");
+check(/\.tabbar\{[^}]*padding-bottom:env\(safe-area-inset-bottom\)/.test(ph),
+      "clearing the home indicator on a phone that has one");
+check(/body\{padding-bottom:calc\(56px \+ env\(safe-area-inset-bottom\)\)\}/.test(ph),
+      "and the page ends above it, so the last task is not underneath it");
+check(/\.sitenav\{display:none\}/.test(ph),
+      "the header loses the row that used to carry Board and Calendar");
+check(/\.sitenav a\[data-view\], \.tabbar \[data-view\]/.test(js),
+      "and both navigations light up together, or the app looks lost");
+
+const tabs = qa(".tabbar .tab").length;
+check(tabs === 4, "four destinations: board, calendar, holidays, settings (got " + tabs + ")");
+
+/* ---- settings is a destination, not a wall of panels in the scroll ---- */
+check(/\.rail\{position:fixed;left:0;right:0;top:0;z-index:70/.test(ph),
+      "the rail lifts out of the page into a sheet on a phone");
+check(/bottom:calc\(56px \+ env\(safe-area-inset-bottom\)\)/.test(ph),
+      "stopping above the tab bar, so Settings is a tab rather than a modal");
+check(/body\.sheet\{overflow:hidden\}/.test(ph),
+      "with the board behind it locked, so two things do not scroll at once");
+check(/function openSheet/.test(js) && /function closeSheet/.test(js),
+      "opened and closed by name rather than by a class toggled in six places");
+$("tabSettings").click();
+check(d.body.classList.contains("sheet"), "the Settings tab opens it");
+check($("tabSettings").getAttribute("aria-expanded") === "true", "and says so");
+$("sheetClose").click();
+check(!d.body.classList.contains("sheet"), "Done closes it");
+
+/* ---- the year grid is folded on a phone, and only on a phone ---- */
+check(/function glanceOpen/.test(js), "the year grid's open state is asked for, not read raw");
+check(/phone\(\) \? !!cfg\.glanceOpenPhone : !!cfg\.glanceOpen/.test(js),
+      "and the two screens keep separate answers");
+check(/glanceOpenPhone:false/.test(js),
+      "folded by default on a phone - 2,069px of a 4,120px page, below the board");
+check(/glanceOpen:true/.test(js) || /cfg\.glanceOpen = true/.test(js),
+      "and still open by default on a desktop, where it is the point of the page");
+check(/max-width:640px/.test(js.slice(js.indexOf("function phone"), js.indexOf("function phone") + 300)),
+      "phone() matches the stylesheet's breakpoint, not narrow()'s older 700");
+
+/* ---- the day popup fits the screen it is on ---- */
+check(/\.ov\{align-items:flex-end;padding:0;overflow:hidden\}/.test(ph),
+      "the day popup is anchored to the bottom as a sheet");
+check(/\.ov \.md\{width:100%;max-height:88vh/.test(ph),
+      "never taller than the screen - it was 891px on an 852px phone");
+check(/\.mh\{position:sticky;top:0/.test(ph),
+      "its header holds still, so the way out cannot scroll off the top");
+check(/\.mh button\{[^}]*min-height:44px/.test(ph),
+      "and the way out is 44px, not the 27x25 cross it was");
+check(/<span class="mx">&times;<\/span><span class="mdone">Done<\/span>/.test(html),
+      "labelled Done on a phone and a cross on a desktop, from one button");
+check(/\.mh button \.mdone\{display:none\}/.test(oneline),
+      "with the word hidden at desktop width");
 }
 
 let docFail = 0;

@@ -135,7 +135,19 @@
     <div class="ad ad-foot hidden" id="adFoot">ad slot - 728&times;90</div>
   </div>
 
-  <aside class="rail">
+  <!-- On a desktop this is the right-hand rail, sitting beside the board.
+       On a phone it becomes a full-screen Settings sheet, because a phone
+       stacks it INTO the page: measured at 393x852 it was 848px of country
+       pickers and colour rows - 21% of the board page - sitting between the
+       board and the end. Settings are not content and do not belong in the
+       main scroll. Same markup, different presentation; see the sheet rules
+       in the phone block of app.css. -->
+  <aside class="rail" id="railSheet" aria-label="Settings">
+    <!-- Phone only, hidden above 640px: a sheet needs a title and a way out. -->
+    <div class="sheethead">
+      <h2>Settings</h2>
+      <button type="button" class="sheetdone" id="sheetClose">Done</button>
+    </div>
     <div class="rbox">
       <h3>Calendar setup</h3>
       <div class="rbody">
@@ -212,6 +224,53 @@
  </div>
 </main>
 
+<!-- PHONE NAVIGATION.
+     Hidden above 640px, so the desktop is untouched by it entirely.
+
+     Everything used to be anchored to the top of the screen: four stacked rows
+     of controls, 180px of an 852px phone, with the primary navigation - Board
+     and Calendar - rendered as the smallest text on that stack while a
+     secondary control sat above it in a heavier style. The bottom third of the
+     screen, the only part a thumb reaches without moving the hand, held
+     nothing at all.
+
+     So the two views and the two destinations move down here, at the size a
+     thumb expects, and the header loses a row. Settings opens the rail as a
+     sheet rather than leaving it in the page. -->
+<!-- TASK ACTIONS, phone only.
+     The card's controls are a row of eight glyphs at 34x32 - a pencil, two
+     triangles, two arrows, a calendar, a cross and an ellipsis - and every one
+     of them explains itself through a title tooltip. Tooltips do not exist on
+     a touch screen, so on a phone there is no way to learn what any of them
+     does except by pressing it and finding out. One of them deletes, and it
+     sits six pixels from "move right".
+
+     This sheet does not re-implement any of that. It reads the buttons already
+     on the card and lists them with their labels, so the two can never drift
+     apart: one row per control, the words that were in the tooltip, and delete
+     pulled out on its own at the bottom in red. -->
+<div class="actsheet hidden" id="actSheet" role="dialog" aria-modal="true"
+     aria-label="Task actions">
+  <div class="actback" id="actBack"></div>
+  <div class="actpanel">
+    <p class="acttitle" id="actTitle"></p>
+    <div class="actlist" id="actList"></div>
+    <button class="actcancel" id="actCancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<nav class="tabbar" aria-label="Main">
+  <a class="tab" href="#board" data-view="board">
+    <span class="ti" aria-hidden="true">&#9635;</span><span class="tl">Board</span></a>
+  <a class="tab" href="#calendar" data-view="calendar">
+    <span class="ti" aria-hidden="true">&#9638;</span><span class="tl">Calendar</span></a>
+  <a class="tab" href="holidays/index.html">
+    <span class="ti" aria-hidden="true">&#9733;</span><span class="tl">Holidays</span></a>
+  <button class="tab" type="button" id="tabSettings"
+          aria-controls="railSheet" aria-expanded="false">
+    <span class="ti" aria-hidden="true">&#9881;</span><span class="tl">Settings</span></button>
+</nav>
+
 <!-- Deleting is instant and the delete button sits among six others at 34px on
      a phone, so a mis-tap is easy and used to be permanent. A confirmation on
      every delete would be worse than the problem; this is the alternative. -->
@@ -270,7 +329,11 @@
   <div class="md" role="dialog" aria-modal="true" aria-labelledby="mDate">
     <div class="mh">
       <span class="d" id="mDate"></span><span class="w" id="mWk"></span>
-      <button id="mClose" aria-label="Close">&times;</button>
+      <!-- Two labels, one per screen. A mouse gets the familiar corner cross;
+           a thumb gets a word at a size it can hit, because on a phone this is
+           a sheet and the cross was 27x25. Only one is ever visible - see the
+           day-popup-as-a-sheet block in app.css. -->
+      <button id="mClose" aria-label="Close"><span class="mx">&times;</span><span class="mdone">Done</span></button>
     </div>
     <div class="mb">
       <div class="mrow" id="mSw"></div>

@@ -30,7 +30,7 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
             /* Phone only, both of them. A desktop reads them and ignores them:
                the rules they drive live inside the max-width:640px block, which
                is never applied above that width. */
-            phoneCol:"todo", calDense:false,
+            phoneCol:"todo", calDense:false, glanceOpenPhone:false,
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
             /* Display order only. The colour stored on a day is an INDEX into
@@ -251,6 +251,31 @@ function monthSpan(weeks){
   return first === last ? MON3[first] : MON3[first] + "\u2013" + MON3[last];
 }
 function narrow(){ return (window.innerWidth || 1200) <= 700; }
+
+/* PHONE, meaning exactly what the stylesheet means by it.
+   narrow() above is 700px and predates the phone pass; the CSS breakpoint is
+   640px. Anything that has to agree with a CSS rule asks this one instead, or
+   the two disagree in the 60px between them and the layout says one thing
+   while the behaviour does another. */
+function phone(){
+  return !!(window.matchMedia && window.matchMedia("(max-width:640px)").matches);
+}
+
+/* THE SETTINGS SHEET, phone only.
+   On a desktop the rail is a column beside the board and there is no sheet to
+   open or close, so these are no-ops there: the class they toggle is only ever
+   read by a rule inside the phone query. */
+function openSheet(){
+  document.body.classList.add("sheet");
+  var t = document.getElementById("tabSettings");
+  if (t) t.setAttribute("aria-expanded", "true");
+}
+function closeSheet(){
+  if (!document.body.classList.contains("sheet")) return;
+  document.body.classList.remove("sheet");
+  var t = document.getElementById("tabSettings");
+  if (t) t.setAttribute("aria-expanded", "false");
+}
 /* the on-demand country files call this when they finish loading */
 window.__imcHol = function(code, data){
   HOL[code] = data || {};
@@ -926,12 +951,11 @@ function taskRow(task, st, idx, total){
      Desktop is not affected. The rule that hides the others lives inside the
      phone query, so above 640px all seven are still in the open, which is what
      a mouse should get. */
-  var menu = opBtn("\u22ef","More actions", false, function(){
-    n.classList.toggle("acts");
-    menu.setAttribute("aria-expanded", n.classList.contains("acts") ? "true" : "false");
-  });
+  var menu = opBtn("\u22ef","More actions", false, function(){ openActs(n); });
   menu.className = "op menu";
-  menu.setAttribute("aria-expanded", "false");
+  /* It opens a sheet now rather than expanding the card, so it announces a
+     dialog rather than an expanded region. */
+  menu.setAttribute("aria-haspopup", "dialog");
   ops.appendChild(menu);
 
   n.appendChild(ops);
@@ -968,6 +992,58 @@ function taskRow(task, st, idx, total){
   }
   return n;
 }
+/* THE TASK ACTION SHEET, phone only.
+
+   Deliberately NOT a second implementation of the eight actions. It reads the
+   buttons already sitting on the card and lists them, one row each, using the
+   label each one already carries in aria-label - the same string that was in
+   the tooltip nobody on a phone could ever see. A ninth action added to
+   taskRow() appears here on its own, correctly labelled, with nothing to
+   update; and the two cannot drift, because there is only one of them.
+
+   Delete is pulled out of sequence to the end and marked, so the destructive
+   one is not the row your thumb reaches by momentum. */
+function openActs(card){
+  var sheet = document.getElementById("actSheet");
+  var list  = document.getElementById("actList");
+  var title = document.getElementById("actTitle");
+  if (!sheet || !list) return;
+
+  var txt = card.querySelector(".txt");
+  title.textContent = txt ? txt.textContent : "";
+
+  list.innerHTML = "";
+  var btns = card.querySelectorAll(".ops .op"), danger = null;
+  for (var i=0;i<btns.length;i++){
+    (function(btn){
+      /* The menu button itself is what opened this; listing it would offer to
+         open the sheet from inside the sheet. */
+      if (btn.classList.contains("menu")) return;
+      var row = mk("button","actrow");
+      row.type = "button";
+      row.disabled = btn.disabled;
+      row.appendChild(mk("span","ai", btn.textContent));
+      row.appendChild(mk("span","al", btn.getAttribute("aria-label") || ""));
+      row.addEventListener("click", function(){
+        closeActs();
+        /* Click the ORIGINAL. Every handler already lives on it, including the
+           ones that open a native date picker, which has to be triggered by a
+           real gesture on an element in the document. */
+        btn.click();
+      });
+      if (btn.classList.contains("x")){ row.className += " danger"; danger = row; }
+      else list.appendChild(row);
+    })(btns[i]);
+  }
+  if (danger) list.appendChild(danger);
+
+  sheet.classList.remove("hidden");
+}
+function closeActs(){
+  var sheet = document.getElementById("actSheet");
+  if (sheet) sheet.classList.add("hidden");
+}
+
 function opBtn(label,title,disabled,fn){
   var b = mk("button","op",label);
   b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
@@ -1287,12 +1363,30 @@ function renderCarry(){
   bar.appendChild(move); bar.appendChild(no);
   el.carryHost.appendChild(bar);
 }
+/* IS THE YEAR GRID OPEN - and the two screens disagree about the answer.
+
+   On a desktop it is the point of the page: three compact columns beside the
+   board, a year on one screen, open by default and rightly so.
+
+   On a phone the three columns stack. Measured at 393x852 it is 2,069px - 52%
+   of the whole board page - for a grid whose cells are too small to plan in,
+   directly below a board you came to use. Folding it takes the page from 4.8
+   screens to about 2. The Calendar tab is one tap away and shows the same year
+   properly, which is what makes folding it a default rather than a loss.
+
+   So the two states are stored separately. One flag with a width test would
+   mean opening it on the laptop and finding it open on the phone, or worse,
+   folding it on the phone and losing it on the laptop. */
+function glanceOpen(){
+  return phone() ? !!cfg.glanceOpenPhone : !!cfg.glanceOpen;
+}
 function renderGlance(){
-  el.glanceBox.classList.toggle("folded", !cfg.glanceOpen);
-  el.glFold.textContent = cfg.glanceOpen ? "\u25be" : "\u25b8";
-  el.glFold.setAttribute("aria-expanded", cfg.glanceOpen ? "true" : "false");
+  var gOpen = glanceOpen();
+  el.glanceBox.classList.toggle("folded", !gOpen);
+  el.glFold.textContent = gOpen ? "\u25be" : "\u25b8";
+  el.glFold.setAttribute("aria-expanded", gOpen ? "true" : "false");
   el.gyLabel.textContent = String(glanceYear);
-  if (!cfg.glanceOpen){ el.glance.innerHTML = ""; return; }
+  if (!gOpen){ el.glance.innerHTML = ""; return; }
   var wks = weeksForYear(glanceYear), size = Math.ceil(wks.length/3);
   el.gyLabel.textContent = String(glanceYear);
   var cy = today().getFullYear();
@@ -2099,9 +2193,15 @@ function setView(v){
   el.calView.classList.toggle("hidden", b);
   el.scopeSeg.classList.toggle("hidden", !b);   /* day/week/month means nothing on the calendar */
   el.metaOut.classList.toggle("hidden", !b);
-  var links = document.querySelectorAll(".sitenav a[data-view]");
+  /* Both navigations, because a phone now has one at the bottom as well: the
+     tab bar has to light up the same way the site nav does or the app looks
+     like it is on a page it is not. */
+  var links = document.querySelectorAll(".sitenav a[data-view], .tabbar [data-view]");
   for (var i=0;i<links.length;i++)
     links[i].classList.toggle("on", links[i].getAttribute("data-view") === v);
+  /* Leaving a view closes the settings sheet - arriving somewhere new behind
+     an open sheet is disorienting, and it is what tapping a tab means. */
+  closeSheet();
   viewHash(v);
   if (b) renderBoard(); else { renderCalendar(); revealTodaySoon(); }
   /* The day-colour counts describe whatever span is on screen, and the span
@@ -2381,8 +2481,36 @@ function wire(){
     e.preventDefault(); setView(v);
   });
 
+  /* The phone tab bar switches the same two views, so it needs the same
+     handler. Same closest() reasoning as above - every tab wraps its label in
+     spans, so e.target is never the link itself. */
+  var tabbar = document.querySelector(".tabbar");
+  if (tabbar) tabbar.addEventListener("click", function(e){
+    var link = e.target.closest ? e.target.closest("[data-view]") : null;
+    var v = link && link.getAttribute("data-view");
+    if (!v) return;
+    e.preventDefault(); setView(v);
+  });
+
+  var tabSettings = document.getElementById("tabSettings");
+  if (tabSettings) tabSettings.addEventListener("click", function(){
+    if (document.body.classList.contains("sheet")) closeSheet(); else openSheet();
+  });
+  var sheetClose = document.getElementById("sheetClose");
+  if (sheetClose) sheetClose.addEventListener("click", closeSheet);
+
+  /* Three ways out of the action sheet: the backdrop, Cancel, and Escape
+     below. A sheet with one way out is how the day popup ended up with a
+     27x25 close button that scrolled off the top of itself. */
+  var actBack = document.getElementById("actBack");
+  if (actBack) actBack.addEventListener("click", closeActs);
+  var actCancel = document.getElementById("actCancel");
+  if (actCancel) actCancel.addEventListener("click", closeActs);
+
   el.glFold.addEventListener("click", function(){
-    cfg.glanceOpen = !cfg.glanceOpen; commit("cfg"); renderGlance();
+    if (phone()) cfg.glanceOpenPhone = !cfg.glanceOpenPhone;
+    else         cfg.glanceOpen      = !cfg.glanceOpen;
+    commit("cfg"); renderGlance();
   });
   el.isoOut.addEventListener("click", function(){
     if (el.dInput.showPicker){ try { el.dInput.showPicker(); return; } catch (e){} }
@@ -2581,6 +2709,9 @@ function wire(){
     else if (mq.addListener) mq.addListener(onScheme);   /* older Safari */
   }
   document.addEventListener("keydown", function(e){
+    var acts = document.getElementById("actSheet");
+    if (e.key === "Escape" && acts && !acts.classList.contains("hidden")){ closeActs(); return; }
+    if (e.key === "Escape" && document.body.classList.contains("sheet")){ closeSheet(); return; }
     if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }
     if (e.key === "Escape" && !el.ov.classList.contains("hidden")){ closeDay(); return; }
     /* Escape drops a day selection. Checked AFTER the two dialogs, so Escape
@@ -2652,6 +2783,8 @@ function init(){
   cfg.fwd   = Math.min(CAP, Math.max(0, cfg.fwd|0));
   cfg.shift = 0;   /* the calendar opens on today, exactly as the glance does */
   if (typeof cfg.glanceOpen !== "boolean") cfg.glanceOpen = true;
+  /* Folded on a phone unless the reader has opened it - see glanceOpen(). */
+  if (typeof cfg.glanceOpenPhone !== "boolean") cfg.glanceOpenPhone = false;
   if (typeof cfg.calDense !== "boolean") cfg.calDense = false;
   if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
 

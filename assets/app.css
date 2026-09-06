@@ -505,6 +505,7 @@ main{padding:16px 0 0}
 .mh button{margin-left:auto;background:var(--card);border:1px solid var(--rule);color:var(--soft);
   width:27px;height:25px;border-radius:6px;line-height:1}
 .mh button:hover{background:var(--card2);color:var(--ink)}
+.mh button .mdone{display:none}
 .mb{padding:14px}
 .mrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mnlabel{display:block;font-family:var(--disp);font-size:10px;letter-spacing:.12em;
@@ -697,18 +698,12 @@ main{padding:16px 0 0}
   .t .ops .op.adv,.t .ops .op.menu{display:inline-flex;align-items:center;justify-content:center}
   .t .ops .op.menu{font-size:16px;line-height:1}
 
-  /* Expanded by the menu: the old full-width row comes back, below the text
-     rather than above it, which is what the ordering is for. The wrap rule
-     from the previous pass still applies - eight controls at 34px need more
-     width than the narrowest phone has, and shrinking them costs the thumb. */
-  .t.acts{display:flex;flex-direction:column;row-gap:6px}
-  .t.acts .txt{order:1}
-  .t.acts .ops{order:2;float:none;width:100%;justify-content:flex-start;gap:8px;
-    margin:0;flex-wrap:wrap;row-gap:6px}
-  .t.acts .detail{order:3}
-  .t.acts .more{order:4}
-  .t.acts .ops .op{display:inline-flex;align-items:center;justify-content:center}
-  .t.acts .ops .op.menu{background:var(--card2);color:var(--ink)}
+  /* The .acts rules that used to live here are gone with the class. They
+     unfolded the eight controls into a full-width row inside the card, which
+     was an improvement on seven of them being always-on and still left a grid
+     of unlabelled glyphs - meaning conveyed by a tooltip, on a device that has
+     none. The menu opens a labelled sheet now; see the action sheet block at
+     the foot of this file. */
   .op{width:34px;height:32px;font-size:13px;flex:none}
   .t .edit{order:1;width:100%;font-size:16px;padding:6px 8px}
   .t::after{display:none}
@@ -1071,4 +1066,195 @@ main{padding:16px 0 0}
   #calView.dense .wg .wk{min-height:23px;font-size:9px}
   #calView.dense .wg .dc .task{width:3px;height:3px;top:2px;right:2px}
   #calView.dense .wg .dc .pen{font-size:6px}
+}
+
+/* ==========================================================================
+   PHONE: A TAB BAR AT THE BOTTOM, AND SETTINGS IN A SHEET
+
+   What the board page actually measured at 393x852 before this:
+
+     header      180px    5%    four stacked rows of controls
+     THE BOARD   496px   12%    the thing the app is for
+     day note     50px    1%
+     settings    848px   21%    country picker, countdowns, colour rows
+     year grid  2069px   52%    too small to read, and not foldable by default
+     footer      254px    6%
+                -----
+                4120px  = 4.8 screens
+
+   The board was an eighth of the board page. Settings were nearly twice the
+   board. That is the finding this block answers, and none of it is a styling
+   problem - it is a question of what belongs in the main scroll.
+
+   Declared hidden at desktop width first, so adding the markup cannot change
+   the desktop layout even for one frame.
+   ========================================================================== */
+.tabbar,.sheethead{display:none}
+
+@media (max-width:640px){
+
+  /* ---- THE TAB BAR ------------------------------------------------------
+     Four destinations, at the bottom, where the thumb is. 56px plus whatever
+     the home indicator needs on the device it is running on. */
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:80;
+    background:var(--card);border-top:1px solid var(--rule);
+    padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar .tab{flex:1 1 0;min-width:0;min-height:56px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:transparent;border:0;text-decoration:none;color:var(--faint);
+    font-family:var(--disp);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    cursor:pointer;padding:6px 2px}
+  .tabbar .tab .ti{font-size:17px;line-height:1}
+  .tabbar .tab.on{color:var(--ink)}
+  .tabbar .tab:active{background:var(--card2)}
+
+  /* The page has to end above the bar, or the last task sits under it. */
+  body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+  /* and anything already pinned to the bottom moves up by the same amount */
+  .toast{bottom:calc(64px + env(safe-area-inset-bottom))}
+  .toast.above{bottom:calc(152px + env(safe-area-inset-bottom))}
+  .selbar{bottom:calc(64px + env(safe-area-inset-bottom))}
+
+  /* Board and Calendar are in the tab bar now, so the header loses its fourth
+     row - the one that carried them - and 36px with it. */
+  .sitenav{display:none}
+
+  /* ---- SETTINGS AS A SHEET ----------------------------------------------
+     The rail is not restyled into a sheet so much as lifted out of the page:
+     same markup, same panels, taken out of the scroll and put behind a tab.
+     visibility, not display, so the transform has something to animate and so
+     a screen reader does not see a hidden panel. */
+  /* Below the tab bar's z-index, and stopping short of it, so Settings is a
+     DESTINATION rather than a modal: the bar stays visible and usable, the
+     Settings tab stays lit while you are in it, and you leave by tapping
+     another tab exactly as you would in any app. "Done" is the second way
+     out, not the only one. */
+  .rail{position:fixed;left:0;right:0;top:0;z-index:70;margin:0;padding:0 14px 24px;
+    bottom:calc(56px + env(safe-area-inset-bottom));
+    background:var(--page);overflow-y:auto;-webkit-overflow-scrolling:touch;
+    max-height:none;display:block;
+    transform:translateY(100%);visibility:hidden;
+    transition:transform .22s ease, visibility .22s}
+  body.sheet .rail{transform:none;visibility:visible}
+  /* The tab lights up like any other destination. */
+  body.sheet #tabSettings{color:var(--ink)}
+  body.sheet{overflow:hidden}          /* the board must not scroll behind it */
+
+  .sheethead{display:flex;align-items:center;gap:10px;
+    position:sticky;top:0;z-index:2;background:var(--page);
+    padding:calc(10px + env(safe-area-inset-top)) 0 10px;
+    border-bottom:1px solid var(--rule);margin-bottom:12px}
+  .sheethead h2{flex:1 1 auto;margin:0;font-family:var(--disp);font-size:15px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ink);font-weight:500}
+  /* "Done" rather than a 27px glyph in a corner: it says what it does, it is
+     the width of a word, and it stays put because the header is sticky. */
+  .sheetdone{min-height:40px;padding:0 16px;border:1px solid var(--ink);
+    border-radius:9px;background:var(--accent);color:var(--onAccent);
+    font-family:var(--disp);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;cursor:pointer;flex:none}
+
+  /* The rail's own phone rules from the 900px block turned it into a wrapping
+     row of panels beside the board. Inside a sheet it is a column again. */
+  .rail{flex-direction:column}
+  .rail .rbox{flex:none;margin-bottom:12px}
+}
+
+/* ==========================================================================
+   THE TASK ACTION SHEET, phone only
+
+   Replaces the eight-glyph row that used to unfold inside the card. Same
+   actions, in the same order, with the words that were only ever in a tooltip
+   - and delete separated, in red, at the end, instead of six pixels from the
+   arrow that moves a task forward.
+   ========================================================================== */
+.actsheet{display:none}
+
+@media (max-width:640px){
+  .actsheet{display:block;position:fixed;inset:0;z-index:110}
+  .actsheet.hidden{display:none !important}
+  .actback{position:absolute;inset:0;background:var(--overlay)}
+  .actpanel{position:absolute;left:0;right:0;bottom:0;
+    background:var(--card);border-top:1px solid var(--rule);
+    border-radius:16px 16px 0 0;
+    padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+    max-height:82vh;overflow-y:auto;
+    box-shadow:0 -8px 30px var(--shadow)}
+
+  /* Which task this is about. Two lines at most - it is a reminder of what you
+     tapped, not the task itself. */
+  .acttitle{margin:6px 8px 10px;font-size:13px;line-height:1.4;color:var(--soft);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  .actlist{display:flex;flex-direction:column;gap:2px}
+  /* 48px, above the 44 Apple asks for, because these are the rows that were
+     34x32 glyphs and this is the whole point of the change. */
+  .actrow{display:flex;align-items:center;gap:14px;width:100%;min-height:48px;
+    padding:0 10px;background:transparent;border:0;border-radius:10px;
+    color:var(--ink);font-size:15px;text-align:left;cursor:pointer}
+  .actrow:active{background:var(--card2)}
+  .actrow[disabled]{opacity:.35;cursor:default}
+  .actrow .ai{flex:none;width:24px;text-align:center;font-size:15px;color:var(--soft)}
+  .actrow.danger{color:var(--danger)}
+  .actrow.danger .ai{color:var(--danger)}
+  /* A rule above delete, so the destructive one is never the row your thumb
+     lands on by momentum. */
+  .actrow.danger{margin-top:6px;border-top:1px solid var(--rule);border-radius:0 0 10px 10px}
+
+  .actcancel{width:100%;min-height:48px;margin-top:8px;
+    background:var(--card2);border:1px solid var(--rule);border-radius:12px;
+    color:var(--ink);font-size:15px;cursor:pointer}
+}
+
+/* ==========================================================================
+   THE DAY POPUP AS A SHEET, phone only
+
+   Measured at 393x852: the panel was 891px tall - taller than the screen it
+   was on - so it overflowed and the whole overlay scrolled instead. The way
+   out was a 27x25 button in its top corner, the smallest control in the app,
+   and scrolling to the bottom of the panel took that button off the top of
+   the screen. Tapping the backdrop does close it and always did - but the only
+   backdrop left was a 32px strip above the panel, and that scrolled away with
+   everything else. So at the bottom of a day there was no visible way out, and
+   a phone keyboard has no Escape.
+
+   As a sheet it is anchored to the bottom, never taller than 88vh, and the
+   header holds still while the body scrolls under it - so the way out is
+   always on screen, and it is a word rather than a glyph.
+   ========================================================================== */
+@media (max-width:640px){
+  /* The overlay stops being the scroller. Its only jobs now are the dim and
+     the tap-to-dismiss target above the sheet. */
+  .ov{align-items:flex-end;padding:0;overflow:hidden}
+  .ov .md{width:100%;max-height:88vh;display:flex;flex-direction:column;
+    border-radius:16px 16px 0 0;border-bottom:0;
+    box-shadow:0 -8px 30px var(--shadow)}
+
+  /* Sticky, so scrolling the note or the board inside cannot take the exit
+     away with it. */
+  /* No flex-wrap:nowrap here, deliberately: the suite bans it because on the
+     ribbon it turned a tight fit into overlapping text, and the reasoning is
+     about a row of unknown width, which this is. If the date, the week and
+     Done cannot share a line on a very narrow phone, a second line is the
+     correct answer - the header is sticky either way. */
+  .mh{position:sticky;top:0;z-index:2;
+    padding:12px 12px calc(12px);border-radius:16px 16px 0 0}
+  .mh .w{white-space:nowrap}
+  /* 27x25 to a labelled 44px control. It reads "Done" because that is what it
+     does - the note and the colours save as you go, so there is nothing to
+     confirm and nothing to cancel. */
+  .mh button{margin-left:auto;flex:none;width:auto;height:auto;min-height:44px;
+    padding:0 14px;background:var(--accent);color:var(--onAccent);
+    border-color:var(--ink);border-radius:10px;
+    font-family:var(--disp);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .mh button:hover{background:var(--accent);color:var(--onAccent)}
+  .mh button .mx{display:none}
+  .mh button .mdone{display:inline}
+
+  .mb{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:14px 12px calc(14px + env(safe-area-inset-bottom))}
+
+  /* The search overlay is a different shape - it belongs at the top, under the
+     thumb's reach but next to the keyboard that opens with it. */
+  #sov{align-items:flex-start;padding:0}
+  .ov .md.search{max-height:100vh;border-radius:0;box-shadow:none}
 }
