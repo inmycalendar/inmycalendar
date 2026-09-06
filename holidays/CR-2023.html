@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Public holidays in Costa Rica 2023 - inmycalendar</title>
+<meta name="description" content="All 9 national public holidays in Costa Rica in 2023, with the date and day of the week for each. Free, and you can see them on a year calendar.">
+<meta property="og:title" content="Public holidays in Costa Rica 2023">
+<meta property="og:description" content="All 9 national public holidays in Costa Rica in 2023, with the date and day of the week for each. Free, and you can see them on a year calendar.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://inmycalendar.com/holidays/CR-2023.html">
+<link rel="icon" href="../assets/favicon.ico?v=74" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=74">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=74">
+<link rel="manifest" href="../manifest.webmanifest?v=74">
+<script>/* theme before first paint - see the dark block in site.css */
+try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
+<link rel="canonical" href="https://inmycalendar.com/holidays/CR-2023.html">
+<link rel="stylesheet" href="../assets/site.css?v=74">
+<style>
+.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
+table{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px;font-family:var(--sans)}
+thead th{text-align:left;font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--soft);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--rule)}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--rule2)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr.reg td{color:var(--soft)}
+.ctrylist{columns:4 170px;column-gap:18px;font-family:var(--sans);font-size:13.5px;margin-top:8px}
+.ctrylist a{display:block;padding:2px 0;text-decoration:none;color:var(--ink);break-inside:avoid}
+.ctrylist a:hover{text-decoration:underline}
+
+/* PHONE ONLY. Every rule below is inside a max-width query, so the desktop
+   page is not overridden - these are never applied above 640px at all. */
+.ctryfind{display:none}
+@media (max-width:640px){
+  /* 246 links in a two-column list, 4.7 screens of it, and no way to reach a
+     country except to scan for it. A filter is the whole fix. */
+  .ctryfind{display:block;width:100%;margin:14px 0 4px;padding:12px 14px;
+    font-family:var(--sans);font-size:16px;   /* 16px, or iOS zooms on focus */
+    color:var(--ink);background:var(--card);
+    border:1px solid var(--rule);border-radius:10px}
+  .ctryfind:focus{outline:none;border-color:var(--accent)}
+  .ctrycount{font-family:var(--disp);font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--faint);padding:8px 2px 0}
+  /* One column, and rows a thumb can hit: they were 27px. */
+  .ctrylist{columns:1;font-size:15px;margin-top:4px}
+  .ctrylist a{min-height:44px;display:flex;align-items:center;
+    border-top:1px solid var(--rule2);padding:4px 0}
+  .ctrylist a.nomatch{display:none}
+  /* A 64-row table scrolls the heading off after about ten, and then the
+     columns are unlabelled for the rest of the year.
+
+     .tablewrap has overflow-x:auto so a wide table can scroll sideways on a
+     desktop - and a box with overflow on either axis is a SCROLL CONTAINER,
+     which is what position:sticky measures against. Left alone, the heading
+     stuck to a box that never scrolls vertically, so it did not stick at all:
+     measured at -430 with the page 1,200px down. On a phone the fourth column
+     is already dropped and nothing overflows, so the wrapper can stop being a
+     scroller and the heading can stick to the page. */
+  .tablewrap{overflow-x:visible}
+  table{min-width:0}
+  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
+}
+.yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+/* THIRTY-ONE YEARS, not six.
+   Wrapped, that is three rows on a desktop and five on a phone - about 180px
+   of year chips above the thing you came to read. On a phone it becomes one
+   row that scrolls sideways instead, which is what a strip of chips is for.
+   flex-wrap:nowrap is deliberate here and unlike the case the app's stylesheet
+   bans it for: that was a row of unknown content where a tight fit turned into
+   overlapping text. This is fixed-width chips in a box that scrolls, so a
+   tight fit is the normal state rather than a failure.
+   site.js scrolls the current year into view, or you would land on 2015. */
+@media (max-width:640px){
+  .yearnav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+    margin:0 -14px 16px;padding:2px 14px 8px;scroll-padding:0 14px}
+  .yearnav::-webkit-scrollbar{display:none}
+  .yearnav a,.yearnav span{flex:none;min-height:38px;display:inline-flex;
+    align-items:center;scroll-snap-align:center}
+}
+.yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
+  border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
+.yearnav a:hover{background:var(--accentBg)}
+.yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
+
+/* THE FOURTH COLUMN DOES NOT FIT ON A PHONE.
+   Measured at 390px: the table is 420px inside a wrapper that scrolls, so 56px
+   is hidden to the right - the whole National/Regional column. Nothing on
+   screen said it scrolled, so it did not read as scrollable, it read as broken:
+   the heading cut to "TY" and every row ending in a clipped N or R.
+
+   A scroll shadow was tried first. It made the scrolling discoverable and left
+   the column exactly as unreadable, which is solving the wrong half.
+
+   So the column comes out below 640px and the table then fits with no sideways
+   scrolling at all. Nothing is lost: regional rows already carry .reg, so a
+   small grey marker after the holiday name says the same thing in the space
+   that exists. National days get no marker because they are the default and the
+   majority, and labelling the common case is noise.
+
+   Inside a max-width query, so the four-column desktop table is untouched. */
+@media (max-width:640px){
+  table{min-width:0}
+  thead th:nth-child(4),tbody td:nth-child(4){display:none}
+  tbody tr.reg td:nth-child(3)::after{content:" · regional";color:var(--soft);
+    font-size:11px;white-space:nowrap}
+}</style>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Event",
+   "name": "New Year's Day",
+   "startDate": "2023-01-01",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "New Year's Day is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Maundy Thursday",
+   "startDate": "2023-04-06",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Maundy Thursday is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Good Friday",
+   "startDate": "2023-04-07",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Good Friday is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Juan Santamaría Day (observed)",
+   "startDate": "2023-04-10",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Juan Santamaría Day (observed) is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "International Labor Day",
+   "startDate": "2023-05-01",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "International Labor Day is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Annexation of the Party of Nicoya to Costa Rica (observed)",
+   "startDate": "2023-07-24",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Annexation of the Party of Nicoya to Costa Rica (observed) is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Mother's Day (observed)",
+   "startDate": "2023-08-14",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Mother's Day (observed) is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Independence Day",
+   "startDate": "2023-09-15",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Independence Day is a public holiday in Costa Rica."
+  },
+  {
+   "@type": "Event",
+   "name": "Christmas Day",
+   "startDate": "2023-12-25",
+   "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+   "location": {
+    "@type": "Place",
+    "name": "Costa Rica"
+   },
+   "description": "Christmas Day is a public holiday in Costa Rica."
+  }
+ ]
+}
+</script>
+</head>
+<body>
+<header class="bar">
+ <div class="wrap">
+  <a class="brand" href="../index.html"><svg width="22" height="22" viewBox="0 0 128 128" aria-hidden="true"><rect x="39" y="12" width="7" height="18" rx="3.5" fill="#3f3f46"/><rect x="82" y="12" width="7" height="18" rx="3.5" fill="#3f3f46"/><rect x="10" y="22" width="108" height="94" rx="16" fill="#fff" stroke="#18181b" stroke-width="6"/><path d="M13 40 A13 13 0 0 1 26 25 H102 A13 13 0 0 1 115 40 V44 H13 Z" fill="#18181b"/><text x="64" y="98" text-anchor="middle" font-family="Oswald,sans-serif" font-weight="700" font-size="58" fill="#18181b">imc</text></svg><span class="wordmark">in<b>my</b>calendar</span></a>
+  <div class="appzone"></div>
+  <nav class="sitenav">
+    <a href="../index.html#board"><span class="navlong">Kanban Board</span><span class="navshort">Board</span></a>
+    <a href="../index.html#calendar">Calendar</a>
+    <span class="gap"></span>
+    <a class="page" href="../about.html">About</a><a class="page" href="../guide.html">Guide</a><a class="page" href="index.html">Holidays</a><a class="page" href="../contact.html">Contact</a><a class="page" href="../privacy.html">Privacy</a>
+  </nav>
+  <span class="authslot hidden" id="authSlot"></span>
+ </div>
+</header>
+
+<main class="wrap pagebody"><div class="body">
+
+<h1>Public holidays in Costa Rica 2023</h1>
+<div class="eyebrow"><a href="CR.html">Costa Rica</a> &middot; <a href="index.html">All countries</a> &middot; 9 national</div>
+<div class="yearnav"><a href="CR-2015.html">2015</a><a href="CR-2016.html">2016</a><a href="CR-2017.html">2017</a><a href="CR-2018.html">2018</a><a href="CR-2019.html">2019</a><a href="CR-2020.html">2020</a><a href="CR-2021.html">2021</a><a href="CR-2022.html">2022</a><span class="on">2023</span><a href="CR-2024.html">2024</a><a href="CR-2025.html">2025</a><a href="CR-2026.html">2026</a><a href="CR-2027.html">2027</a><a href="CR-2028.html">2028</a><a href="CR-2029.html">2029</a><a href="CR-2030.html">2030</a><a href="CR-2031.html">2031</a><a href="CR-2032.html">2032</a><a href="CR-2033.html">2033</a><a href="CR-2034.html">2034</a><a href="CR-2035.html">2035</a><a href="CR-2036.html">2036</a><a href="CR-2037.html">2037</a><a href="CR-2038.html">2038</a><a href="CR-2039.html">2039</a><a href="CR-2040.html">2040</a><a href="CR-2041.html">2041</a><a href="CR-2042.html">2042</a><a href="CR-2043.html">2043</a><a href="CR-2044.html">2044</a><a href="CR-2045.html">2045</a></div>
+<p>Every public holiday in Costa Rica in 2023 is listed below, with the day of the week each one falls on. National holidays apply across the whole country. Regional ones apply only in certain states or areas, so check locally before booking anything around them.</p>
+
+<div class="card">
+  <p style="margin:0"><strong>See 2023 on a calendar.</strong> <a href="../index.html#calendar/CR">Open the Costa Rica calendar</a> to see these marked on a year-at-a-glance grid next to your own leave, travel and deadlines. Free, no sign-up.</p>
+  <p style="margin:6px 0 0">Planning around a reporting week rather than a month? <a href="../week-number/2023.html">Week numbers for 2023</a> lists every week with its dates.</p>
+</div>
+
+<h2>Public holiday dates in Costa Rica, 2023</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Date</th><th>Day</th><th>Holiday</th><th>Type</th></tr></thead>
+  <tbody>
+    <tr><td>1 January</td><td>Sunday</td><td>New Year's Day</td><td>National</td></tr>
+    <tr><td>6 April</td><td>Thursday</td><td>Maundy Thursday</td><td>National</td></tr>
+    <tr><td>7 April</td><td>Friday</td><td>Good Friday</td><td>National</td></tr>
+    <tr><td>10 April</td><td>Monday</td><td>Juan Santamaría Day (observed)</td><td>National</td></tr>
+    <tr><td>1 May</td><td>Monday</td><td>International Labor Day</td><td>National</td></tr>
+    <tr><td>24 July</td><td>Monday</td><td>Annexation of the Party of Nicoya to Costa Rica (observed)</td><td>National</td></tr>
+    <tr><td>14 August</td><td>Monday</td><td>Mother's Day (observed)</td><td>National</td></tr>
+    <tr><td>15 September</td><td>Friday</td><td>Independence Day</td><td>National</td></tr>
+    <tr><td>25 December</td><td>Monday</td><td>Christmas Day</td><td>National</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Which days of the week they fall on</h2>
+<p>Of the 9 national holidays in 2023, 8 fall on a weekday and 1 at a weekend. A holiday landing on a weekend is worth spotting early if you were counting on a long one.</p>
+<h2>Other years</h2>
+<p><a href="CR-2022.html">Public holidays in Costa Rica 2022</a> &middot; <a href="CR-2024.html">Public holidays in Costa Rica 2024</a></p>
+
+<h2>Other countries</h2>
+<p><a href="index.html">Public holidays for 247 countries and territories</a>, or back to <a href="CR.html">Costa Rica</a>.</p>
+</div></main>
+<!-- The same four destinations as the app, in the same place. A tab bar that
+     is missing on some pages teaches you where to look and then takes it away,
+     which is what tapping Holidays used to do. Hidden above 640px. -->
+<nav class="tabbar" aria-label="Main">
+  <a class="tab" href="../index.html#board"><span class="ti" aria-hidden="true">&#9635;</span><span class="tl">Board</span></a>
+  <a class="tab" href="../index.html#calendar"><span class="ti" aria-hidden="true">&#9638;</span><span class="tl">Calendar</span></a>
+  <a class="tab" data-tab="holidays" href="index.html"><span class="ti" aria-hidden="true">&#9733;</span><span class="tl">Holidays</span></a>
+  <a class="tab" href="../index.html#settings"><span class="ti" aria-hidden="true">&#9881;</span><span class="tl">Settings</span></a>
+</nav>
+
+<footer>
+  <div class="wrap">
+    <a href="../index.html#board">Kanban Board</a><a href="../index.html#calendar">Calendar</a>
+    <a href="../about.html">About</a><a href="../guide.html">Guide</a><a href="index.html">Holidays</a><a href="../contact.html">Contact</a><a href="../privacy.html">Privacy</a><a href="../terms.html">Terms</a>
+    <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
+  </div>
+</footer>
+<script src="../assets/errors.js?v=74"></script>
+<script src="../assets/vendor/supabase.js?v=74"></script>
+<script src="../assets/site.js?v=74"></script>
+<script src="../assets/auth.js?v=74"></script>
+<script src="../assets/stats.js?v=74"></script>
+</body>
+</html>

@@ -19,9 +19,18 @@
    AND regional, which is what the person searching actually wants. A page that
    is a link and nothing else deserves to be ignored, and would be.
 
-   The window is six years, not the full 2015-2045 range the data holds. A page
-   for a year nobody searches does not earn traffic, it dilutes the ones that
-   do, and 31 years per country would be 7,600 thin pages.
+   IT IS NO LONGER A SIX-YEAR WINDOW. It used to be, on the argument that a page
+   for a year nobody searches dilutes the ones that do. That argument is wrong
+   here, and the note is kept rather than deleted because it was believed for a
+   while: these pages are not thin. Every one carries that country's real dates
+   for that year, national and regional, which exist nowhere else on the site
+   and cannot be derived from a neighbouring year. The dilution argument applies
+   to pages that are a link and a heading; it does not apply to a page that is
+   the only place a fact is written down.
+
+   So all 31 years the data holds are published, 2015 to 2045. That is 7,602
+   year pages, and the cost is real - a rebuild rewrites all of them - but the
+   data was already in the repo and 25 years of it were simply not reachable.
 
    RUN:  node tools/build-holiday-pages.js
    It overwrites /holidays/ entirely and rewrites sitemap.xml, so it is the
@@ -33,10 +42,35 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "73";                        /* cache tag, keep in step with the pages */
+const V    = "74";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
-const YEARS = [THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3, THIS_YEAR + 4];
+
+/* EVERY YEAR THERE IS DATA FOR, not a window around today.
+
+   This used to be [THIS_YEAR-1 .. THIS_YEAR+4] - six years - while the country
+   files in assets/holidays have carried thirty-one, 2015 to 2045, all along.
+   Twenty-five years of data were sitting in the repo unpublished, so a search
+   for "public holidays in Germany 2038" found nothing here and the app's own
+   calendar could show a year the site had no page for.
+
+   Derived from the files rather than written down, so it follows the data if
+   the data is ever refetched. Nothing outside 2015-2045 can be added by
+   widening this: holiday RULES change - Juneteenth only became a US federal
+   holiday in 2021 - so a year with no data cannot be computed from a
+   neighbouring one, it has to be fetched.
+
+   Each country is filtered again below to the years IT has, so a file with a
+   shorter run does not get pages full of nothing. */
+const YEARS = (() => {
+  const dir = path.join(ROOT, "assets/holidays");
+  const seen = new Set();
+  fs.readdirSync(dir).forEach(f => {
+    const raw = fs.readFileSync(path.join(dir, f), "utf8");
+    (raw.match(/"(19|20)\d{2}":\{/g) || []).forEach(s => seen.add(+s.slice(1, 5)));
+  });
+  return [...seen].sort((a, b) => a - b);
+})();
 
 const appJs = fs.readFileSync(path.join(ROOT, "assets/app.js"), "utf8");
 /* \r?\n, not \n. Git checks this repo out with CRLF on Windows and LF on
@@ -123,6 +157,22 @@ tbody tr.reg td{color:var(--soft)}
   thead th{position:sticky;top:0;z-index:2;background:var(--card)}
 }
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+/* THIRTY-ONE YEARS, not six.
+   Wrapped, that is three rows on a desktop and five on a phone - about 180px
+   of year chips above the thing you came to read. On a phone it becomes one
+   row that scrolls sideways instead, which is what a strip of chips is for.
+   flex-wrap:nowrap is deliberate here and unlike the case the app's stylesheet
+   bans it for: that was a row of unknown content where a tight fit turned into
+   overlapping text. This is fixed-width chips in a box that scrolls, so a
+   tight fit is the normal state rather than a failure.
+   site.js scrolls the current year into view, or you would land on 2015. */
+@media (max-width:640px){
+  .yearnav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+    margin:0 -14px 16px;padding:2px 14px 8px;scroll-padding:0 14px}
+  .yearnav::-webkit-scrollbar{display:none}
+  .yearnav a,.yearnav span{flex:none;min-height:38px;display:inline-flex;
+    align-items:center;scroll-snap-align:center}
+}
 .yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
   border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
 .yearnav a:hover{background:var(--accentBg)}

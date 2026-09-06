@@ -70,3 +70,16 @@
   if (tab && location.pathname.toLowerCase().indexOf("/holidays/") >= 0)
     tab.classList.add("on");
 })();
+
+/* LAND ON THE YEAR YOU ARE READING.
+   The year strip runs 2015 to 2045 and scrolls sideways on a phone, so without
+   this you arrive looking at 2015 with the year you asked for somewhere off to
+   the right. Horizontal only - scrollIntoView would also scroll the PAGE down
+   to it, which is the last thing wanted on arrival. */
+(function(){
+  var nav = document.querySelector(".yearnav");
+  var now = nav && nav.querySelector(".on");
+  if (!nav || !now) return;
+  if (nav.scrollWidth <= nav.clientWidth) return;      /* it all fits; nothing to do */
+  nav.scrollLeft = now.offsetLeft - (nav.clientWidth - now.offsetWidth) / 2;
+})();

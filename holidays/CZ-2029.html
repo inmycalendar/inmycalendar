@@ -9,16 +9,16 @@
 <meta property="og:description" content="All 13 national public holidays in Czechia in 2029, with the date and day of the week for each. Free, and you can see them on a year calendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/holidays/CZ-2029.html">
-<link rel="icon" href="../assets/favicon.ico?v=73" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=73">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=73">
-<link rel="manifest" href="../manifest.webmanifest?v=73">
+<link rel="icon" href="../assets/favicon.ico?v=74" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=74">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=74">
+<link rel="manifest" href="../manifest.webmanifest?v=74">
 <script>/* theme before first paint - see the dark block in site.css */
 try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/holidays/CZ-2029.html">
-<link rel="stylesheet" href="../assets/site.css?v=73">
+<link rel="stylesheet" href="../assets/site.css?v=74">
 <style>
 .tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
 table{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px;font-family:var(--sans)}
@@ -64,6 +64,22 @@ tbody tr.reg td{color:var(--soft)}
   thead th{position:sticky;top:0;z-index:2;background:var(--card)}
 }
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+/* THIRTY-ONE YEARS, not six.
+   Wrapped, that is three rows on a desktop and five on a phone - about 180px
+   of year chips above the thing you came to read. On a phone it becomes one
+   row that scrolls sideways instead, which is what a strip of chips is for.
+   flex-wrap:nowrap is deliberate here and unlike the case the app's stylesheet
+   bans it for: that was a row of unknown content where a tight fit turned into
+   overlapping text. This is fixed-width chips in a box that scrolls, so a
+   tight fit is the normal state rather than a failure.
+   site.js scrolls the current year into view, or you would land on 2015. */
+@media (max-width:640px){
+  .yearnav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+    margin:0 -14px 16px;padding:2px 14px 8px;scroll-padding:0 14px}
+  .yearnav::-webkit-scrollbar{display:none}
+  .yearnav a,.yearnav span{flex:none;min-height:38px;display:inline-flex;
+    align-items:center;scroll-snap-align:center}
+}
 .yearnav a,.yearnav span{font-family:var(--disp);font-size:12px;letter-spacing:.06em;padding:6px 12px;
   border:1px solid var(--rule);border-radius:7px;text-decoration:none;color:var(--ink);background:var(--card)}
 .yearnav a:hover{background:var(--accentBg)}
@@ -261,7 +277,7 @@ tbody tr.reg td{color:var(--soft)}
 
 <h1>Public holidays in Czechia 2029</h1>
 <div class="eyebrow"><a href="CZ.html">Czechia</a> &middot; <a href="index.html">All countries</a> &middot; 13 national</div>
-<div class="yearnav"><a href="CZ-2025.html">2025</a><a href="CZ-2026.html">2026</a><a href="CZ-2027.html">2027</a><a href="CZ-2028.html">2028</a><span class="on">2029</span><a href="CZ-2030.html">2030</a></div>
+<div class="yearnav"><a href="CZ-2015.html">2015</a><a href="CZ-2016.html">2016</a><a href="CZ-2017.html">2017</a><a href="CZ-2018.html">2018</a><a href="CZ-2019.html">2019</a><a href="CZ-2020.html">2020</a><a href="CZ-2021.html">2021</a><a href="CZ-2022.html">2022</a><a href="CZ-2023.html">2023</a><a href="CZ-2024.html">2024</a><a href="CZ-2025.html">2025</a><a href="CZ-2026.html">2026</a><a href="CZ-2027.html">2027</a><a href="CZ-2028.html">2028</a><span class="on">2029</span><a href="CZ-2030.html">2030</a><a href="CZ-2031.html">2031</a><a href="CZ-2032.html">2032</a><a href="CZ-2033.html">2033</a><a href="CZ-2034.html">2034</a><a href="CZ-2035.html">2035</a><a href="CZ-2036.html">2036</a><a href="CZ-2037.html">2037</a><a href="CZ-2038.html">2038</a><a href="CZ-2039.html">2039</a><a href="CZ-2040.html">2040</a><a href="CZ-2041.html">2041</a><a href="CZ-2042.html">2042</a><a href="CZ-2043.html">2043</a><a href="CZ-2044.html">2044</a><a href="CZ-2045.html">2045</a></div>
 <p>Every public holiday in Czechia in 2029 is listed below, with the day of the week each one falls on. National holidays apply across the whole country. Regional ones apply only in certain states or areas, so check locally before booking anything around them.</p>
 
 <div class="card">
@@ -316,10 +332,10 @@ tbody tr.reg td{color:var(--soft)}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="../assets/errors.js?v=73"></script>
-<script src="../assets/vendor/supabase.js?v=73"></script>
-<script src="../assets/site.js?v=73"></script>
-<script src="../assets/auth.js?v=73"></script>
-<script src="../assets/stats.js?v=73"></script>
+<script src="../assets/errors.js?v=74"></script>
+<script src="../assets/vendor/supabase.js?v=74"></script>
+<script src="../assets/site.js?v=74"></script>
+<script src="../assets/auth.js?v=74"></script>
+<script src="../assets/stats.js?v=74"></script>
 </body>
 </html>
