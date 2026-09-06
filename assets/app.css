@@ -1405,3 +1405,55 @@ main{padding:16px 0 0}
      entitled to. */
   .op{width:36px;height:36px}
 }
+
+/* ==========================================================================
+   THE MONTH COMES BACK TO THE CALENDAR CELL
+
+   It was taken out on the argument that MM-DD prints the month 371 times a
+   year to say something that changes twelve times, and that dropping it buys
+   the room to read the day. That is true, and it turned out to be true only on
+   a narrow phone. Measured, cell width by device:
+
+     393px phone   cell 45.0   MM-DD at 13px needs 39   6px spare
+     320px phone   cell 34.6   MM-DD at 13px needs 39   CLIPS
+                               at 12px needs 36         CLIPS
+                               at 11px needs 33         1.5px, too tight
+                               at 10px needs 30         4.6px spare
+
+   So on any phone from about 360px up - which is nearly all of them now - the
+   full date fits at the SAME 13px the day alone was using. Nothing is paid for
+   it there at all. Only a 320px screen has to give up type size, and it gives
+   up about two points, not the whole month.
+
+   Hence a size that follows the screen rather than a breakpoint: five
+   characters of JetBrains Mono are 3x the font size, seven cells and a 32px
+   week column share the width, so the largest that always fits is about
+   (100vw - 90) / 21, capped at the 13px there is no reason to exceed.
+
+     320px -> 10.9px    360px -> 12.9px    393px and up -> 13px
+
+   The month markers down the week column stay. They are how you know where you
+   are when the top of the grid has scrolled away, and the date in the cell
+   answers a different question - which is the one a person reads a calendar to
+   ask.
+   ========================================================================== */
+@media (max-width:640px){
+  .wg .dc .cm{display:inline}
+  /* The 90 was 82 plus a guess. Sized properly: the grid is the viewport less
+     about 82px of page gutter and card padding, seven cells share what is left
+     of it after a 32px week column, and five characters of JetBrains Mono are
+     three times the font size. Leaving 4px of air between one date and the
+     next - at 320px the first attempt left 1.7px and the dates ran together -
+     the largest that fits is (100vw - 82) / 21 - 1.33.
+
+       320px -> 10.0px    360px -> 11.9px    393px and up -> 13px  */
+  .wg .dc{font-size:min(13px, calc((100vw - 82px) / 21 - 1.33px))}
+  .wg.c .dc{font-size:min(11px, calc((100vw - 82px) / 21 - 1.33px))}
+  #calView.dense .wg .dc{font-size:min(10.5px, calc((100vw - 82px) / 21 - 1.33px))}
+
+  /* The year grid on the BOARD keeps the day alone. It is three months side by
+     side in a third of the width, so its cells are a third of the size, and
+     there is no arithmetic that fits five characters into them. Its own month
+     markers carry the month there. */
+  #glanceBox .wg.c .dc .cm{display:none}
+}

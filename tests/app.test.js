@@ -4738,6 +4738,48 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
         "with the rows still 44px tall");
 }
 
+/* ==========================================================================
+   C77. THE MONTH IS BACK IN THE CALENDAR CELL ON A PHONE
+
+   It was taken out on the argument that MM-DD prints the month 371 times a
+   year to say something that changes twelve times. Measured properly, that
+   argument only held on a NARROW phone:
+
+     393px   cell 45.0   MM-DD at 13px is 39px wide   6.0px spare
+     320px   cell 34.6   MM-DD at 13px is 39px wide   clips
+
+   So from about 360px up - nearly every phone sold now - the full date fits at
+   the same 13px the day alone was using, and nothing is paid for it at all.
+   Only a 320px screen gives up type size, and about three points rather than
+   the whole month.
+
+   Hence a size that follows the screen instead of a breakpoint. Measured after:
+   320 -> 10.0px, 360 -> 11.9px, 375 -> 12.6px, 393 and up -> 13px, with about
+   4.5px of air between one date and the next at every width. The first attempt
+   used (100vw - 90)/21 and left 1.7px at 320px, where the dates ran together.
+   ========================================================================== */
+{
+  const appFlat = readFile("assets/app.css").replace(/\s*\n\s*/g, "");
+  const appPh   = appFlat.split("@media (max-width:640px)").slice(1).join("");
+
+  check(/\.wg \.dc \.cm\{display:inline\}/.test(appPh),
+        "a phone calendar cell shows the month again, as the desktop always has");
+  check(/\.wg \.dc\{font-size:min\(13px, calc\(\(100vw - 82px\) \/ 21 - 1\.33px\)\)\}/.test(appPh),
+        "at a size that follows the screen, capped at the 13px there is no reason to exceed");
+  /* The cap matters as much as the floor: without min() a wide phone would get
+     absurd type, and without the calc a narrow one would clip. */
+  check(/min\(13px,/.test(appPh) && /100vw - 82px/.test(appPh),
+        "both halves present - the cap and the fit");
+  check(/#calView\.dense \.wg \.dc\{font-size:min\(10\.5px/.test(appPh),
+        "and Fit year is sized by the same arithmetic, so it cannot clip either");
+
+  /* The board's year grid is a third of the width and keeps the day alone. */
+  check(/#glanceBox \.wg\.c \.dc \.cm\{display:none\}/.test(appPh),
+        "the year grid on the board still shows the day alone - its cells are a third the size");
+  check(/b\.setAttribute\("data-mo", MON3\[/.test(js),
+        "with the month markers down the week column kept in both");
+}
+
 let docFail = 0;
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
