@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- THE APP ICON, which is not the favicon and must not be the same file.
+       ===================================================================
+       WHAT WAS WRONG
+       manifest.webmanifest declared assets/icon-512-v2.png as BOTH purpose
+       "any" and purpose "maskable". They are different jobs and one file
+       cannot do both.
+
+       A maskable icon is cropped by the launcher to whatever shape it uses -
+       a squircle on Samsung, a circle elsewhere - and only the inner 80% is
+       guaranteed to survive. The favicon artwork is a white calendar with a
+       thin dark outline that runs to the edge of the canvas, so Android cut
+       the outline off and filled the rest, which is why the installed icon
+       looked like a flat dark square with the drawing chopped.
+
+       It also has no background of its own. Sitting on a photo wallpaper next
+       to Facebook blue and Instagram pink, a white plate with a hairline
+       drawing reads as a blank card.
+
+       And it was drawn for legibility at 16px in a browser tab: thin stroke,
+       small shapes, mostly empty white. Those choices are right there and
+       wrong at 192px on a home screen, where an icon has to have presence.
+
+       WHAT THIS IS
+       Full bleed to all four edges, so the launcher can crop to any shape and
+       never expose a corner. Near-black, matching theme_color and the app's
+       own chrome, which is deliberately colourless so the colours on the
+       calendar can mean something.
+
+       Every part of the mark sits inside a centred box of about 62% of the
+       canvas. The maskable safe zone is the inner 80% circle; 62% leaves room
+       for the most aggressive crop any launcher applies.
+
+       The mark is the same calendar, inverted and much heavier: a thick white
+       body so it survives being shrunk to 48px in a notification tray. -->
+
+  <rect width="512" height="512" fill="#18181b"/>
+
+  <g transform="translate(256 256) scale(2.55) translate(-64 -66)">
+    <!-- the two binding rings -->
+    <rect x="39" y="12" width="9" height="20" rx="4.5" fill="#a1a1aa"/>
+    <rect x="80" y="12" width="9" height="20" rx="4.5" fill="#a1a1aa"/>
+    <!-- the body: solid white, so the shape reads at any size -->
+    <rect x="10" y="22" width="108" height="94" rx="17" fill="#ffffff"/>
+    <!-- the header band, in the app's own near-black -->
+    <path d="M10 39 A17 17 0 0 1 27 22 H101 A17 17 0 0 1 118 39 V47 H10 Z" fill="#18181b"/>
+    <!-- the wordmark, drawn heavier than the favicon's so it holds at 48px -->
+    <text x="64" y="100" text-anchor="middle"
+          font-family="Oswald, Arial Narrow, Helvetica, Arial, sans-serif"
+          font-weight="700" font-size="60" fill="#18181b">imc</text>
+  </g>
+</svg>

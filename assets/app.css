@@ -266,6 +266,18 @@ main{padding:16px 0 0}
 /* pre-wrap, so a task written with Shift+Enter keeps its line breaks. It still
    wraps normally and is still clipped at three lines - a card is a summary,
    not the document. */
+/* HOW MANY CHARACTERS FIT BEFORE THE TEXT IS CLIPPED.
+   CSS owns this number because CSS owns the breakpoint. It was a single
+   constant in app.js, which cannot be right for both widths: 90 is about two
+   lines on a desktop card and about three on a phone, and lowering it to 55
+   for the phone made the "more" control appear on 29 of 30 realistic tasks on
+   DESKTOP, where nothing was hidden at all. That is noise on every card.
+
+   Reading a declared custom property is not measuring layout - no box is
+   consulted and nothing reflows - so this stays on the right side of the rule
+   that layout belongs to CSS. */
+:root{--taskClamp:90}
+
 .t .txt{display:block;font-size:12.5px;line-height:1.6;cursor:text;white-space:pre-wrap;
   max-height:calc(1.6em * 2);overflow:clip;overflow-wrap:anywhere}
 /* THE FIRST LINE IS THE TASK, THE REST IS DETAIL.
@@ -279,6 +291,10 @@ main{padding:16px 0 0}
 .t.open .detail{display:block;font-size:12px;line-height:1.55;color:var(--soft);
   white-space:pre-wrap;overflow-wrap:anywhere;margin-top:6px;padding-top:6px;
   border-top:1px solid var(--rule2)}
+/* Hidden unless the text really is cut. markOverflowing() in app.js measures
+   that once per render and adds .overflowing; a character count was tried and
+   was wrong in both directions. */
+.t:not(.overflowing) .more{display:none}
 .t .more{display:block;background:transparent;border:0;padding:3px 0 0;margin:0;
   font-family:var(--disp);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
   color:var(--soft);cursor:pointer}
@@ -660,6 +676,8 @@ main{padding:16px 0 0}
      the thumb, so the row wraps and flex:none holds the size. */
   .t .ops{order:2;float:none;width:100%;justify-content:flex-start;gap:8px;margin:0;
     flex-wrap:wrap;row-gap:6px}
+  /* a phone card is about half the width, so half the characters fit */
+  :root{--taskClamp:55}
   .op{width:34px;height:32px;font-size:13px;flex:none}
   .t .edit{order:1;width:100%;font-size:16px;padding:6px 8px}
   .t::after{display:none}

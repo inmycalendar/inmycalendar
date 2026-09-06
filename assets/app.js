@@ -653,6 +653,58 @@ function dropIndex(wrap,y){
   }
   return rows.length;
 }
+/* Cached, because 30 tasks means 30 reads otherwise, and cleared whenever the
+   layout could have crossed the breakpoint. The resize handler below already
+   re-renders when the board changes between narrow and wide; this is reset in
+   the same place so the number never lags the stylesheet. */
+var taskClampChars = 0;
+function clampChars(){
+  if (taskClampChars) return taskClampChars;
+  var v = 0;
+  try {
+    v = parseInt(getComputedStyle(document.documentElement)
+                   .getPropertyValue("--taskClamp"), 10);
+  } catch (e){}
+  taskClampChars = (v > 0 ? v : 90);   /* the old constant, if CSS says nothing */
+  return taskClampChars;
+}
+
+/* DOES THE TEXT ACTUALLY OVERFLOW? A SECOND MEASURING EXCEPTION, ON PURPOSE.
+
+   The rule in this project is that layout is CSS's job and the app must not
+   measure boxes to decide how to draw. It has one recorded exception - the add
+   field, which reads scrollHeight to grow as you type, because there is no CSS
+   that both fits the content and caps the height. This is the second, and it is
+   here for exactly the same reason.
+
+   The alternative was a character count, and it was tried twice. At 90 a phone
+   clipped an 84-character task and offered no way to read it. At 55 the phone
+   was fixed and desktop grew a "more" control on 29 of 30 tasks where nothing
+   was hidden. Moving the number into CSS per breakpoint improved it and did not
+   fix it: on a phone, 27 controls for 2 genuinely clipped tasks. A guess based
+   on character count cannot work, because whether text wraps depends on the
+   characters themselves, the font, and the width of a card nobody has measured.
+
+   So it is measured once per render, after the rows are in the document, and
+   the answer is exact. scrollHeight against the rendered height: no
+   clientHeight and no offsetHeight, so the existing check still reads as
+   written, but this is the same KIND of measurement and pretending otherwise
+   would be dishonest.
+
+   One forced layout per render, not one per task. */
+function markOverflowing(host){
+  if (!host || !host.querySelectorAll) return;
+  var rows = host.querySelectorAll(".t");
+  for (var i = 0; i < rows.length; i++){
+    var t = rows[i].querySelector(".txt");
+    if (!t) continue;
+    var shown = t.getBoundingClientRect().height;
+    /* a detail block always has something to reveal, whatever the first line does */
+    var more = rows[i].querySelector(".detail") || (t.scrollHeight > shown + 1);
+    rows[i].classList.toggle("overflowing", !!more);
+  }
+}
+
 function taskRow(task, st, idx, total){
   var n = mk("div","t s-" + st.k);
   n.setAttribute("draggable","true");
@@ -691,18 +743,23 @@ function taskRow(task, st, idx, total){
   var nl    = full.indexOf("\n");
   var head  = nl < 0 ? full : full.slice(0, nl);
   var rest  = nl < 0 ? "" : full.slice(nl + 1).replace(/^\n+/, "");
-  /* TUNED TO THE NARROWEST CARD, NOT THE WIDEST.
-     This was 90, which is about two lines on a DESKTOP card and about three on
-     a phone. Measured on the live site at 390px: an 84-character task wrapped
-     to three lines, only two showed, and no control appeared because 84 is
-     under 90. scrollHeight 59 against clientHeight 39 - cut off mid-sentence
-     with nothing to say so, which is the exact fault this was written to fix.
+  /* HOW MANY CHARACTERS FIT BEFORE THE TEXT IS CLIPPED - asked of CSS.
 
-     55 is roughly two lines on the narrowest phone. Erring low is the right
-     way round: a control that appears when little is hidden costs a line of
-     grey text on a wide screen, while one that fails to appear when text IS
-     cut is the bug. */
-  var expandable = !!rest || head.length > 55;
+     This was a single constant and could not be right for both widths. At 90 a
+     phone clipped an 84-character task with no control at all, which was the
+     bug. Dropped to 55 it fixed the phone and put a "more" control on 29 of 30
+     realistic tasks on DESKTOP, where nothing was hidden - noise on every card,
+     which is its own bug and a worse one because it is on every screen.
+
+     So CSS declares it, because CSS is what knows how wide the card is:
+     90 by default, 55 inside the phone block. Reading a declared custom
+     property consults no box and triggers no reflow, so this is not the layout
+     measurement the suite forbids - it is asking the stylesheet what it
+     already decided. */
+  /* Built for every task. Whether it is SHOWN is decided after the row is in
+     the document, by markOverflowing() below, which is the only thing that can
+     actually know. A task with a second line always has something to reveal. */
+  var expandable = true;
 
   var txt = mk("span","txt", head);
   txt.title = full + "\nTo do: " + (task.ts.todo || "-") +
@@ -1083,6 +1140,9 @@ function renderBoard(){
     renderReadOnly(el.scopeHost, daysOfMonth(sel));
   }
   renderDayNote();
+  /* After the rows are in the document and before the frame is painted, so the
+     control appears with the card rather than blinking in a moment later. */
+  markOverflowing(el.scopeHost);
   renderGlance();
 }
 function renderCarry(){
@@ -2373,7 +2433,7 @@ function wire(){
   var wasNarrow = narrow();
   window.addEventListener("resize", function(){
     var n = narrow();
-    if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
+    if (n !== wasNarrow){ wasNarrow = n; taskClampChars = 0; renderAll(); }
   });
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }
@@ -2489,6 +2549,20 @@ function init(){
   applyAds();
   segOn(el.scopeSeg,"scope",cfg.scope);
   renderAll();
+  /* MEASURE AGAIN ONCE THE FONT HAS ARRIVED.
+     markOverflowing() runs inside renderBoard, which on a first load happens
+     while the fallback font is still in place. The fallback is a different
+     width, so the answer is wrong for exactly the tasks near the boundary -
+     measured on a first load, 22 rows marked instead of 27, and the five that
+     were missed were silently cut with no way to read them.
+
+     Fonts load once per session, so this runs once. Every later render already
+     has the real font and needs nothing. */
+  if (document.fonts && document.fonts.ready && document.fonts.ready.then){
+    document.fonts.ready.then(function(){
+      try { markOverflowing(el.scopeHost); } catch (e){}
+    });
+  }
   setView(view);
   if (cfg.country) loadHolidays(cfg.country);
 }

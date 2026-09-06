@@ -2894,9 +2894,38 @@ const codeOnly = s => s.replace(/\/\*[\s\S]*?\*\//g, "")
                        .replace(/(^|[^:])\/\/.*$/gm, "$1");
 const jsCode = codeOnly(js);
 check(!/offsetHeight|clientHeight/.test(jsCode), "no JS layout measurement");
+/* TWO EXCEPTIONS NOW, BOTH NAMED, AND THE SECOND WAS EARNED.
+
+   The first is the add field growing to fit what you type. The second is
+   markOverflowing(), which decides whether a task's text is actually cut and
+   therefore whether to offer a way to read the rest.
+
+   That second one was a character count first, and the count was wrong in both
+   directions. At 90 a phone clipped an 84-character task and offered nothing.
+   At 55 desktop grew a control on 29 of 30 tasks where nothing was hidden.
+   Splitting the number per breakpoint in CSS improved it and still left 27
+   controls for 2 genuinely clipped tasks on a phone. A guess from character
+   count cannot work: whether text wraps depends on the characters, the font,
+   and a card width nobody measured.
+
+   Measured, it is exact - 27 of 27 on desktop, 2 of 2 on a phone. So the rule
+   stands as "layout is CSS's job", with these two places where there is no CSS
+   that can answer the question, and both say so in their own comments. */
 const grows = (jsCode.match(/scrollHeight/g) || []).length;
-check(grows === 1 && /inp\.scrollHeight/.test(jsCode),
-      "the only height read is the add field sizing itself to what you type");
+check(grows === 2, "exactly two height reads in the whole app, got " + grows);
+check(/inp\.scrollHeight/.test(jsCode), "one is the add field sizing itself to what you type");
+check(/t\.scrollHeight > shown/.test(jsCode),
+      "the other is deciding whether a task's text is genuinely cut");
+check(/function markOverflowing/.test(jsCode) &&
+      /A SECOND MEASURING EXCEPTION, ON PURPOSE/.test(js),
+      "and it is documented as a deliberate exception, not slipped in");
+/* Once per render over the rows, not once per task inside taskRow. */
+check(/markOverflowing\(el\.scopeHost\)/.test(jsCode),
+      "run once per render against the whole board");
+/* A first load measures against the fallback font, which is a different width:
+   22 rows marked instead of 27, and the five missed were cut with no way out. */
+check(/document\.fonts\.ready\.then/.test(jsCode),
+      "and measured again once the real font has loaded, or a first load is wrong");
 check(/--hYear:30px/.test(flat) && /top:var\(--hYear\)/.test(flat.replace(/\s+/g,"")),
       "sticky offsets are fixed CSS custom properties, not JS-measured");
 check((flat.match(/minmax\(0,1fr\)/g)||[]).length >= 3, "grids use minmax(0,1fr)");
@@ -4003,11 +4032,40 @@ check(/table\{min-width:0\}/.test(gen),
    on the live site at 390px: an 84-character task was clipped, scrollHeight 59
    against clientHeight 39, and showed no control because 84 is under 90. */
 {
-  const js = readFile("assets/app.js");
-  check(/head\.length > 55/.test(js),
-        "the more-control threshold is tuned to the narrowest card, not the widest");
-  check(/TUNED TO THE NARROWEST CARD/.test(js),
-        "and says why, so it is not raised again to suit a desktop screenshot");
+  /* A SINGLE CONSTANT COULD NOT BE RIGHT FOR BOTH WIDTHS.
+     At 90 a phone clipped an 84-character task and offered no control - the
+     original bug. At 55 the phone was fixed and DESKTOP grew a "more" control
+     on 29 of 30 realistic tasks, where nothing was hidden. Both numbers were
+     correct for one screen and wrong for the other, so the number moved into
+     CSS, which is what knows how wide a card is. */
+  const js  = readFile("assets/app.js");
+  const css = readFile("assets/app.css");
+  /* And then the number went away entirely. Splitting it per breakpoint was
+     better and still wrong: 27 controls for 2 genuinely clipped tasks on a
+     phone. It is measured now - see the two-exceptions note in the layout
+     section - so the control appears exactly when text is cut. Verified in a
+     browser: 27 of 27 on desktop, 2 of 2 on a phone. */
+  check(!/head\.length >/.test(js),
+        "no character-count guess is left deciding whether text was cut");
+  check(/classList\.toggle\("overflowing"/.test(js),
+        "the row is marked from a real measurement instead");
+  check(/--taskClamp:90/.test(css) && /--taskClamp:55/.test(css),
+        "90 on a wide card, 55 on a phone, both declared by the stylesheet");
+  {
+    /* Find the query that ENCLOSES the 55, not the last one in the file. The
+       stylesheet has several max-width blocks and the first version of this
+       check looked at the wrong one, reporting a correct rule as broken. */
+    const at = css.indexOf("--taskClamp:55");
+    const query = css.lastIndexOf("@media", at);
+    check(at > 0 && query > 0 && /max-width:\s*640px/.test(css.slice(query, at)),
+          "and the 55 is inside a phone query, so a wide card never uses it");
+    check(css.indexOf("--taskClamp:90") < query,
+          "with the 90 declared before it, as the default a phone overrides");
+  }
+  check(/taskClampChars = 0; renderAll\(\)/.test(js),
+        "the cached value is cleared when the board crosses the breakpoint");
+  check(/consults no box and triggers no reflow/.test(js),
+        "with a note that reading a custom property is not the layout measurement the suite bans");
 }
 }
 
