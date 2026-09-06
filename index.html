@@ -16,17 +16,17 @@
 <meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
 <meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512-v2.png">
-<link rel="icon" href="assets/favicon.ico?v=74" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=74">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=74">
-<link rel="manifest" href="manifest.webmanifest?v=74">
+<link rel="icon" href="assets/favicon.ico?v=75" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=75">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=75">
+<link rel="manifest" href="manifest.webmanifest?v=75">
 <script>/* theme before first paint - see the dark block in site.css */
-try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=74">
-<link rel="stylesheet" href="assets/app.css?v=74">
+<link rel="stylesheet" href="assets/site.css?v=75">
+<link rel="stylesheet" href="assets/app.css?v=75">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -54,6 +54,10 @@ try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.
     <button class="nub" id="dNext" aria-label="Next day">&rarr;</button>
     <button class="nub" id="dToday">Today</button>
     <button class="nub" id="searchBtn" aria-label="Search tasks and notes" title="Search  /">&#128269;</button>
+    <!-- One tap between light and dark, next to the other things you reach for.
+         The third state - follow this device - is in Settings, where it can be
+         spelled out; three states behind one icon is a riddle. -->
+    <button class="nub" id="themeBtn" type="button" aria-label="Switch to dark">&#9789;</button>
     <span class="meta" id="metaOut"></span>
     <div class="seg" id="scopeSeg">
       <button data-scope="day">Day</button><button data-scope="week">Week</button><button data-scope="month">Month</button>
@@ -374,11 +378,11 @@ try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.
   </div>
 </div>
 
-<script src="assets/errors.js?v=74"></script>
-<script src="assets/vendor/supabase.js?v=74"></script>
-<script src="assets/app.js?v=74"></script>
-<script src="assets/auth.js?v=74"></script>
-<script src="assets/sync.js?v=74"></script>
-<script src="assets/stats.js?v=74"></script>
+<script src="assets/errors.js?v=75"></script>
+<script src="assets/vendor/supabase.js?v=75"></script>
+<script src="assets/app.js?v=75"></script>
+<script src="assets/auth.js?v=75"></script>
+<script src="assets/sync.js?v=75"></script>
+<script src="assets/stats.js?v=75"></script>
 </body>
 </html>

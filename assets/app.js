@@ -33,7 +33,7 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
             /* glancePhoneFix is deliberately NOT here: DEF is merged UNDER the stored
                config, so a default of true would hand the migration below a flag
                saying it had already run, on exactly the users it exists for. */
-            phoneCol:"todo", calDense:false, glanceOpenPhone:true, theme:"system",
+            phoneCol:"todo", calDense:false, glanceOpenPhone:true, theme:"light",
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
             /* Display order only. The colour stored on a day is an INDEX into
@@ -2101,18 +2101,36 @@ function isDark(){
 
    "system" removes the attribute rather than setting it, which hands the
    answer back to the media query in site.css. */
+/* LIGHT IS THE DEFAULT, and following the OS is a choice rather than the rule.
+
+   It was the other way round for a release. The argument for the OS was that
+   the device already knows whether it is night - which is true, and beside the
+   point for this app: a phone flips itself to dark on a schedule, and a board
+   you opened in daylight turning dark on you at six is a surprise, not a
+   service. A person who wants dark can say so once and mean it.
+
+   "system" is kept because some people do want it, and because it is the right
+   answer for anyone who has already set their whole machine up that way. It is
+   simply not what a first visit gets.
+
+   All three are WRITTEN to storage now, including "system". The head script in
+   every page reads that key before the first paint, and it has to be able to
+   tell "chose to follow the OS" from "has never chosen anything" - an absent
+   key now means light, so system has to be present to mean system. */
 var THEMES = ["system","light","dark"];
 function setTheme(t){
-  if (THEMES.indexOf(t) < 0) t = "system";
+  if (THEMES.indexOf(t) < 0) t = "light";
   cfg.theme = t; commit("cfg");
-  try {
-    if (t === "system") localStorage.removeItem("imc.theme");
-    else localStorage.setItem("imc.theme", t);
-  } catch (e){}      /* private mode, or storage full - the page still works */
+  try { localStorage.setItem("imc.theme", t); }
+  catch (e){}        /* private mode, or storage full - the page still works */
   applyTheme();
 }
+/* The header button, which is two states rather than three: whatever you are
+   looking at now, to the other one. Three states behind one icon is a riddle;
+   the third lives in Settings, spelled out. */
+function toggleTheme(){ setTheme(isDark() ? "light" : "dark"); }
 function applyTheme(){
-  var t = (cfg && THEMES.indexOf(cfg.theme) >= 0) ? cfg.theme : "system";
+  var t = (cfg && THEMES.indexOf(cfg.theme) >= 0) ? cfg.theme : "light";
   if (t === "system") document.documentElement.removeAttribute("data-theme");
   else                document.documentElement.setAttribute("data-theme", t);
   var seg = document.getElementById("themeSeg");
@@ -2125,6 +2143,14 @@ function applyTheme(){
   if (hint) hint.textContent = t === "system"
     ? "Following this device, which is currently " + (isDark() ? "dark." : "light.")
     : "Always " + t + ", whatever this device is set to.";
+  /* The header button shows where it will take you, not where you are. */
+  var btn = document.getElementById("themeBtn");
+  if (btn){
+    var dark = isDark();
+    btn.textContent = dark ? "☀" : "☽";
+    btn.setAttribute("aria-label", dark ? "Switch to light" : "Switch to dark");
+    btn.title = dark ? "Switch to light" : "Switch to dark";
+  }
   /* The day-category tints are computed rather than declared, so they are the
      one thing a token cannot re-answer on its own. */
   if (typeof applyCatColours === "function" && cfg && cfg.catColors) applyCatColours();
@@ -2590,6 +2616,9 @@ function wire(){
   var sheetClose = document.getElementById("sheetClose");
   if (sheetClose) sheetClose.addEventListener("click", closeSheet);
 
+  var themeBtn = document.getElementById("themeBtn");
+  if (themeBtn) themeBtn.addEventListener("click", toggleTheme);
+
   var themeSeg = document.getElementById("themeSeg");
   if (themeSeg) themeSeg.addEventListener("click", function(e){
     var b = e.target.closest ? e.target.closest("[data-theme-choice]") : null;
@@ -2889,7 +2918,16 @@ function init(){
      they never chose. This flips it once, records that it has, and then never
      touches the setting again - so folding the grid deliberately still sticks. */
   if (cfg.glancePhoneFix !== true){ cfg.glanceOpenPhone = true; cfg.glancePhoneFix = true; }
-  if (THEMES.indexOf(cfg.theme) < 0) cfg.theme = "system";
+  if (THEMES.indexOf(cfg.theme) < 0) cfg.theme = "light";
+  /* ONE-TIME: the first release with a theme defaulted to "system" and saved
+     it, so everyone who opened the app during it is carrying a preference for
+     following the OS that they never expressed. Light is the default now, and
+     this moves those people onto it once. Anyone who has since chosen system
+     deliberately keeps it, because the flag is set at the same moment. */
+  if (cfg.themeDefaultFix !== true){
+    if (cfg.theme === "system") cfg.theme = "light";
+    cfg.themeDefaultFix = true;
+  }
   if (typeof cfg.calDense !== "boolean") cfg.calDense = false;
   if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
 

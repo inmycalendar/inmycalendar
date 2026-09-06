@@ -9,21 +9,33 @@
 <meta property="og:description" content="All 11 national public holidays in Luxembourg in 2043, with the date and day of the week for each. Free, and you can see them on a year calendar.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://inmycalendar.com/holidays/LU-2043.html">
-<link rel="icon" href="../assets/favicon.ico?v=74" sizes="any">
-<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=74">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=74">
-<link rel="manifest" href="../manifest.webmanifest?v=74">
+<link rel="icon" href="../assets/favicon.ico?v=75" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=75">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=75">
+<link rel="manifest" href="../manifest.webmanifest?v=75">
 <script>/* theme before first paint - see the dark block in site.css */
-try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/holidays/LU-2043.html">
-<link rel="stylesheet" href="../assets/site.css?v=74">
+<link rel="stylesheet" href="../assets/site.css?v=75">
 <style>
-.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
-table{border-collapse:collapse;width:100%;min-width:420px;font-size:13.5px;font-family:var(--sans)}
+/* THE HEADING STICKS AT EVERY WIDTH.
+   These tables run to sixty-five rows. On a laptop that is about two screens,
+   so the column headings scroll away after ten and the rest of the year is
+   three unlabelled columns of text - the same fault as on a phone, just later.
+
+   .tablewrap used to be overflow-x:auto, and a box with overflow on either axis
+   is a SCROLL CONTAINER, which is what position:sticky measures against: the
+   heading stuck to a box that never scrolls vertically, so it did not stick at
+   all. The sideways scroll was insurance against a table too wide for its
+   column, and with min-width gone there is no such table - measured at 641,
+   900 and 1400px, nothing overflows and no row wraps badly. */
+.tablewrap{border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-family:var(--sans)}
 thead th{text-align:left;font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--soft);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--rule)}
+  color:var(--soft);font-weight:500;padding:10px 12px;border-bottom:1px solid var(--rule);
+  position:sticky;top:0;z-index:2;background:var(--card)}
 tbody td{padding:9px 12px;border-bottom:1px solid var(--rule2)}
 tbody tr:last-child td{border-bottom:0}
 tbody tr.reg td{color:var(--soft)}
@@ -31,37 +43,27 @@ tbody tr.reg td{color:var(--soft)}
 .ctrylist a{display:block;padding:2px 0;text-decoration:none;color:var(--ink);break-inside:avoid}
 .ctrylist a:hover{text-decoration:underline}
 
-/* PHONE ONLY. Every rule below is inside a max-width query, so the desktop
-   page is not overridden - these are never applied above 640px at all. */
-.ctryfind{display:none}
+/* FINDING ONE OF 246 COUNTRIES, at any width.
+   Four columns on a wide screen is scannable in a way two columns on a phone
+   is not, but scanning 246 names is still the wrong way to reach one you can
+   already name. The box is narrow here and full-width on a phone; everything
+   below it stays phone-only. */
+.ctryfind{display:block;width:100%;max-width:320px;margin:14px 0 2px;padding:9px 12px;
+  font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--card);
+  border:1px solid var(--rule);border-radius:9px}
+.ctryfind:focus{outline:none;border-color:var(--accent)}
+.ctrycount{font-family:var(--disp);font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);padding:6px 2px 0}
+.ctrylist a.nomatch{display:none}
+
 @media (max-width:640px){
-  /* 246 links in a two-column list, 4.7 screens of it, and no way to reach a
-     country except to scan for it. A filter is the whole fix. */
-  .ctryfind{display:block;width:100%;margin:14px 0 4px;padding:12px 14px;
-    font-family:var(--sans);font-size:16px;   /* 16px, or iOS zooms on focus */
-    color:var(--ink);background:var(--card);
-    border:1px solid var(--rule);border-radius:10px}
-  .ctryfind:focus{outline:none;border-color:var(--accent)}
-  .ctrycount{font-family:var(--disp);font-size:10px;letter-spacing:.12em;
-    text-transform:uppercase;color:var(--faint);padding:8px 2px 0}
+  /* Full width, and 16px or iOS zooms the page the moment it is focused. */
+  .ctryfind{max-width:none;font-size:16px;padding:12px 14px;margin-bottom:4px}
+  .ctrycount{padding-top:8px}
   /* One column, and rows a thumb can hit: they were 27px. */
   .ctrylist{columns:1;font-size:15px;margin-top:4px}
   .ctrylist a{min-height:44px;display:flex;align-items:center;
     border-top:1px solid var(--rule2);padding:4px 0}
-  .ctrylist a.nomatch{display:none}
-  /* A 64-row table scrolls the heading off after about ten, and then the
-     columns are unlabelled for the rest of the year.
-
-     .tablewrap has overflow-x:auto so a wide table can scroll sideways on a
-     desktop - and a box with overflow on either axis is a SCROLL CONTAINER,
-     which is what position:sticky measures against. Left alone, the heading
-     stuck to a box that never scrolls vertically, so it did not stick at all:
-     measured at -430 with the page 1,200px down. On a phone the fourth column
-     is already dropped and nothing overflows, so the wrapper can stop being a
-     scroller and the heading can stick to the page. */
-  .tablewrap{overflow-x:visible}
-  table{min-width:0}
-  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
 }
 .yearnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
 /* THIRTY-ONE YEARS, not six.
@@ -308,10 +310,10 @@ tbody tr.reg td{color:var(--soft)}
     <div style="margin-top:5px">Free, no sign-up needed. Sign in only if you want your board on more than one device.</div>
   </div>
 </footer>
-<script src="../assets/errors.js?v=74"></script>
-<script src="../assets/vendor/supabase.js?v=74"></script>
-<script src="../assets/site.js?v=74"></script>
-<script src="../assets/auth.js?v=74"></script>
-<script src="../assets/stats.js?v=74"></script>
+<script src="../assets/errors.js?v=75"></script>
+<script src="../assets/vendor/supabase.js?v=75"></script>
+<script src="../assets/site.js?v=75"></script>
+<script src="../assets/auth.js?v=75"></script>
+<script src="../assets/stats.js?v=75"></script>
 </body>
 </html>

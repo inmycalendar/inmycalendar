@@ -31,7 +31,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "week-number");
-const V    = "74";                    /* keep in step with the other pages */
+const V    = "75";                    /* keep in step with the other pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 2, THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3];
@@ -76,11 +76,17 @@ function weeksIn(y, weekStart, rule){
    remembering. A nav link added to one and not the other is invisible until
    someone follows it. */
 const STYLE = `
-.tablewrap{overflow-x:auto;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
-table{border-collapse:collapse;width:100%;font-size:13px;min-width:420px}
+/* No overflow on the wrapper, so the heading below can stick. A box with
+   overflow on either axis is a scroll container, and that is what sticky
+   measures against - it was sticking to a box that never scrolls vertically.
+   The sideways scroll guarded against a table wider than its column; with
+   min-width gone there is no such table here. */
+.tablewrap{border:1px solid var(--rule);border-radius:var(--r);background:var(--card);margin:0 0 18px}
+table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--rule)}
 thead th{font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--soft);font-weight:500;background:var(--card2)}
+  color:var(--soft);font-weight:500;background:var(--card2);
+  position:sticky;top:0;z-index:2}
 tbody tr:last-child td{border-bottom:none}
 td.n{font-family:var(--mono);font-weight:700}
 tr.nowrow{background:var(--accentBg)}
@@ -92,7 +98,12 @@ tr.nowrow td{font-weight:600}
 .yearnav .on{background:var(--accent);color:var(--onAccent);border-color:var(--accent)}
 .answer{border:1px solid var(--rule);border-left:3px solid var(--accent);background:var(--card);
   border-radius:var(--r);padding:14px 16px;margin:0 0 20px}
-.answer .big{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1.15;display:block;margin-bottom:4px}
+/* THE ANSWER IS THE HEADLINE.
+   This page exists to answer one question and used to set the QUESTION larger
+   than the answer: an h1 of 27px above 26px of answer. The h1 is left alone -
+   it is the page's heading and shrinking it on a desktop is a change nobody
+   asked for - and the answer is simply given the size its job deserves. */
+.answer .big{font-family:var(--mono);font-size:38px;font-weight:700;line-height:1.1;display:block;margin-bottom:6px}
 .answer .sub{color:var(--soft);font-size:13px}
 
 /* PHONE ONLY, and inside a max-width query, so the desktop page is untouched.
@@ -106,15 +117,13 @@ tr.nowrow td{font-weight:600}
    A 64-row table also scrolls its heading away after about ten rows, and the
    columns are unlabelled from there on, so the head sticks. */
 @media (max-width:640px){
-  /* .pagebody h1 in site.css is two selectors to this one's one, so a bare h1
-     here lost to it and the question stayed at 27px. */
+  /* On a phone the heading steps back as well - there is no room for a 27px
+     question above a 34px answer. .pagebody h1, because site.css is two
+     selectors to a bare h1's one and would otherwise win. */
   .pagebody h1{font-size:20px}
   .answer{padding:16px 14px}
-  .answer .big{font-size:34px;line-height:1.1;margin-bottom:6px}
+  .answer .big{font-size:34px}
   .answer .sub{font-size:13.5px;line-height:1.5}
-  .tablewrap{overflow-x:visible}
-  table{min-width:0}
-  thead th{position:sticky;top:0;z-index:2;background:var(--card)}
 }
 .cols{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 18px}
 .cols>div{flex:1 1 240px;border:1px solid var(--rule);border-radius:var(--r);background:var(--card);padding:12px 14px}
@@ -138,7 +147,7 @@ function shell({ title, desc, canonical, ld, body }){
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=${V}">
 <link rel="manifest" href="../manifest.webmanifest?v=${V}">
 <script>/* theme before first paint - see the dark block in site.css */
-try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="${canonical}">

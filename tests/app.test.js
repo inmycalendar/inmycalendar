@@ -4528,26 +4528,38 @@ check(/^\.toc\{display:none\}/m.test(siteFlat) || /\.toc\{display:none\}/.test(s
 check(/\.toc a\{[^}]*min-height:44px/.test(sitePhone),
       "with 44px rows - the only links on these pages not inside a sentence");
 
-/* ---- finding one of 246 countries ---- */
-check(/\.ctryfind\{display:none\}/.test(holGen),
-      "the country filter is declared hidden at desktop width");
-check(/\.ctryfind\{display:block[^}]*font-size:16px/.test(holGen.replace(/\s*\n\s*/g,"")),
-      "and 16px on a phone, or iOS zooms the page on focus");
+/* ---- finding one of 246 countries, at any width ----
+   It was phone-only for a release, on the reasoning that four columns on a wide
+   screen are scannable. They are - but scanning 246 names is still the wrong
+   way to reach one you can already name, and a search box is a pure addition
+   that moves nothing. */
+check(!/\.ctryfind\{display:none\}/.test(holGen),
+      "the country filter is no longer hidden on a desktop");
+check(/\.ctryfind\{display:block;width:100%;max-width:320px/.test(holGen.replace(/\s*\n\s*/g,"")),
+      "and is a narrow box there rather than a full-width one");
+check(/\.ctryfind\{max-width:none;font-size:16px/.test(holGen.replace(/\s*\n\s*/g,"")),
+      "full width and 16px on a phone, or iOS zooms the page on focus");
 check(/\.ctrylist a\{min-height:44px/.test(holGen.replace(/\s*\n\s*/g,"")),
       "with the country rows themselves at 44px, up from 27");
 check(/normalize\("NFD"\)/.test(readFile("assets/site.js")),
       "matching ignores accents, so \"turkiye\" finds \"Turkiye\"");
 
 /* ---- a 64-row table keeps its column headings ---- */
+/* AT EVERY WIDTH NOW. Sixty-five rows is two screens on a laptop, so the
+   headings scroll away there too - the same fault as on a phone, just later. */
 [["build-holiday-pages.js", holGen], ["build-week-pages.js", wkGen]].forEach(([name, src]) => {
   const flat = src.replace(/\s*\n\s*/g, "");
-  check(/thead th\{position:sticky;top:0/.test(flat), name + ": the table heading sticks");
-  /* THE TRAP: .tablewrap has overflow-x:auto so a wide table can scroll
-     sideways, and a box with overflow on either axis is a scroll container -
-     which is what sticky measures against. Measured at -430 with the page
-     1,200px down, i.e. not sticking at all. */
-  check(/\.tablewrap\{overflow-x:visible\}/.test(flat),
-        name + ": with its wrapper no longer a scroll container on phones");
+  check(/thead th\{[^}]*position:sticky;top:0/.test(flat), name + ": the table heading sticks");
+  /* THE TRAP, and why the wrapper lost its overflow entirely: a box with
+     overflow on EITHER axis is a scroll container, and that is what sticky
+     measures against. It was sticking to a box that never scrolls vertically,
+     so it did not stick at all - measured at -430 with the page 1,200px down.
+     The sideways scroll guarded against a table wider than its column; with
+     min-width gone there is no such table. */
+  check(!/\.tablewrap\{overflow-x:auto/.test(flat),
+        name + ": with its wrapper no longer a scroll container at any width");
+  check(!/table\{[^}]*min-width:420px/.test(flat),
+        name + ": and no min-width forcing one");
 });
 
 /* ---- the answer is the headline ---- */
@@ -4607,8 +4619,30 @@ check(/:root\[data-theme="dark"\]\{color-scheme:dark\}/.test(siteFlat2) &&
 check(qa("#themeSeg [data-theme-choice]").length === 3, "three states: system, light, dark");
 check(qa('#themeSeg [data-theme-choice="system"]').length === 1, "and system is one of them");
 check(/function setTheme/.test(js) && /function applyTheme/.test(js), "with named setters");
-check(/localStorage\.removeItem\("imc\.theme"\)/.test(js),
-      "choosing system removes the key, handing the answer back to the media query");
+
+/* LIGHT IS THE DEFAULT, and following the device is a choice.
+   It was the other way round for a release. A phone flips itself to dark on a
+   schedule, and a board opened in daylight going dark at six is a surprise
+   rather than a service. */
+check(/theme:"light"/.test(js), "a first visit gets light, not whatever the machine is set to");
+check(/cfg\.themeDefaultFix !== true/.test(js),
+      "and the release that defaulted to system is migrated once, not left behind");
+check(/localStorage\.setItem\("imc\.theme", t\)/.test(js) &&
+      !/localStorage\.removeItem\("imc\.theme"\)/.test(js),
+      "all three states are written, so an absent key can mean light");
+PAGES.forEach(f => {
+  check(/t!=="system"\)document\.documentElement\.setAttribute\("data-theme",t==="dark"\?"dark":"light"\)/
+        .test(readFile(f).replace(/\s+/g," ")),
+        f + ": the pre-paint script defaults to light and steps aside only for system");
+});
+
+/* One tap between the two you actually switch between; the third is in
+   Settings where it can be spelled out. */
+check(/function toggleTheme/.test(js) && /setTheme\(isDark\(\) \? "light" : "dark"\)/.test(js),
+      "the header button flips between light and dark");
+check(d.querySelector("#themeBtn") !== null, "and that button is in the ribbon");
+check(/btn\.textContent = dark \? "☀" : "☽"/.test(js),
+      "showing where it will take you rather than where you are");
 check(/cfg && cfg\.theme === "dark"/.test(js),
       "and the computed day-colour tints follow the choice, not just the OS");
 PAGES.forEach(f => {
