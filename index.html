@@ -16,15 +16,17 @@
 <meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
 <meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512-v2.png">
-<link rel="icon" href="assets/favicon.ico?v=71" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=71">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=71">
-<link rel="manifest" href="manifest.webmanifest?v=71">
+<link rel="icon" href="assets/favicon.ico?v=72" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=72">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=72">
+<link rel="manifest" href="manifest.webmanifest?v=72">
+<script>/* theme before first paint - see the dark block in site.css */
+try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=71">
-<link rel="stylesheet" href="assets/app.css?v=71">
+<link rel="stylesheet" href="assets/site.css?v=72">
+<link rel="stylesheet" href="assets/app.css?v=72">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -148,6 +150,13 @@
       <h2>Settings</h2>
       <button type="button" class="sheetdone" id="sheetClose">Done</button>
     </div>
+
+    <!-- Where the account lives on a phone. The header has room for three rows
+         and no more, and an account is a setting - iOS puts it here too. On a
+         desktop the header keeps it and this stays empty; app.js moves the one
+         element between the two rather than rendering it twice. -->
+    <div class="rbox authbox" id="authBox"></div>
+
     <div class="rbox">
       <h3>Calendar setup</h3>
       <div class="rbody">
@@ -220,6 +229,21 @@
     </div>
 
     <div class="ad ad-rail hidden" id="adRail">ad slot<br>160&times;600</div>
+    <div class="rbox">
+      <h3>Appearance</h3>
+      <div class="rbody">
+        <!-- Three states, not a switch. "System" is the default and the right
+             answer for most people - the phone already knows whether it is
+             night. The other two are for the reader who wants dark at noon or
+             light at midnight, and they override the operating system. -->
+        <div class="seg themeseg" id="themeSeg" role="group" aria-label="Appearance">
+          <button type="button" data-theme-choice="system">System</button
+          ><button type="button" data-theme-choice="light">Light</button
+          ><button type="button" data-theme-choice="dark">Dark</button>
+        </div>
+        <p class="rhint" id="themeHint"></p>
+      </div>
+    </div>
   </aside>
  </div>
 </main>
@@ -264,7 +288,7 @@
     <span class="ti" aria-hidden="true">&#9635;</span><span class="tl">Board</span></a>
   <a class="tab" href="#calendar" data-view="calendar">
     <span class="ti" aria-hidden="true">&#9638;</span><span class="tl">Calendar</span></a>
-  <a class="tab" href="holidays/index.html">
+  <a class="tab" data-tab="holidays" href="holidays/index.html">
     <span class="ti" aria-hidden="true">&#9733;</span><span class="tl">Holidays</span></a>
   <button class="tab" type="button" id="tabSettings"
           aria-controls="railSheet" aria-expanded="false">
@@ -350,11 +374,11 @@
   </div>
 </div>
 
-<script src="assets/errors.js?v=71"></script>
-<script src="assets/vendor/supabase.js?v=71"></script>
-<script src="assets/app.js?v=71"></script>
-<script src="assets/auth.js?v=71"></script>
-<script src="assets/sync.js?v=71"></script>
-<script src="assets/stats.js?v=71"></script>
+<script src="assets/errors.js?v=72"></script>
+<script src="assets/vendor/supabase.js?v=72"></script>
+<script src="assets/app.js?v=72"></script>
+<script src="assets/auth.js?v=72"></script>
+<script src="assets/sync.js?v=72"></script>
+<script src="assets/stats.js?v=72"></script>
 </body>
 </html>

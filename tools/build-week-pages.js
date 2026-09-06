@@ -31,7 +31,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "week-number");
-const V    = "71";                    /* keep in step with the other pages */
+const V    = "72";                    /* keep in step with the other pages */
 
 const THIS_YEAR = 2026;
 const YEARS = [THIS_YEAR - 2, THIS_YEAR - 1, THIS_YEAR, THIS_YEAR + 1, THIS_YEAR + 2, THIS_YEAR + 3];
@@ -137,6 +137,8 @@ function shell({ title, desc, canonical, ld, body }){
 <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg?v=${V}">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon-v2.png?v=${V}">
 <link rel="manifest" href="../manifest.webmanifest?v=${V}">
+<script>/* theme before first paint - see the dark block in site.css */
+try{var t=localStorage.getItem("imc.theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="${canonical}">
@@ -162,6 +164,16 @@ ${ld ? `<script type="application/ld+json">\n${ld}\n</script>` : ""}
 <main class="wrap pagebody"><div class="body">
 ${body}
 </div></main>
+<!-- The same four destinations as the app, in the same place. A tab bar that
+     is missing on some pages teaches you where to look and then takes it away,
+     which is what tapping Holidays used to do. Hidden above 640px. -->
+<nav class="tabbar" aria-label="Main">
+  <a class="tab" href="../index.html#board"><span class="ti" aria-hidden="true">&#9635;</span><span class="tl">Board</span></a>
+  <a class="tab" href="../index.html#calendar"><span class="ti" aria-hidden="true">&#9638;</span><span class="tl">Calendar</span></a>
+  <a class="tab" data-tab="holidays" href="../holidays/index.html"><span class="ti" aria-hidden="true">&#9733;</span><span class="tl">Holidays</span></a>
+  <a class="tab" href="../index.html#settings"><span class="ti" aria-hidden="true">&#9881;</span><span class="tl">Settings</span></a>
+</nav>
+
 <footer>
   <div class="wrap">
     <a href="../index.html#board">Kanban Board</a><a href="../index.html#calendar">Calendar</a>

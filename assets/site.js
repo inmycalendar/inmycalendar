@@ -52,3 +52,21 @@
   /* A search input's own clear button fires "search", not "input", in Safari. */
   box.addEventListener("search", apply);
 })();
+
+/* WHICH TAB YOU ARE ON.
+   The same job the site nav already does above, for the bar at the bottom.
+   Holidays is the only content destination in the bar, and every holiday page
+   lives under /holidays/, so the match is on the directory rather than on the
+   filename - a country page should light the Holidays tab too. */
+(function(){
+  /* Matched on data-tab, not on the href. The Holidays tab points at
+     "holidays/index.html" from the root, "../holidays/index.html" from
+     /week-number/, and plain "index.html" from inside /holidays/ itself - so a
+     URL comparison was always going to miss one of the three, and did: on every
+     country page no tab lit up at all.
+
+     The section is the directory, so a country page lights Holidays too. */
+  var tab = document.querySelector('.tabbar [data-tab="holidays"]');
+  if (tab && location.pathname.toLowerCase().indexOf("/holidays/") >= 0)
+    tab.classList.add("on");
+})();

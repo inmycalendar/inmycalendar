@@ -1089,35 +1089,39 @@ main{padding:16px 0 0}
    Declared hidden at desktop width first, so adding the markup cannot change
    the desktop layout even for one frame.
    ========================================================================== */
-.tabbar,.sheethead{display:none}
+.sheethead{display:none}
 
 @media (max-width:640px){
 
-  /* ---- THE TAB BAR ------------------------------------------------------
-     Four destinations, at the bottom, where the thumb is. 56px plus whatever
-     the home indicator needs on the device it is running on. */
-  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:80;
-    background:var(--card);border-top:1px solid var(--rule);
-    padding-bottom:env(safe-area-inset-bottom)}
-  .tabbar .tab{flex:1 1 0;min-width:0;min-height:56px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    background:transparent;border:0;text-decoration:none;color:var(--faint);
-    font-family:var(--disp);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
-    cursor:pointer;padding:6px 2px}
-  .tabbar .tab .ti{font-size:17px;line-height:1}
-  .tabbar .tab.on{color:var(--ink)}
-  .tabbar .tab:active{background:var(--card2)}
-
-  /* The page has to end above the bar, or the last task sits under it. */
-  body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
-  /* and anything already pinned to the bottom moves up by the same amount */
+  /* The tab bar itself now lives in site.css, because every page has one -
+     tapping Holidays used to leave the app shell entirely and land on a page
+     with no bar at all, which is the one thing a tab bar must never do. What
+     stays here is only what the APP adds to it. */
+  /* anything pinned to the bottom clears the bar */
   .toast{bottom:calc(64px + env(safe-area-inset-bottom))}
   .toast.above{bottom:calc(152px + env(safe-area-inset-bottom))}
   .selbar{bottom:calc(64px + env(safe-area-inset-bottom))}
 
-  /* Board and Calendar are in the tab bar now, so the header loses its fourth
-     row - the one that carried them - and 36px with it. */
+  /* Board and Calendar are in the tab bar now, so the header loses the row
+     that carried them - and with the brand and the account gone too, what is
+     left is the one row you actually use on a board: the date, Today, and
+     search. Measured: 180px to 94px, 21% of the screen to 11%.
+
+     The account moves into Settings rather than disappearing - see placeAuth()
+     in app.js. An account is a setting, and iOS puts it at the top of Settings
+     for the same reason. */
   .sitenav{display:none}
+  .brand{display:none}
+
+  /* Appearance: full width and thumb-sized, unlike the compact scope segment
+     it borrows its class from. */
+  .themeseg{display:flex;width:100%}
+  .themeseg button{flex:1 1 0;height:auto;min-height:42px;font-size:11.5px}
+  /* Empty on a desktop, where the account stays in the header, and an empty
+     bordered panel is worse than none. :empty is exact here: placeAuth moves
+     the one element in and out, so the box is either empty or holds it. */
+  .authbox:empty{display:none}
+  .authbox{padding:10px 12px;display:flex;justify-content:flex-start}
 
   /* ---- SETTINGS AS A SHEET ----------------------------------------------
      The rail is not restyled into a sheet so much as lifted out of the page:
@@ -1296,4 +1300,24 @@ main{padding:16px 0 0}
      matched every cell after it, which on a year grid is the whole rest of the
      year, because .wg is one flat grid and not a row per week. */
   .wg .wk[data-mo],.wg .dc.mstart{border-top-color:var(--rule)}
+}
+
+/* ==========================================================================
+   THE YEAR GRID ON THE BOARD, open by default on a phone too
+
+   It was folded on phones for one release, because at 2,069px it was half the
+   board page. Folding it was the wrong answer: it is the app's headline
+   feature - "plan today, see the whole year" - and defaulting it shut hides
+   what the app is for behind a control most people will never press.
+
+   The length is answered properly instead. The glance already renders in the
+   compact grid; on a phone those rows come down to the same 23px the calendar
+   uses in "Fit year", which takes the panel from 2,069px to about 1,300px
+   without hiding anything or costing a tap.
+   ========================================================================== */
+@media (max-width:640px){
+  #glanceBox .wg.c .dc{min-height:23px;font-size:10px}
+  #glanceBox .wg.c .wk{min-height:23px;font-size:9px}
+  #glanceBox .wg.c .dc .cm{display:none}
+  #glanceBox .wg.c .dc .task{width:3px;height:3px;top:2px;right:2px}
 }

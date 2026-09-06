@@ -30,7 +30,10 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
             /* Phone only, both of them. A desktop reads them and ignores them:
                the rules they drive live inside the max-width:640px block, which
                is never applied above that width. */
-            phoneCol:"todo", calDense:false, glanceOpenPhone:false,
+            /* glancePhoneFix is deliberately NOT here: DEF is merged UNDER the stored
+               config, so a default of true would hand the migration below a flag
+               saying it had already run, on exactly the users it exists for. */
+            phoneCol:"todo", calDense:false, glanceOpenPhone:true, theme:"system",
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
             /* Display order only. The colour stored on a day is an INDEX into
@@ -265,6 +268,29 @@ function phone(){
    On a desktop the rail is a column beside the board and there is no sheet to
    open or close, so these are no-ops there: the class they toggle is only ever
    read by a rule inside the phone query. */
+/* WHERE THE ACCOUNT CONTROL LIVES.
+
+   The header has room for three rows on a phone and the account is not one of
+   them: it is a setting, and iOS puts an account at the top of Settings for
+   the same reason. On a desktop the header has the width and keeps it.
+
+   The ELEMENT is moved rather than re-rendered. appendChild moves a node with
+   its listeners intact, so auth.js keeps working and there is only ever one of
+   it - two copies would mean one of them silently stops matching the signed-in
+   state. */
+function placeAuth(){
+  var slot = document.getElementById("authSlot");
+  var box  = document.getElementById("authBox");
+  if (!slot || !box) return;
+  var wantsSheet = phone();
+  var inSheet = slot.parentNode === box;
+  if (wantsSheet && !inSheet) box.appendChild(slot);
+  else if (!wantsSheet && inSheet){
+    var bar = document.querySelector("header.bar .wrap");
+    if (bar) bar.appendChild(slot);
+  }
+}
+
 function openSheet(){
   document.body.classList.add("sheet");
   var t = document.getElementById("tabSettings");
@@ -2059,7 +2085,49 @@ function applyCatColours(){
    Reading a media query is not the layout measurement this codebase bans: no
    box is consulted and nothing reflows. */
 function isDark(){
+  if (cfg && cfg.theme === "dark")  return true;
+  if (cfg && cfg.theme === "light") return false;
   return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
+/* THE APPEARANCE CHOICE.
+
+   Stored twice, deliberately. cfg carries it like every other setting, so it
+   syncs and exports with the rest; and a plain "imc.theme" key carries it for
+   the inline script in every page's <head>, which has to stamp the attribute
+   BEFORE the first paint and cannot afford to parse the whole config to do it.
+   A stylesheet cannot read storage, and site.js loads too late - without the
+   head script the page flashes the wrong theme on every load.
+
+   "system" removes the attribute rather than setting it, which hands the
+   answer back to the media query in site.css. */
+var THEMES = ["system","light","dark"];
+function setTheme(t){
+  if (THEMES.indexOf(t) < 0) t = "system";
+  cfg.theme = t; commit("cfg");
+  try {
+    if (t === "system") localStorage.removeItem("imc.theme");
+    else localStorage.setItem("imc.theme", t);
+  } catch (e){}      /* private mode, or storage full - the page still works */
+  applyTheme();
+}
+function applyTheme(){
+  var t = (cfg && THEMES.indexOf(cfg.theme) >= 0) ? cfg.theme : "system";
+  if (t === "system") document.documentElement.removeAttribute("data-theme");
+  else                document.documentElement.setAttribute("data-theme", t);
+  var seg = document.getElementById("themeSeg");
+  if (seg){
+    var b = seg.querySelectorAll("button");
+    for (var i=0;i<b.length;i++)
+      b[i].classList.toggle("on", b[i].getAttribute("data-theme-choice") === t);
+  }
+  var hint = document.getElementById("themeHint");
+  if (hint) hint.textContent = t === "system"
+    ? "Following this device, which is currently " + (isDark() ? "dark." : "light.")
+    : "Always " + t + ", whatever this device is set to.";
+  /* The day-category tints are computed rather than declared, so they are the
+     one thing a token cannot re-answer on its own. */
+  if (typeof applyCatColours === "function" && cfg && cfg.catColors) applyCatColours();
 }
 
 /* ---------- selecting several days at once ----------------------------------
@@ -2522,6 +2590,12 @@ function wire(){
   var sheetClose = document.getElementById("sheetClose");
   if (sheetClose) sheetClose.addEventListener("click", closeSheet);
 
+  var themeSeg = document.getElementById("themeSeg");
+  if (themeSeg) themeSeg.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest("[data-theme-choice]") : null;
+    if (b) setTheme(b.getAttribute("data-theme-choice"));
+  });
+
   /* Three ways out of the action sheet: the backdrop, Cancel, and Escape
      below. A sheet with one way out is how the day popup ended up with a
      27x25 close button that scrolled off the top of itself. */
@@ -2719,6 +2793,7 @@ function wire(){
   window.addEventListener("resize", function(){
     var n = narrow();
     if (n !== wasNarrow){ wasNarrow = n; renderAll(); }
+    placeAuth();
   });
 
   /* FOLLOW THE OS WHEN IT CHANGES, not only when the page loads.
@@ -2727,7 +2802,7 @@ function wire(){
      token; only the computed day-category tints need telling. */
   if (window.matchMedia){
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
-    var onScheme = function(){ applyCatColours(); };
+    var onScheme = function(){ applyTheme(); };
     if (mq.addEventListener) mq.addEventListener("change", onScheme);
     else if (mq.addListener) mq.addListener(onScheme);   /* older Safari */
   }
@@ -2807,7 +2882,14 @@ function init(){
   cfg.shift = 0;   /* the calendar opens on today, exactly as the glance does */
   if (typeof cfg.glanceOpen !== "boolean") cfg.glanceOpen = true;
   /* Folded on a phone unless the reader has opened it - see glanceOpen(). */
-  if (typeof cfg.glanceOpenPhone !== "boolean") cfg.glanceOpenPhone = false;
+  if (typeof cfg.glanceOpenPhone !== "boolean") cfg.glanceOpenPhone = true;
+  /* ONE-TIME: the previous release defaulted this to false and then SAVED it,
+     so changing the default alone would only ever reach a brand new visitor.
+     Anyone who used the app during that release is carrying a stored false
+     they never chose. This flips it once, records that it has, and then never
+     touches the setting again - so folding the grid deliberately still sticks. */
+  if (cfg.glancePhoneFix !== true){ cfg.glanceOpenPhone = true; cfg.glancePhoneFix = true; }
+  if (THEMES.indexOf(cfg.theme) < 0) cfg.theme = "system";
   if (typeof cfg.calDense !== "boolean") cfg.calDense = false;
   if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
 
@@ -2829,6 +2911,13 @@ function init(){
      in a link: everything else is personal data that lives on the device. */
   var h = (window.location.hash || "").replace("#","");
   var hashParts = h.split("/");
+  /* ARRIVING FROM THE SETTINGS TAB ON A CONTENT PAGE.
+     Those pages carry the same tab bar but have no settings of their own, so
+     their Settings tab links here with #settings. Read BEFORE setView runs:
+     setView rewrites the hash to #board or #calendar and then closes the
+     sheet, so opening it any earlier opened something that was shut a
+     millisecond later. Acted on after, at the foot of init(). */
+  var wantsSettings = (h === "settings");
   var view = (hashParts[0] === "board" || hashParts[0] === "calendar") ? hashParts[0] : "board";
   var hashCountry = resolveCountry(hashParts[1]);
   if (hashCountry) cfg.country = hashCountry;
@@ -2865,8 +2954,11 @@ function init(){
       try { markOverflowing(el.scopeHost); } catch (e){}
     });
   }
+  applyTheme();     /* before the first paint of anything colour-dependent */
+  placeAuth();
   applyDensity();   /* the saved row height, before the calendar is first shown */
   setView(view);
+  if (wantsSettings && phone()) openSheet();
   if (cfg.country) loadHolidays(cfg.country);
 }
 

@@ -230,15 +230,34 @@ PAGES.forEach(f => {
 check(broken === 0, "every cross-page link resolves");
 
 console.log("\n=== C2. The split itself ===");
-check(fs.existsSync(path.join(ROOT,"assets/app.js")) && !/<style>|<script>[^<]/.test(readFile("index.html")),
-      "index.html is markup only - no inline CSS or JS left in it");
+{
+  /* ONE INLINE SCRIPT IS ALLOWED, and only this one.
+
+     A theme has to be decided before the first paint or the page flashes the
+     wrong one on every load. A stylesheet cannot read storage, and an external
+     script - even in <head> - is a fetch, which is a paint too late.
+
+     So the rule stays and gains a named exception: the file may carry the
+     theme stamp and nothing else. Anything longer, or a second one, fails. */
+  const src = readFile("index.html");
+  const inline = src.match(/<script(?![^>]*\bsrc=)(?![^>]*ld\+json)[^>]*>[\s\S]*?<\/script>/g) || [];
+  check(fs.existsSync(path.join(ROOT,"assets/app.js")) && !/<style>/.test(src),
+        "index.html carries no inline CSS");
+  check(inline.length === 1, "and exactly one inline script (got " + inline.length + ")");
+  check(/localStorage\.getItem\("imc\.theme"\)/.test(inline[0] || "") && inline[0].length < 400,
+        "which is the pre-paint theme stamp, short enough to read at a glance");
+}
 [["assets/site.css","shared shell"],["assets/app.css","app styles"],
  ["assets/app.js","app logic"],["assets/site.js","content-page menu"]].forEach(([f,what]) =>
   check(fs.existsSync(path.join(ROOT,f)), f + " exists (" + what + ")"));
 check(!/\.pagebody[^{]*\{[^}]*\}[\s\S]*\.sitenav a\.page\b/.test(siteCss) || true, "content wrapper and nav link no longer share a class name");
 check(/\.pagebody\{/.test(siteCss) && !/^\.page\{/m.test(siteCss),
       ".page now means only 'a nav link to a content page'");
-check(readFile("index.html").length < 20000,
+/* The ceiling moved once, from 20,000 to 24,000, when the phone work added the
+   tab bar, the action sheet and the settings sheet header to the markup. The
+   point of the check is that logic and styling never come back into this file,
+   not that it never grows: it was 57,000 bytes of inline everything. */
+check(readFile("index.html").length < 24000,
       "index.html is down to " + readFile("index.html").length + " bytes of readable markup (was ~57000)");
 check(fs.existsSync(path.join(ROOT,"package.json")) && fs.existsSync(path.join(ROOT,"README.md")),
       "package.json and README.md are in the repo");
@@ -309,7 +328,10 @@ $("wsSel").value = "0"; $("wsSel").dispatchEvent(new w.Event("change",{bubbles:t
 const headingText = h => [...h.childNodes]
   .filter(n => n.nodeType === 3).map(n => n.textContent).join("").trim();
 const railBoxes = [...qa(".rail .rbox h3")].map(headingText);
-check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours",
+/* Appearance is deliberately LAST. It is set once and then never again, and
+   putting it first would have reshuffled a desktop panel order chosen on
+   purpose - Calendar setup first, because it is the one everybody changes. */
+check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours | Appearance",
       "rail reads: " + railBoxes.join(" | "));
 const dataBtns = [...qa("footer .fdata .btn")].map(b => b.textContent.trim());
 check(dataBtns.length === 5, "the data actions live in the footer: " + dataBtns.join(", "));
@@ -690,7 +712,7 @@ check(d.querySelector(".sitenav").compareDocumentPosition(d.querySelector("#auth
       "placed after the nav, at the far right where people look for accounts");
 check($("authSlot").classList.contains("hidden"),
       "with no library or key it hides itself rather than erroring");
-check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox").length === 3,
+check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox h3").length === 4,
       "and the whole app still works signed out - sign-in is never required");
 check(/signInWithOAuth/.test(au) && /id:"google"/.test(au), "Google is wired as a provider");
 check(/signOut/.test(au), "and there is a way back out");
@@ -1222,8 +1244,19 @@ console.log("\n=== C36. The save choke point records what changed ===");
    these check the journal itself, not merely that a write happened. A blanket
    "something changed" flag would pass a naive test and still lose data. */
 check(typeof w.commit === "function", "commit() exists as the single write path");
-check((js.match(/localStorage\.setItem/g) || []).length === 1,
-      "exactly one place in the whole app writes to localStorage");
+/* TWO writers now, and the second is named rather than merely tolerated.
+   commit() stays the choke point for everything that is data. The theme is
+   also written to a plain "imc.theme" key, because the inline script in every
+   page's <head> has to read it before the first paint and cannot afford to
+   parse the whole config to do it. A third appearing here is a bug. */
+{
+  const writes = js.match(/localStorage\.setItem\([^)]*/g) || [];
+  check(writes.length === 2, "exactly two places write to localStorage (got " + writes.length + ")");
+  check(writes.filter(x => /"imc\.theme"/.test(x)).length === 1,
+        "one is the theme, which the pre-paint head script has to read");
+  check(writes.filter(x => !/"imc\.theme"/.test(x)).length === 1,
+        "and the other is the commit() choke point for everything that is data");
+}
 check(/function writeRaw\(/.test(js), "and it is writeRaw(), reached only through commit()");
 check(!/\bsave\(LS\./.test(js), "no call site pairs a key with a value by hand any more");
 
@@ -4344,23 +4377,39 @@ const atTopLevel = (css, idx) => {
   const head = css.slice(0, idx);
   return (head.match(/\{/g) || []).length === (head.match(/\}/g) || []).length;
 };
-["\\.tabbar,\\.sheethead", "\\.actsheet"].forEach(sel => {
+const siteOne = siteCss.replace(/\s*\n\s*/g, "");
+const sitePh  = siteOne.split("@media (max-width:640px)").slice(1).join("");
+
+[[oneline, "\\.sheethead"], [oneline, "\\.actsheet"], [siteOne, "\\.tabbar"]].forEach(([css, sel]) => {
   const re = new RegExp(sel + "\\{display:none\\}");
-  const m  = oneline.match(re);
+  const m  = css.match(re);
   check(!!m, "declared display:none outside any query: " + sel);
-  if (m) check(atTopLevel(oneline, oneline.indexOf(m[0])),
+  if (m) check(atTopLevel(css, css.indexOf(m[0])),
                "  and at top level, so it applies before any phone rule could");
 });
 
-/* ---- the tab bar ---- */
-check(/\.tabbar\{display:flex;position:fixed;left:0;right:0;bottom:0/.test(ph),
+/* ---- the tab bar, which lives in site.css because EVERY page has one ----
+   It began as an app-only control in app.css, which only index.html loads, so
+   tapping Holidays left the shell completely: the bar vanished and there was
+   no way back except the browser. A tab bar that is missing on some
+   destinations is worse than none, because it teaches you where to look and
+   then takes it away. */
+check(/\.tabbar\{display:flex;position:fixed;left:0;right:0;bottom:0/.test(sitePh),
       "a phone gets a tab bar pinned to the bottom, where the thumb is");
-check(/\.tabbar \.tab\{[^}]*min-height:56px/.test(ph),
+check(/\.tabbar \.tab\{[^}]*min-height:56px/.test(sitePh),
       "with 56px targets, comfortably past the 44 Apple asks for");
-check(/\.tabbar\{[^}]*padding-bottom:env\(safe-area-inset-bottom\)/.test(ph),
+check(/\.tabbar\{[^}]*padding-bottom:env\(safe-area-inset-bottom\)/.test(sitePh),
       "clearing the home indicator on a phone that has one");
-check(/body\{padding-bottom:calc\(56px \+ env\(safe-area-inset-bottom\)\)\}/.test(ph),
-      "and the page ends above it, so the last task is not underneath it");
+check(/body\{padding-bottom:calc\(56px \+ env\(safe-area-inset-bottom\)\)\}/.test(sitePh),
+      "and the page ends above it, so the last line is not underneath it");
+/* The point of the whole change: it is on the content pages too. */
+["about.html","contact.html","guide.html","privacy.html","terms.html"].forEach(f => {
+  const src = readFile(f);
+  check(/<nav class="tabbar"/.test(src), f + " has the tab bar");
+  check((src.match(/class="tab"/g) || []).length === 4, f + " has all four destinations");
+});
+check(/\.sitenav\{display:none\}/.test(sitePh),
+      "and the content pages drop their wrapping seven-link nav row, 128px to ~48px");
 check(/\.sitenav\{display:none\}/.test(ph),
       "the header loses the row that used to carry Board and Calendar");
 check(/\.sitenav a\[data-view\], \.tabbar \[data-view\]/.test(js),
@@ -4388,10 +4437,15 @@ check(!d.body.classList.contains("sheet"), "Done closes it");
 check(/function glanceOpen/.test(js), "the year grid's open state is asked for, not read raw");
 check(/phone\(\) \? !!cfg\.glanceOpenPhone : !!cfg\.glanceOpen/.test(js),
       "and the two screens keep separate answers");
-check(/glanceOpenPhone:false/.test(js),
-      "folded by default on a phone - 2,069px of a 4,120px page, below the board");
-check(/glanceOpen:true/.test(js) || /cfg\.glanceOpen = true/.test(js),
-      "and still open by default on a desktop, where it is the point of the page");
+/* OPEN by default on both now. It was folded on phones for a pass - 2,069px
+   of a 4,120px page, for a grid too small to plan in - and that was the wrong
+   call: it is the app's headline feature and hiding it by default hides what
+   the app is for. The page length problem it was solving is answered properly
+   instead, by the dense rows the calendar already had. */
+check(/glanceOpenPhone:true/.test(js),
+      "the year grid is open by default on a phone as well as on a desktop");
+check(/#glanceBox \.wg\.c \.dc\{min-height:2[0-9]px/.test(readFile("assets/app.css").replace(/\s*\n\s*/g,"")),
+      "with denser rows there, so being open costs a fraction of what it did");
 check(/max-width:640px/.test(js.slice(js.indexOf("function phone"), js.indexOf("function phone") + 300)),
       "phone() matches the stylesheet's breakpoint, not narrow()'s older 700");
 
@@ -4496,6 +4550,69 @@ check(/monthStart \? " mstart" : ""/.test(js),
 check(/\.wg \.dc\.mstart\{border-top-color/.test(appPhone) ||
       /\.wg \.wk\[data-mo\],\.wg \.dc\.mstart\{border-top-color/.test(appPhone),
       "rather than by a sibling selector, which would match the rest of the year");
+}
+
+/* ==========================================================================
+   C75. A SWITCH FOR THE THEME, AND A HEADER THAT EARNS ITS ROWS
+   ========================================================================== */
+{
+const appCssFlat = readFile("assets/app.css").replace(/\s*\n\s*/g, "");
+const appPh = appCssFlat.split("@media (max-width:640px)").slice(1).join("");
+const siteFlat2 = siteCss.replace(/\s*\n\s*/g, "");
+
+/* ---- the two dark blocks must agree ----
+   Plain CSS cannot share one declaration between a media query and a selector
+   outside it, so the dark palette is written twice: once following the OS and
+   once for the explicit override. They are only correct while they are the
+   same, and nothing but this stops them drifting. */
+{
+  const grab = sel => {
+    const at = siteFlat2.indexOf(sel + "{");
+    if (at < 0) return null;
+    return siteFlat2.slice(at + sel.length + 1, siteFlat2.indexOf("}", at))
+                    .split(";").filter(Boolean).sort().join(";");
+  };
+  const bySystem = grab(':root:not([data-theme="light"])');
+  const byChoice = grab(':root[data-theme="dark"]');
+  check(!!bySystem && !!byChoice, "the dark palette exists for both the OS and the override");
+  check(bySystem === byChoice, "and the two declare exactly the same tokens");
+  check(/:root:not\(\[data-theme="light"\]\)/.test(siteFlat2),
+        "the OS block steps aside for a reader who has chosen light");
+}
+check(/:root\[data-theme="dark"\]\{color-scheme:dark\}/.test(siteFlat2) &&
+      /:root\[data-theme="light"\]\{color-scheme:light\}/.test(siteFlat2),
+      "with color-scheme both ways, so native controls follow the choice");
+
+/* ---- the switch ---- */
+check(qa("#themeSeg [data-theme-choice]").length === 3, "three states: system, light, dark");
+check(qa('#themeSeg [data-theme-choice="system"]').length === 1, "and system is one of them");
+check(/function setTheme/.test(js) && /function applyTheme/.test(js), "with named setters");
+check(/localStorage\.removeItem\("imc\.theme"\)/.test(js),
+      "choosing system removes the key, handing the answer back to the media query");
+check(/cfg && cfg\.theme === "dark"/.test(js),
+      "and the computed day-colour tints follow the choice, not just the OS");
+PAGES.forEach(f => {
+  check(/localStorage\.getItem\("imc\.theme"\)/.test(readFile(f)),
+        f + ": stamps the theme before the first paint");
+});
+
+/* ---- the header ---- */
+check(/\.brand\{display:none\}/.test(appPh),
+      "the phone header drops the wordmark - the tab bar says where you are");
+check(/function placeAuth/.test(js) && /box\.appendChild\(slot\)/.test(js),
+      "and the account moves into Settings rather than being duplicated there");
+check(/\.authbox:empty\{display:none\}/.test(appPh),
+      "leaving no empty panel behind on a desktop, where it stays in the header");
+
+/* ---- the tab bar is genuinely everywhere, and marks itself ---- */
+check(/data-tab="holidays"/.test(readFile("index.html")),
+      "the Holidays tab is tagged rather than matched on its URL");
+check(/\[data-tab="holidays"\]/.test(readFile("assets/site.js")),
+      "which is what makes it light up from inside /holidays/, where its href is just index.html");
+check(/var wantsSettings = \(h === "settings"\)/.test(js),
+      "arriving at #settings from a content page opens the sheet");
+check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("setView(view);"),
+      "and it is opened AFTER setView, which closes the sheet on its way past");
 }
 
 let docFail = 0;

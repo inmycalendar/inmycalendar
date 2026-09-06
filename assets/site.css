@@ -408,8 +408,23 @@ footer a:hover{color:var(--ink)}
       This is what replaces the shadows, which do almost nothing on a dark
       ground.
    ========================================================================== */
+/* THE OS SETTING, unless the reader has said otherwise.
+
+   Two blocks, and they hold the same values on purpose. The first follows the
+   operating system and is what almost everyone gets - it also works with no
+   JavaScript at all, which matters on 1,732 pages that are only text. The
+   second is the override, for a reader who wants dark at noon or light at
+   midnight, and it wins because it is an attribute selector outside any query.
+
+   The :not() in the first is what lets "always light" beat a dark OS. Without
+   it the media query would keep repainting the page dark underneath the
+   choice.
+
+   The duplication is deliberate and checked: a test compares the two token
+   lists and fails if they ever drift apart. Plain CSS has no way to share one
+   block between a media query and a selector outside it. */
 @media (prefers-color-scheme: dark){
-  :root{
+  :root:not([data-theme="light"]){
     --page:#0f1115;
     --card:#181b21;
     --card2:#242830;
@@ -462,13 +477,75 @@ footer a:hover{color:var(--ink)}
   /* Tell the browser the page is dark, so form controls, scrollbars and the
      text-selection colour come from the dark set rather than being drawn light
      on top of it. One line, and it fixes every native widget at once. */
-  :root{color-scheme:dark}
+  :root:not([data-theme="light"]){color-scheme:dark}
 
   /* The logo is a white tile with near-black artwork, drawn inline in the
      markup where no token can reach it. On a dark page a bright white tile is
      the loudest thing on screen, which is not what a wordmark is for. */
-  .brand svg{opacity:.9}
+  :root:not([data-theme="light"]) .brand svg{opacity:.9}
 }
+:root[data-theme="dark"]{
+  --page:#0f1115;
+  --card:#181b21;
+  --card2:#242830;
+  --ink:#e8eaee;
+  --soft:#a2a9b6;
+  --faint:#79808d;
+  --rule:#2c313b;
+  --rule2:#232830;
+
+  /* Inverted deliberately: --accent is the "active" fill and --onAccent the
+     text on it, so in the dark they swap ends rather than staying put. */
+  --accent:#e8eaee;
+  --accent2:#a2a9b6;
+  --accentBg:#242830;
+  --onAccent:#0f1115;
+  --danger:#f87171;
+
+  /* Lifted, not dimmed - see rule 2 above. */
+  --todo:#60a5fa;  --todoBg:#141c2b;  --todoE:#22314c;
+  --doing:#fbbf24; --doingBg:#241a0e; --doingE:#412f13;
+  --done:#34d399;  --doneBg:#0e2019;  --doneE:#17392b;
+
+  --holNat:#f87171;
+  --holReg:#60a5fa;
+
+  --bodyInk:#c8cede;
+  --dangerBg:#2a1a1c;
+  --dangerLine:#4b2c30;
+  --dangerInk:#ef4444;
+  --wkInk:#5b626e;
+  --cellInk:#c4cad6;
+  --wkndBg:#14171d;
+  --outInk:#484e59;
+  --chipLine:rgba(255,255,255,.16);
+
+  /* The toast is the inverse of the page in BOTH themes, which is what makes
+     it read as a system message rather than as one more panel. So in the
+     dark it is the light one, and everything drawn on it flips with it. */
+  --toastBg:#e8eaee;
+  --toastInk:#0f1115;
+  --toastLine:rgba(0,0,0,.32);
+  --toastHover:rgba(0,0,0,.10);
+  --toastSoft:rgba(0,0,0,.55);
+
+  --overlay:rgba(0,0,0,.62);
+  --shadow:rgba(0,0,0,.55);
+  --shadowStrong:rgba(0,0,0,.65);
+}
+
+/* Tell the browser the page is dark, so form controls, scrollbars and the
+   text-selection colour come from the dark set rather than being drawn light
+   on top of it. One line, and it fixes every native widget at once. */
+:root[data-theme="dark"]{color-scheme:dark}
+/* And the other way: a reader who has chosen light on a dark machine should
+   get light form controls and scrollbars too, not dark ones on a light page. */
+:root[data-theme="light"]{color-scheme:light}
+
+/* The logo is a white tile with near-black artwork, drawn inline in the
+   markup where no token can reach it. On a dark page a bright white tile is
+   the loudest thing on screen, which is not what a wordmark is for. */
+:root[data-theme="dark"] .brand svg{opacity:.9}
 
 /* ==========================================================================
    SAFE AREAS - the notch, the rounded corners and the home indicator
@@ -531,4 +608,45 @@ footer{padding-bottom:calc(30px + env(safe-area-inset-bottom))}
   /* Landing on a section should not put its heading against the very top edge
      of the screen. Harmless where nothing is sticky; correct if it ever is. */
   .pagebody h2{scroll-margin-top:12px}
+}
+
+
+/* ==========================================================================
+   THE TAB BAR - on every page, in the same place
+
+   It started as an app-only control in app.css, which only index.html loads.
+   That made tapping Holidays leave the shell completely: the bar vanished, the
+   page jumped, and there was no way back except the browser. A tab bar that
+   is not on every destination is worse than no tab bar, because it teaches you
+   a place to look and then takes it away.
+
+   So it lives here, on all 1,733 pages, always at the bottom, always the same
+   four. On a content page Board and Calendar link into the app and Settings
+   opens the app's settings; on the app itself they switch view in place.
+
+   Hidden above 640px, where the header has the width to carry navigation.
+   ========================================================================== */
+.tabbar{display:none}
+
+@media (max-width:640px){
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:80;
+    background:var(--card);border-top:1px solid var(--rule);
+    padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar .tab{flex:1 1 0;min-width:0;min-height:56px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:transparent;border:0;text-decoration:none;color:var(--faint);
+    font-family:var(--disp);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    cursor:pointer;padding:6px 2px}
+  .tabbar .tab .ti{font-size:17px;line-height:1}
+  .tabbar .tab.on{color:var(--ink)}
+  .tabbar .tab:active{background:var(--card2)}
+
+  /* Every page ends above the bar, or its last line sits underneath it. */
+  body{padding-bottom:calc(56px + env(safe-area-inset-bottom))}
+
+  /* THE CONTENT-PAGE HEADER, now that there is a bar.
+     It was 128px - 15% of every screen - because seven links wrapped onto two
+     rows. Four of them are in the bar and all seven are in the footer, so the
+     row comes out and the header is the brand alone. 128px to about 48px. */
+  .sitenav{display:none}
 }
