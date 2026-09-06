@@ -4161,10 +4161,25 @@ const oneline = sheet.replace(/\s*\n\s*/g, "");
 const ph = (oneline.match(/@media \(max-width:640px\)\{[^@]*/g) || []).join("");
 
 /* ---- the three nested scrolls are gone on a phone ---- */
-check(/\.lane,\.rlist\{max-height:none;overflow:visible\}/.test(ph),
-      "a phone lane scrolls with the page, not inside itself");
+/* THE LANE CAP WENT OFF, AND OFF WAS WORSE.
+   The desktop cap is 227px on a phone - about three cards - so twenty tasks
+   meant a 227px window onto 1,664px. Removing it made the lane 1,664px and
+   the page 5,400px at 322x710: 7.6 screens, against 6.0 before any of this.
+   Reported from real use, then reproduced. The cap is back, sized to the
+   screen instead of to a fraction of it. */
+check(/\.lane,\.rlist\{max-height:max\(260px, calc\(100vh - 104px\)\);overflow-y:auto\}/.test(ph),
+      "a phone lane is one screen tall, not three cards and not twenty");
+{
+  /* 46px of pinned tabs plus a 38px add field is 84; the rest of the 104 is
+     the padding around them. The point of tying it to 100vh rather than to a
+     percentage is that the lane fills the phone exactly once. */
+  const at = oneline.indexOf(".lane,.rlist{max-height:max(260px");
+  const q  = oneline.lastIndexOf("@media", at);
+  check(at > 0 && /max-width:\s*640px/.test(oneline.slice(q, at)),
+        "and that size is phone-only, so the desktop keeps its own cap");
+}
 check(/\.calbox\{max-height:none;overflow:visible\}/.test(ph),
-      "and so does the calendar, which held 1,882px inside a 520px box");
+      "the calendar is the exception: a year scrolls continuously, in one scroll not two");
 
 /* ---- but the desktop keeps every one of them ---- */
 check(/max-height:var\(--laneMax\);overflow-y:auto/.test(oneline),
@@ -4172,7 +4187,7 @@ check(/max-height:var\(--laneMax\);overflow-y:auto/.test(oneline),
 check(/\.calbox\{overflow:auto;max-height:calc\(100vh - 190px\)/.test(oneline),
       "and so does the desktop calendar box - the phone overrides it, nothing removed it");
 {
-  const at = oneline.indexOf(".lane,.rlist{max-height:none");
+  const at = oneline.indexOf(".calbox{max-height:none");
   const q  = oneline.lastIndexOf("@media", at);
   check(at > 0 && /max-width:\s*640px/.test(oneline.slice(q, at)),
         "the removal is inside a phone query, so above 640px it is never applied");

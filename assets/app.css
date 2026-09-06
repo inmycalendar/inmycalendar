@@ -953,11 +953,32 @@ main{padding:16px 0 0}
 
 @media (max-width:640px){
 
-  /* ---- 1. ONE SCROLL PER PAGE ------------------------------------------
-     The lane cap and the calendar box height exist to hold a desktop layout
-     still. Stacked on a phone they hold nothing still and only steal the
-     page's own scroll. */
-  .lane,.rlist{max-height:none;overflow:visible}
+  /* ---- 1. THE LANE IS A SCREEN, NOT A LETTERBOX AND NOT A ROPE ---------
+     This went wrong in both directions before it landed here.
+
+     The desktop cap is clamp(180px, 32vh, 460px), which is 227px on a phone -
+     about three cards. With twenty tasks in To do that is a 227px window onto
+     1,664px, and reaching task four meant working a scrollbar the height of
+     three cards inside a page that was also scrolling. So the cap came off.
+
+     Off was worse. Measured at 322x710 with a real twenty-task To do list:
+     the lane became 1,664px and the page 5,400px - 7.6 screens, where it had
+     been 6.0 before any of this work. Everything below the board, which is
+     the calendar and the year, went a very long way down.
+
+     So the cap is back, sized to the SCREEN rather than to a fraction of it.
+     The tabs pin at the top and take 46px, the add field 38px; the lane gets
+     what is left, so it fills the phone exactly once and the next section
+     begins just below the fold. About seven cards on a 710px screen instead
+     of three, and one obvious scroller rather than a letterbox.
+
+     The floor matters for a phone held sideways, where 100vh is about 380px
+     and the arithmetic would otherwise leave a lane too short to use. */
+  .lane,.rlist{max-height:max(260px, calc(100vh - 104px));overflow-y:auto}
+
+  /* The calendar is the exception, and deliberately: a year should scroll
+     continuously, and with no box scrolling inside it the grid's own year
+     header sticks to the page instead of to the inside of a box. */
   .calbox{max-height:none;overflow:visible}
 
   /* ---- 2. THE STICKY THING IS THE CONTEXT, NOT THE CHROME ---------------
