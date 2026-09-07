@@ -28,6 +28,63 @@
   var LAST_PULL = "imc.lastPull";
   var syncing = false, queued = false, slot = null, statusEl = null;
 
+  /* THE WATERMARK IS NOT AS TRUSTWORTHY AS IT LOOKS.
+
+     Reported: a colour set on one laptop never appeared on the other, while
+     the row itself was sitting on the server, correct, and was the newest row
+     in the whole table.
+
+     The pull asks for rows newer than the last one we saw. The trouble is who
+     decides what "newer" means. updated_at is written by the CLIENT, from the
+     clock of whichever machine made the edit, and two laptops do not agree on
+     the time. If this machine's clock runs a minute fast, its own pushes carry
+     timestamps a minute in the future, the watermark jumps a minute ahead of
+     reality, and every edit the other machine makes in that minute is stamped
+     BEHIND the watermark and filtered out of the pull. Not delayed. Filtered
+     out, once, and then never asked for again, because the watermark only ever
+     moves forwards.
+
+     The clean repair is a database trigger stamping updated_at server-side, so
+     one clock decides for everybody. That needs SQL run against the live
+     project, which is the owner's to run and not mine, and it would leave the
+     bug live until he did.
+
+     So, two things that need nothing but this file:
+
+       FIRST SYNC OF EVERY PAGE LOAD PULLS EVERYTHING. Opening the app on any
+       device reconciles it completely against the server, whatever the
+       watermark thinks. This is what makes the bug self-healing rather than
+       permanent, and it is affordable here: the whole account is a few hundred
+       rows, which is one small request, once, on a page that already fetches
+       more than that in holiday data.
+
+       EVERY LATER PULL OVERLAPS. Incremental syncs inside a long session ask
+       from a few minutes BEFORE the watermark rather than exactly at it, so a
+       clock difference smaller than the overlap cannot hide anything. Re-seeing
+       a row already held is free: it is compared and written back identical,
+       and a row with an unpushed local edit is protected by the conflict rule
+       further down, exactly as it was before. */
+  var SKEW_MS = 10 * 60 * 1000;    /* how far two clocks may drift and still agree */
+  var pulledFullyThisLoad = false;
+
+  /* WHAT TO ASK THE SERVER FOR, as one function with no side effects.
+
+     This is the whole bug in four lines, so it is worth being able to test
+     without a browser, a network and two devices. Returning null means "send
+     everything"; returning a timestamp means "only what changed after this".
+
+     Everything full-pulls except an ongoing session with a usable watermark,
+     and that one case reaches back by SKEW_MS so a clock difference between
+     two machines cannot drop an edit into the gap. */
+  function sinceFor(mark, fullyPulledThisLoad, needsFull){
+    if (needsFull) return null;              /* too much history to replay row by row */
+    if (!fullyPulledThisLoad) return null;   /* first sync after a load reconciles fully */
+    if (!mark) return null;                  /* never synced here, so there is no gap */
+    var t = Date.parse(mark);
+    if (isNaN(t)) return null;               /* unreadable, so do not trust it */
+    return new Date(t - SKEW_MS).toISOString();
+  }
+
   function store(){ return window.imcStore; }
   function sb(){ return window.imcAuth && window.imcAuth.client; }
   function uid(){
@@ -169,9 +226,9 @@
     syncing = true;
     status("Syncing…");
 
-    var since = null;
-    try { since = localStorage.getItem(LAST_PULL) || null; } catch (e){}
-    if (store().needsFullSync()) since = null;   /* too much history to replay row by row */
+    var mark = null;
+    try { mark = localStorage.getItem(LAST_PULL) || null; } catch (e){}
+    var since = sinceFor(mark, pulledFullyThisLoad, store().needsFullSync());
 
     var kinds = ["tasks","notes","track","cfg"];
     var newest = since;
@@ -235,6 +292,9 @@
     })
     .then(function(){
       if (store().needsFullSync()) store().fullSyncDone();
+      /* Only once a sync has actually finished, so a failed first attempt does
+         not leave the session believing it is caught up. */
+      pulledFullyThisLoad = true;
       try { if (newest) localStorage.setItem(LAST_PULL, newest); } catch (e){}
       store().repaint();
       status("Synced", "ok");
@@ -280,6 +340,7 @@
         /* Signed out. The server keeps everything; this machine keeps nothing,
            which is the point on a shared computer. */
         try { localStorage.removeItem(LAST_PULL); } catch (e){}
+        pulledFullyThisLoad = false;   /* the next account starts from nothing */
         store().clearLocal();
         status("");
       }
@@ -327,6 +388,13 @@
     now: function(){ return syncNow("manual"); },
     roundTrip: function(kind, local){
       return fromRemote(kind, toRemote(kind, local && local.id, local, Date.now()));
-    }
+    },
+    /* Lets a test act like a tab that has already been open a while, which is
+       the only state in which the incremental pull runs at all. */
+    __settled: function(){ pulledFullyThisLoad = true; },
+    /* The pull-window decision, exposed so it can be checked directly rather
+       than inferred from driving two browsers through a whole sync. Pure. */
+    __sinceFor: sinceFor,
+    __skewMs: SKEW_MS
   };
 })();

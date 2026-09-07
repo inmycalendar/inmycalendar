@@ -51,7 +51,20 @@ jobs:
     env:
       TZ: ${{ matrix.tz }}
     steps:
+      # THE WHOLE HISTORY, and blobs only for the tip.
+      #
+      # The suite checks commit messages as well as files, and the default
+      # checkout is fetch-depth 1 - one commit, which is not a history to
+      # check. The section skips rather than fails when it sees a shallow
+      # clone, so without this the check would simply never run in CI, which
+      # is the one place it most needs to.
+      #
+      # filter keeps that cheap: every commit, but no historical file content,
+      # so this does not drag 7,800 generated pages back through time.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
 
       - uses: actions/setup-node@v4
         with:

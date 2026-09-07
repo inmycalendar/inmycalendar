@@ -22,6 +22,10 @@ function assemble(page){
 }
 
 let pass = 0, fail = 0;
+/* Sections that cannot finish synchronously park a promise here, and the
+   summary at the bottom waits for all of them before counting. Only C81 needs
+   it so far: a sync is a network round trip even when the network is a fake. */
+const deferred = [];
 const ok  = m => { pass++; console.log("  PASS  " + m); };
 const bad = m => { fail++; console.log("  FAIL  " + m); };
 const check = (c, m) => c ? ok(m) : bad(m);
@@ -5175,15 +5179,33 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
    runs is worse, so it says which it did.
    ========================================================================== */
 {
-  let log = null;
+  const git = c => require("child_process")
+                     .execSync(c, { cwd:ROOT, maxBuffer:1e8, stdio:["ignore","pipe","ignore"] })
+                     .toString("utf8");
+
+  /* TWO WAYS TO HAVE NO HISTORY, and the first version of this only handled
+     one of them. "No git at all" is the obvious case - a tarball, a zip. The
+     case that actually broke the build is a SHALLOW clone: git is right there
+     and answers every question, it just has one commit to answer with.
+
+     actions/checkout defaults to fetch-depth 1, so every CI run looked like a
+     repository whose entire history was a single commit, and this section
+     failed five jobs out of six on a rule about punctuation. A guard that
+     fails a build for a reason that has nothing to do with the change is worse
+     than no guard, because the next person turns it off.
+
+     So: shallow is a SKIP, not a failure, and the workflow now asks for the
+     full history so the skip does not happen there either. */
+  let log = null, shallow = false;
   try {
-    log = require("child_process")
-            .execSync("git log --format=%B%x01", { cwd:ROOT, maxBuffer:1e8, stdio:["ignore","pipe","ignore"] })
-            .toString("utf8");
+    shallow = /true/.test(git("git rev-parse --is-shallow-repository"));
+    log = git("git log --format=%B%x01");
   } catch (e){ log = null; }
 
   if (log === null){
-    console.log("  SKIP  no git history available here, so the commit messages were not checked");
+    console.log("  SKIP  no git here, so the commit messages were not checked");
+  } else if (shallow){
+    console.log("  SKIP  shallow clone, so the commit messages were not checked");
   } else {
     const msgs = log.split("\u0001").filter(x => x.trim());
     check(msgs.length > 50, "the whole history is readable: " + msgs.length + " commit messages");
@@ -5212,6 +5234,171 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
   }
 }
 
+/* ==========================================================================
+   C81. TWO DEVICES, ONE ACCOUNT
+
+   Reported: "the color change now worked on my laptop. but it did not sync, on
+   my different laptop it did not sync."
+
+   Checked against the live database before writing a line of this. The row was
+   there, correct, carrying {"cat": 1}, and it was the newest row in the whole
+   table. So the push was right and the pull was wrong, which narrows it to one
+   line: the filter asking for rows newer than the last one we saw.
+
+   updated_at is written by the CLIENT, and two laptops do not agree on the
+   time. A machine whose clock runs fast stamps its own pushes in the future,
+   its watermark follows them there, and every edit the other machine makes
+   before that moment is stamped BEHIND the watermark and filtered out. Once.
+   Then never asked for again, because a watermark only moves forwards.
+
+   Everything below runs the REAL syncNow against a fake Supabase: separate
+   devices, one shared table, the same code on both sides. This is the test
+   that was missing, and its absence is why a two-device bug had to be found on
+   two actual laptops.
+   ========================================================================== */
+{
+  /* ---- a Supabase stand-in: one table set, the query surface sync.js uses ---- */
+  function makeServer(){
+    const rows = { tasks:{}, notes:{}, track:{}, settings:{} };
+    const key = (t, r) => t === "notes" ? r.date : (t === "settings" ? r.user_id : r.id);
+    const log = { pulls:[], pushes:0 };
+    return {
+      rows, log,
+      client: {
+        from(table){
+          const self = {
+            _f: [],
+            select(){ return self; },
+            eq(){ return self; },
+            gt(col, val){ self._f.push([col, val]); return self; },
+            then(resolve){
+              const since = (self._f.find(f => f[0] === "updated_at") || [])[1] || null;
+              if (table === "tasks") log.pulls.push(since);
+              const all = Object.keys(rows[table]).map(k => rows[table][k]);
+              const data = since ? all.filter(r => r.updated_at > since) : all;
+              return Promise.resolve(resolve({ data, error:null }));
+            },
+            upsert(list){
+              if (table === "tasks") log.pushes++;
+              list.forEach(r => { rows[table][key(table, r)] = JSON.parse(JSON.stringify(r)); });
+              return { then(resolve){ return Promise.resolve(resolve({ error:null })); } };
+            }
+          };
+          return self;
+        }
+      }
+    };
+  }
+
+  /* ---- a device: a real app in a real DOM, wired to the shared server ---- */
+  function makeDevice(server){
+    const dom = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                  pretendToBeVisual:true });
+    const w = dom.window;
+    w.confirm = () => true;
+    /* auth.js publishes exactly these two; sync.js reads nothing else from it. */
+    w.imcAuth = { client: server.client, user: { id:"user-1" } };
+    return { dom, w, d:w.document,
+             click(el){ if (el) el.dispatchEvent(new w.MouseEvent("click",{bubbles:true})); } };
+  }
+
+  /* SYNC UNTIL THE DEVICE IS ACTUALLY QUIET, which is not the same as calling
+     sync once. Every commit fires imc:changed, which schedules a sync of its
+     own, and syncNow answers false without doing anything when one is already
+     in flight. A single call therefore proves nothing: it may have run, or it
+     may have been a no-op that resolved before the real one had started.
+
+     Quiet means the journal is empty and a sync has genuinely completed. */
+  function settle(dev, tries){
+    tries = tries === undefined ? 60 : tries;
+    return dev.w.imcSync.now().then(ran => {
+      const pending = dev.w.imcStore.changes().length;
+      if ((ran && pending === 0) || tries <= 0) return ran;
+      return new Promise(r => dev.w.setTimeout(r, 25)).then(() => settle(dev, tries - 1));
+    });
+  }
+
+  const server = makeServer();
+  const A = makeDevice(server);
+
+  /* Device A adds a task and colours it Personal. */
+  A.d.querySelector('#scopeHost .col[data-s="todo"] .cadd').value = "call the landlord";
+  A.click(A.d.querySelector('#scopeHost .col[data-s="todo"] .addgo'));
+  A.click(A.d.querySelector('#scopeHost .col[data-s="todo"] .t .op.hue'));
+  A.click(A.d.querySelector(".huepop .huesw.tc1"));
+  check(A.d.querySelector('#scopeHost .col[data-s="todo"] .t').classList.contains("tc1"),
+        "device A colours a task Personal");
+
+  const ran = settle(A).then(() => {
+    const pushed = Object.keys(server.rows.tasks).map(k => server.rows.tasks[k]);
+    check(pushed.length === 1, "device A pushes it to the server");
+    check(pushed[0].ts && pushed[0].ts.cat === 1,
+          "and the colour is in the row that lands there, as a number");
+
+    /* Device B: a second machine, nothing local, pulling for the first time. */
+    const B = makeDevice(server);
+    return settle(B).then(() => {
+      const cardB = B.d.querySelector('#scopeHost .col[data-s="todo"] .t');
+      check(cardB !== null, "device B pulls the task down");
+      check(cardB.classList.contains("tc1"),
+            "AND IT ARRIVES WITH THE COLOUR - the bug that was reported");
+      check(/call the landlord/.test(cardB.textContent),
+            "with its text intact, so nothing was traded away for it");
+
+      /* THE FIRST PULL OF A PAGE LOAD ASKS FOR EVERYTHING, which is what makes
+         this whole class of bug self-healing rather than permanent: whatever a
+         watermark believes, opening the app reconciles the device completely. */
+      check(server.log.pulls.length >= 2 && server.log.pulls[1] === null,
+            "and device B's first pull asked for everything, not just what is new");
+
+      /* ---- the window the pull asks for, checked directly ----
+
+         Driving a second device through a second edit turned out to test the
+         debounce more than the merge: a commit schedules its own sync, syncNow
+         answers false while one is running, and the assertions kept landing
+         either side of work that had not happened yet. The decision that
+         actually matters is four lines of arithmetic, so it is now its own
+         function and is checked here without a browser in the way.
+
+         Returning null means "send everything". A timestamp means "only what
+         changed after this", and that is the only case where an edit can fall
+         through a gap between two clocks. */
+      const sinceFor = B.w.imcSync.__sinceFor;
+      const SKEW = B.w.imcSync.__skewMs;
+      const mark = "2026-09-07T22:45:29.096Z";
+
+      check(SKEW >= 10 * 60 * 1000,
+            "the overlap is at least ten minutes, which is wider than two laptops realistically drift");
+      check(sinceFor(mark, false, false) === null,
+            "the first sync after a page load asks for EVERYTHING, whatever the watermark says");
+      check(sinceFor(mark, true, true) === null,
+            "and so does a device the journal has told to resync from scratch");
+      check(sinceFor(null, true, false) === null,
+            "a device that has never synced here has no gap to leave, so it asks for everything too");
+      check(sinceFor("not a timestamp", true, false) === null,
+            "an unreadable watermark is not trusted, it is ignored");
+
+      const asked = sinceFor(mark, true, false);
+      check(asked !== null && Date.parse(asked) < Date.parse(mark),
+            "AND AN ONGOING SESSION ASKS FROM BEFORE ITS OWN WATERMARK - the fix");
+      check(Date.parse(mark) - Date.parse(asked) === SKEW,
+            "by exactly the overlap, so an edit stamped by a slower clock cannot fall in the gap");
+
+      /* The number that made this real: the row that never arrived was stamped
+         22:45:29 and the other laptop was asking for anything after its own
+         watermark. Three minutes of drift was enough to lose it for good. */
+      const lostEdit = "2026-09-07T22:45:29.096Z";
+      const fastMark = new Date(Date.parse(lostEdit) + 3 * 60 * 1000).toISOString();
+      check(Date.parse(sinceFor(fastMark, true, false)) < Date.parse(lostEdit),
+            "a laptop three minutes fast still reaches back far enough to pick the edit up");
+      return null;
+    });
+  });
+
+  deferred.push(ran);
+}
+
+function finish(){
 let docFail = 0;
 
 const TOTAL = pass + fail;
@@ -5235,3 +5422,10 @@ console.log("  " + pass + " passed, " + fail + " failed");
 if (docFail) console.log("  " + docFail + " stale test-count claim(s) in the docs - update them");
 console.log("=".repeat(58));
 process.exit(fail || docFail ? 1 : 0);
+}
+
+/* A rejection here means a deferred section threw rather than failed a check,
+   which is a broken test and must not read as a pass. */
+Promise.all(deferred)
+  .catch(e => { bad("a deferred section threw: " + (e && (e.stack || e.message) || e)); })
+  .then(finish);
