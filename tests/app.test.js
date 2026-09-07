@@ -5146,6 +5146,60 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
         "and it is set apart by a rule, not made another circle - it is not a colour");
 }
 
+/* ==========================================================================
+   C80. THE COMMIT HISTORY IS PART OF THE REPOSITORY
+
+   Every other check in this file reads the working tree. A reader who opens
+   this project on GitHub reads something else first: the list of commits. That
+   text was never checked by anything, and it drifted - five messages were
+   still carrying wording the tracked files had long since dropped.
+
+   The house-style rule in C54 says plain ASCII punctuation, and it said it
+   only about files. It applies to what gets written about the files too.
+
+   Skipped rather than failed where git is unavailable, so the suite still runs
+   from a tarball, a zip, or a CI job that checked out without history. A guard
+   that cannot run is not a reason to fail a build; a guard that quietly never
+   runs is worse, so it says which it did.
+   ========================================================================== */
+{
+  let log = null;
+  try {
+    log = require("child_process")
+            .execSync("git log --format=%B%x01", { cwd:ROOT, maxBuffer:1e8, stdio:["ignore","pipe","ignore"] })
+            .toString("utf8");
+  } catch (e){ log = null; }
+
+  if (log === null){
+    console.log("  SKIP  no git history available here, so the commit messages were not checked");
+  } else {
+    const msgs = log.split("\u0001").filter(x => x.trim());
+    check(msgs.length > 50, "the whole history is readable: " + msgs.length + " commit messages");
+
+    /* Same characters C54 forbids in a source file. A message is text somebody
+       reads, and the two should not have different rules. */
+    const smart = msgs.filter(m => /[\u2014\u2013\u201c\u201d\u2018\u2019]/.test(m));
+    check(smart.length === 0,
+          "no commit message uses an em dash, an en dash or a curly quote (" +
+          smart.length + " that do)");
+
+    /* NOT a blanket ban on non-ASCII, which was the first version of this and
+       was wrong. Two messages quote glyphs the app actually draws - the moon
+       and sun on the theme button, the ellipsis on the phone card menu - and a
+       message describing a button reads better with the button in it.
+
+       What is banned is the set that causes trouble while looking like it has
+       not: a non-breaking space that is not a space, a zero-width character
+       that is nothing at all, a soft hyphen that shows up only when a line
+       wraps, a single-glyph ellipsis, and a minus sign that is not one. */
+    const SNEAKY = /[\u00a0\u00ad\u200b\u200c\u200d\u2026\u2212\ufeff]/;
+    const sneaky = msgs.filter(m => SNEAKY.test(m));
+    check(sneaky.length === 0,
+          "nor an invisible or lookalike character - no nbsp, zero-width, soft hyphen, " +
+          "single-glyph ellipsis or unicode minus (" + sneaky.length + " that do)");
+  }
+}
+
 let docFail = 0;
 
 const TOTAL = pass + fail;
