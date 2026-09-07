@@ -2555,11 +2555,23 @@ console.log("\n=== C54. House style: plain ASCII punctuation ===");
 
    This checks the SOURCE, including this file. It caught real occurrences in
    app.css, site.css, app.js and here. */
-const SMART = /[—–“”‘’]/;
+/* ESCAPES, NOT THE CHARACTERS THEMSELVES. A check for a character has to name
+   it somehow, and naming it literally made this file the one place in the whole
+   repository that still contained what it forbids: scan the tree and the only
+   hit is the guard, which is the same shape of mistake v39 removed. The \u
+   form matches exactly the same character and leaves nothing behind to find. */
+const SMART = /[\u2014\u2013\u201c\u201d\u2018\u2019]/;
 
+/* THIS FILE IS IN THE LIST NOW, and could not have been before. It held the
+   six characters literally in order to search for them, so a guard covering
+   itself would have failed on its own definition. With those written as \u
+   escapes there is nothing left here to find, and the one file that decides
+   the rule is finally held to it. tools/build-week-pages.js joins for the same
+   reason its sibling is here: it writes pages nobody reads the source of. */
 const sources = ["assets/app.js","assets/auth.js","assets/sync.js","assets/site.js",
                  "assets/errors.js","assets/app.css","assets/site.css",
-                 "tools/build-holiday-pages.js","manifest.webmanifest",".htaccess"]
+                 "tools/build-holiday-pages.js","tools/build-week-pages.js",
+                 "tests/app.test.js","manifest.webmanifest",".htaccess"]
                 .concat(PAGES);
 
 sources.forEach(f => {
