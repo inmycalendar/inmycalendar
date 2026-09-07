@@ -250,6 +250,78 @@ main{padding:16px 0 0}
 .t.s-todo{background:var(--todoBg);border-color:var(--todoE);--tbg:var(--todoBg)}
 .t.s-doing{background:var(--doingBg);border-color:var(--doingE);--tbg:var(--doingBg)}
 .t.s-done{background:var(--doneBg);border-color:var(--doneE);--tbg:var(--doneBg)}
+/* ---------- A COLOUR ON A TASK ----------------------------------------------
+
+   Four pixels on the left edge, and nothing else.
+
+   Not a tint, because the card's FILL is already saying something - which
+   column it is in - and two things cannot own one surface. A filled card would
+   have made "work" and "in progress" fight over the same rectangle, and the
+   one you actually need at a glance is the column. An edge sits beside that
+   instead of on top of it.
+
+   --catc is chosen by a CLASS, never written onto the element. The value it
+   points at depends on the theme, and the board is NOT re-rendered when the
+   theme changes - applyTaskCatColours() re-answers --tc0..--tc7 on :root and
+   every stripe on screen follows with no repaint at all. A hex written onto
+   the card would still be the light-mode one after switching to dark.
+
+   The fallbacks are the shipped defaults, so a stripe has a colour in the
+   moment before that function runs, and in any context where the inline
+   properties on :root are dropped. */
+.tcat.tc0{--catc:var(--tc0,#7c3aed)}
+.tcat.tc1{--catc:var(--tc1,#db2777)}
+.tcat.tc2{--catc:var(--tc2,#0891b2)}
+.tcat.tc3{--catc:var(--tc3,#65a30d)}
+.tcat.tc4{--catc:var(--tc4,#7c3aed)}
+.tcat.tc5{--catc:var(--tc5,#db2777)}
+.tcat.tc6{--catc:var(--tc6,#0891b2)}
+.tcat.tc7{--catc:var(--tc7,#65a30d)}
+/* Border 1 -> 4 and padding 8 -> 5, so the text does not shift three pixels
+   sideways the moment a colour is added. The card is the same card. */
+.t.tcat{border-left-width:4px;border-left-color:var(--catc);padding-left:5px}
+
+/* THE DOT ON THE CARD. Hollow when the task has no colour, filled when it
+   does, so the control also reports the state - the row of buttons answers
+   "what colour is this" without being opened. */
+.op.hue{font-size:9px}
+.op.hue.tcat{color:var(--catc);border-color:var(--catc)}
+.t.huing .ops{visibility:visible}
+
+/* THE POPOVER. Fixed to the viewport and parented to the body, because a lane
+   is a scroll box and a scroll box clips its children - see toggleHue(). Its
+   left and top are set by that function; everything else is here. */
+.huepop{position:fixed;left:0;top:0;z-index:120;
+  padding:5px 6px;background:var(--card);border:1px solid var(--rule);
+  border-radius:9px;box-shadow:0 6px 20px var(--shadowStrong)}
+.huerow{display:flex;align-items:center;gap:5px}
+.huesw{flex:none;width:18px;height:18px;padding:0;border-radius:50%;
+  border:1px solid var(--rule);background:var(--card);cursor:pointer}
+.huesw.tcat{background:var(--catc);border-color:var(--catc)}
+/* The current one, ringed rather than ticked: a tick inside an 18px circle is
+   four pixels of glyph and reads as dirt. */
+.huesw.on{outline:2px solid var(--ink);outline-offset:2px}
+.huesw:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* "No colour" is a real choice and needs to look like one, so it is a swatch
+   with a stroke through it rather than an empty circle, which reads as a
+   swatch that failed to load. */
+.huesw.no{position:relative;background:var(--card2)}
+.huesw.no::after{content:"";position:absolute;left:2px;right:2px;top:50%;
+  height:1px;background:var(--soft);transform:rotate(-45deg)}
+
+/* THE SWATCH ON THE ADD FIELD. Sized to the field, not to the row of card
+   controls: it sits between the text and the + and has to look like part of
+   the same control, not like something that wandered in from a card. */
+.addhue{flex:none;width:20px;height:30px;padding:0;background:transparent;
+  border:0;cursor:pointer;color:var(--faint);font-size:0;line-height:0}
+.addhue::before{content:"";display:inline-block;width:12px;height:12px;
+  border-radius:50%;border:1px solid currentColor;background:transparent;
+  vertical-align:middle}
+.addhue.tcat{color:var(--catc)}
+.addhue.tcat::before{background:var(--catc);border-color:var(--catc)}
+.addhue:hover{color:var(--ink)}
+.addhue:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:5px}
+
 .t .grip{float:left;margin:1px 6px 0 0;color:var(--faint);font-size:11px;cursor:grab;letter-spacing:-1px}
 /* Three lines, then clip. One line hid all but the first few words; unlimited
    lines would let a single task eat the lane. Three fits about 150 characters,
@@ -669,6 +741,13 @@ main{padding:16px 0 0}
   .gridbox{margin-top:10px !important}
   .cadd{min-height:38px;height:38px}
   .addgo{width:38px;height:38px;font-size:19px}
+  /* Full height of the field, so the three controls read as one row and the
+     swatch is a thumb-sized target rather than a 20px dot between two 38s. */
+  .addhue{width:30px;height:38px}
+  .addhue::before{width:16px;height:16px}
+  /* Bigger than on a card, for the same reason every other control here is. */
+  .huesw{width:26px;height:26px}
+  .huerow{gap:8px}
   .sel{min-height:38px;padding-right:26px}
 
   /* thumb-sized calendar days */
@@ -1243,6 +1322,14 @@ main{padding:16px 0 0}
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
   .actlist{display:flex;flex-direction:column;gap:2px}
+  /* THE COLOUR ROW AT THE TOP OF THE SHEET.
+     Ruled off below rather than above: it is a state, and the rows under it
+     are verbs, so the line says where the answering stops and the doing
+     starts. Swatches are 32px here - the same target every other row in this
+     sheet gets - because a colour you cannot hit is a colour nobody sets. */
+  .actcols{gap:12px;padding:4px 4px 14px;margin-bottom:6px;
+    border-bottom:1px solid var(--rule)}
+  .actcols .huesw{width:32px;height:32px}
   /* 48px, above the 44 Apple asks for, because these are the rows that were
      34x32 glyphs and this is the whole point of the change. */
   .actrow{display:flex;align-items:center;gap:14px;width:100%;min-height:48px;

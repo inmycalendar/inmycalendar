@@ -42,7 +42,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const OUT  = path.join(ROOT, "holidays");
-const V    = "78";                        /* cache tag, keep in step with the pages */
+const V    = "79";                        /* cache tag, keep in step with the pages */
 
 const THIS_YEAR = 2026;
 

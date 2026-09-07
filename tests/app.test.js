@@ -331,7 +331,7 @@ const railBoxes = [...qa(".rail .rbox h3")].map(headingText);
 /* Appearance is deliberately LAST. It is set once and then never again, and
    putting it first would have reshuffled a desktop panel order chosen on
    purpose - Calendar setup first, because it is the one everybody changes. */
-check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours | Appearance",
+check(railBoxes.join(" | ") === "Calendar setup | Countdowns | Day colours | Task colours | Appearance",
       "rail reads: " + railBoxes.join(" | "));
 const dataBtns = [...qa("footer .fdata .btn")].map(b => b.textContent.trim());
 check(dataBtns.length === 5, "the data actions live in the footer: " + dataBtns.join(", "));
@@ -712,7 +712,7 @@ check(d.querySelector(".sitenav").compareDocumentPosition(d.querySelector("#auth
       "placed after the nav, at the far right where people look for accounts");
 check($("authSlot").classList.contains("hidden"),
       "with no library or key it hides itself rather than erroring");
-check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox h3").length === 4,
+check(qa("#scopeHost .cadd").length === 3 && qa(".rail .rbox h3").length === 5,
       "and the whole app still works signed out - sign-in is never required");
 check(/signInWithOAuth/.test(au) && /id:"google"/.test(au), "Google is wired as a provider");
 check(/signOut/.test(au), "and there is a way back out");
@@ -2540,11 +2540,18 @@ check(!/@media \(max-width:640px\)\{[^@]*\.wg \.dc\{[^}]*min-height:44px/.test(f
       "the calendar cells are left dense on purpose, not inflated to 44px");
 }
 
-console.log("\n=== C54. House style: plain punctuation, no assistant fingerprints ===");
+console.log("\n=== C54. House style: plain ASCII punctuation ===");
 {
-/* An em dash is not wrong, but it is uncommon in hand-written code comments and
-   very common in generated text, so it reads as a tell. Same for curly quotes.
-   The whole repository uses plain ASCII punctuation: "-" and '"'.
+/* One punctuation set for the whole repository: "-" and '"', never an em dash
+   or a curly quote. Two reasons, and the second is the one that matters.
+
+   The first is that a file typed on one machine and edited on another drifts:
+   an editor with smart quotes turned on rewrites what you paste, and the diff
+   then carries changes nobody made. The second is that these characters break
+   silently. This is a plain-HTML project with no build step and no transform
+   between the source and the browser, so a stray U+2019 in a JS string is
+   shipped byte for byte, and any tool in the chain that is not UTF-8 clean
+   turns it into mojibake in front of a reader.
 
    This checks the SOURCE, including this file. It caught real occurrences in
    app.css, site.css, app.js and here. */
@@ -4791,7 +4798,234 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
         "with the month markers down the week column kept in both");
 }
 
+/* ==========================================================================
+   C78. A COLOUR ON A TASK
+
+   The ask: "i have 10 to do tasks, is there some kind of colour palette that
+   can be assigned?" - ten things in one column with no way to see which are
+   work and which are the rest of life.
+
+   Two designs were built and shown before this one, and both were rejected for
+   the same reason: "the kanban board should be one, do not want to confuse
+   user to select more tabs again." A second board and a filter tab both make
+   you choose where to look before you can look at anything. So: one board, and
+   a 4px edge on the card.
+
+   What this section holds to:
+     - nothing changes for anyone who never opens it. No colour by default, no
+       key on the task, no stripe, no change to a board that already exists
+     - task colours are a SEPARATE list from day colours. Sharing the day list
+       would have renamed somebody's Leave into somebody's Personal
+     - the stripe is named by a class, so a theme switch re-answers it with no
+       repaint of the board
+     - deleting a colour shifts every task index down, or Personal silently
+       becomes Errand
+   ========================================================================== */
+{
+  const appFlat = readFile("assets/app.css").replace(/\s*\n\s*/g, "");
+  const appPh   = appFlat.split("@media (max-width:640px)").slice(1).join("");
+  const appWide = appFlat.split("@media (max-width:640px)")[0];
+  const jsFlat  = js.replace(/\s*\n\s*/g, "");
+
+  /* ---- the two lists are genuinely separate ---- */
+  check(/taskCats:\[\{label:"Work"/.test(jsFlat),
+        "task colours are their own list, defaulting to Work, Personal and Errand");
+  check(/catLabels:\["Milestone","Travel","Leave","WFH"\]/.test(js),
+        "and the day colours are untouched - Leave still means a day, not a task");
+  check(/addCat:null/.test(js),
+        "nothing is coloured by default: the add field starts on no colour");
+
+  /* ---- a fresh board has no colour anywhere ---- */
+  const plain = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                  pretendToBeVisual:true });
+  const pw = plain.window, pd = pw.document;
+  pw.confirm = () => true;
+  const pclick = n => n.dispatchEvent(new pw.MouseEvent("click", { bubbles:true }));
+  const pAdd = pd.querySelector('#scopeHost .col[data-s="todo"] .cadd');
+  const pGo  = pd.querySelector('#scopeHost .col[data-s="todo"] .addgo');
+  pAdd.value = "buy milk"; pclick(pGo);
+  const pCard = pd.querySelector('#scopeHost .col[data-s="todo"] .t');
+  check(pCard !== null && !pCard.classList.contains("tcat"),
+        "a task typed with no colour chosen gets no stripe");
+  const storedPlain = JSON.parse(pw.localStorage.getItem("imc.tasks") || "[]");
+  check(storedPlain.length === 1 && !("cat" in storedPlain[0]),
+        "and no 'cat' key at all - a task written today matches one written before this existed");
+
+  /* ---- choosing a colour on the add field colours what you type next ---- */
+  const ah = pd.querySelector('#scopeHost .col[data-s="todo"] .addhue');
+  check(ah !== null, "the add field carries a swatch saying what new tasks will get");
+  check(/no colour/.test(ah.getAttribute("aria-label")),
+        "reading 'no colour' until somebody sets one");
+  pclick(ah);
+  /* ON THE BODY, NOT IN THE ADD ROW. A lane is a scroll box and a scroll box
+     clips: parented to the card, the swatches were cut in half by the bottom
+     of a full column, which is exactly when a long list needs them. */
+  const pop = pd.querySelector(".huepop");
+  check(pop !== null && pop.parentNode === pd.body,
+        "pressing it opens the swatch row, parented to the body so nothing can clip it");
+  check(pop.querySelectorAll(".huesw").length === 4,
+        "with one swatch per colour plus 'none', which is a choice and not the lack of one");
+  check(pop.querySelector(".huesw.no.on") !== null,
+        "and 'none' ringed, because that is what it is currently set to");
+  pclick(pop.querySelectorAll(".huesw")[1]);
+  check(pd.querySelector(".huepop") === null, "picking one closes the popover");
+  const ah2 = pd.querySelector('#scopeHost .col[data-s="todo"] .addhue');
+  check(ah2.classList.contains("tcat") && ah2.classList.contains("tc0"),
+        "the swatch fills with what was chosen");
+  check(/Work/.test(ah2.getAttribute("aria-label")), "and says so by name, not by number");
+  check([...pd.querySelectorAll("#scopeHost .addhue")].every(b => b.classList.contains("tc0")),
+        "all three add fields follow - it is one setting, not three");
+
+  pAdd.value = "quarterly review"; pclick(pGo);
+  const cards = [...pd.querySelectorAll('#scopeHost .col[data-s="todo"] .t')];
+  const fresh = cards.find(c => /quarterly/.test(c.textContent));
+  check(fresh.classList.contains("tcat") && fresh.classList.contains("tc0"),
+        "and the next task lands already marked - you say 'work' once, not six times");
+  check(cards.filter(c => /buy milk/.test(c.textContent))
+             .every(c => !c.classList.contains("tcat")),
+        "while the one typed before the choice is left exactly as it was");
+
+  /* ---- the dot on the card ---- */
+  const dot = fresh.querySelector(".op.hue");
+  check(dot !== null, "a card carries a colour dot among its controls");
+  check(dot.classList.contains("tcat"), "filled when the task has one");
+  check(/Colour: Work/.test(dot.getAttribute("aria-label")),
+        "and naming it, so the control reports the state without being opened");
+  pclick(dot);
+  const cpop = pd.querySelector(".huepop");
+  check(cpop !== null, "pressing it opens the same swatch row");
+  check(pd.defaultView.getComputedStyle(cpop).position === "fixed",
+        "fixed to the viewport, because nothing in CSS gets a child out of an ancestor's overflow");
+  check(fresh.classList.contains("huing"),
+        "and the card keeps its controls on screen while the pointer travels to them");
+  check(cpop.querySelector(".huesw.tc0.on") !== null, "with the current colour ringed");
+  pclick(cpop.querySelector(".huesw.no"));
+  const after = [...pd.querySelectorAll('#scopeHost .col[data-s="todo"] .t')]
+                  .find(c => /quarterly/.test(c.textContent));
+  check(!after.classList.contains("tcat"), "and 'none' takes it off again");
+  const storedAfter = JSON.parse(pw.localStorage.getItem("imc.tasks") || "[]");
+  check(storedAfter.every(t => !/quarterly/.test(t.text) || !("cat" in t)),
+        "removing it DELETES the key rather than storing a null - the task is the task again");
+
+  /* ---- Escape and an outside click close it ---- */
+  const dot2 = pd.querySelector('#scopeHost .col[data-s="todo"] .t .op.hue');
+  pclick(dot2);
+  check(pd.querySelector(".huepop") !== null, "the popover opens");
+  pd.dispatchEvent(new pw.KeyboardEvent("keydown", { key:"Escape", bubbles:true }));
+  check(pd.querySelector(".huepop") === null, "Escape closes it");
+  pclick(dot2);
+  pclick(pd.body);
+  check(pd.querySelector(".huepop") === null, "and so does a click anywhere else");
+
+  /* ---- the phone action sheet carries the same swatches ---- */
+  pclick(pd.querySelector('#scopeHost .col[data-s="todo"] .t .op.menu'));
+  const acts = pd.querySelector("#actList .actcols");
+  check(acts !== null, "the phone action sheet opens with a colour row at the top");
+  check(acts.children.length === 4,
+        "the same swatches, built by the same function - the two cannot drift apart");
+  check([...pd.querySelectorAll("#actList .actrow .al")]
+          .every(l => !/^Colour/.test(l.textContent)),
+        "and the dot is NOT mirrored as a row: a state does not belong in a list of verbs");
+  check([...pd.querySelectorAll("#actList .actrow .al")].some(l => /Move right/.test(l.textContent)),
+        "while every actual action is still mirrored, exactly as before");
+
+  /* ---- deleting a colour shifts the indices ---- */
+  const shift = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                  pretendToBeVisual:true,
+    beforeParse(win){
+      win.localStorage.setItem("imc.tasks", JSON.stringify([
+        { id:"a", date:TODAY, text:"work one",  status:"todo", order:0, cat:0, ts:{todo:null,doing:null,done:null} },
+        { id:"b", date:TODAY, text:"personal",  status:"todo", order:1, cat:1, ts:{todo:null,doing:null,done:null} },
+        { id:"c", date:TODAY, text:"an errand", status:"todo", order:2, cat:2, ts:{todo:null,doing:null,done:null} }
+      ]));
+    }});
+  const sww = shift.window, sd = sww.document;
+  sww.confirm = () => true;
+  const sclick = n => n.dispatchEvent(new sww.MouseEvent("click", { bubbles:true }));
+  check(sd.querySelector('.t[data-id="b"]').classList.contains("tc1"),
+        "a stored index paints the colour it names");
+  const del0 = sd.querySelectorAll("#tcats .cat .catx")[0];
+  check(/Remove Work/.test(del0.getAttribute("aria-label")), "the rail can remove one");
+  sclick(del0);
+  const t2 = JSON.parse(sww.localStorage.getItem("imc.tasks"));
+  const by = id => t2.find(t => t.id === id);
+  check(!("cat" in by("a")), "the tasks that used it lose the colour and keep everything else");
+  check(by("a").text === "work one" && by("a").order === 0, "text, order and stamps untouched");
+  check(by("b").cat === 0 && by("c").cat === 1,
+        "and every index above it shifts down - Personal does not silently become Errand");
+  check(sd.querySelector('.t[data-id="b"]').classList.contains("tc0"),
+        "which the board redraws to match");
+  check(/Removed the task colour/.test(sd.getElementById("undoText").textContent),
+        "one undoable action, not three");
+  sclick(sd.getElementById("undoGo"));
+  const t3 = JSON.parse(sww.localStorage.getItem("imc.tasks"));
+  check(t3.find(t => t.id === "a").cat === 0 && t3.find(t => t.id === "c").cat === 2,
+        "and taking it back puts every index exactly where it was");
+
+  /* ---- a stored value that names nothing is repaired, never left dangling ---- */
+  const bad = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                pretendToBeVisual:true,
+    beforeParse(win){
+      win.localStorage.setItem("imc.cfg", JSON.stringify({ taskCats:"not an array", addCat:9 }));
+    }});
+  check(bad.window.document.querySelectorAll("#tcats .cat").length === 3,
+        "a broken task-colour list is rebuilt from the defaults rather than throwing");
+  check(bad.window.document.querySelector(".addhue").className.indexOf("tcat") < 0,
+        "and an addCat pointing at nothing becomes 'no colour', not a colour on everything");
+
+  /* ---- the stripe is a class, so the theme can re-answer it ---- */
+  check(/\.t\.tcat\{border-left-width:4px;border-left-color:var\(--catc\)/.test(appFlat),
+        "the stripe is 4px on the left edge - the card's fill already says which column it is in");
+  check(/\.t\.tcat\{[^}]*padding-left:5px/.test(appFlat),
+        "with the padding cut by the three pixels the border gained, so the text does not move");
+  check(/\.tcat\.tc0\{--catc:var\(--tc0,#7c3aed\)\}/.test(appFlat),
+        "and the colour comes from a class, never written onto the card");
+  /* THE FIRST DRAFT HANDED TASKS THE DAY PALETTE and the screenshot showed why
+     that was wrong: Personal came out the exact amber of Travel, Errand a
+     shade off Leave. The two sets never share an ELEMENT - one paints calendar
+     cells, the other cards - but they share a SCREEN. */
+  check(/var TCATS = \["#7c3aed","#db2777","#0891b2","#65a30d"\]/.test(js),
+        "task colours have their own palette, in four families the day colours do not use");
+  check(!/CATS\[tci % CATS\.length\]/.test(js) && !/color:CATS\[i % CATS\.length\]/.test(js),
+        "and nothing about a task colour falls back to a day colour");
+  check(/root\.style\.setProperty\("--tc" \+ i,/.test(js),
+        "so applyTaskCatColours can re-answer all eight on :root");
+  check(/applyTaskCatColours === "function"/.test(js),
+        "which applyTheme calls, so switching to dark repaints every stripe with no re-render");
+  check(/dark \? blend\(c, 0\.30\) : blend\(c, -0\.08\)/.test(js),
+        "lifted off whichever ground it sits on, with the hue - the only part that means anything - left alone");
+
+  /* ---- the phone gets the dot as swatches, never as a hidden button ---- */
+  check(/\.t \.ops \.op\{display:none\}/.test(appPh),
+        "on a phone the card's controls collapse, the colour dot among them");
+  check(/\.actcols\{/.test(appPh) && /\.actcols \.huesw\{width:32px;height:32px\}/.test(appPh),
+        "and the sheet's swatches are 32px, the same target every other row there gets");
+  check(/\.addhue\{width:30px;height:38px\}/.test(appPh),
+        "the add field's swatch matches the field's own height, so the three read as one row");
+
+  /* ---- desktop is not touched by any of the phone rules ---- */
+  check(!/\.actcols/.test(appWide) && !/\.addhue\{width:30px/.test(appWide),
+        "none of which exists above 640px");
+
+  /* ---- the export says the name, not the number ---- */
+  check(/"task","task_colour"/.test(jsFlat),
+        "the CSV carries a task_colour column, right after the task");
+  check(/function taskColourOf\(t\)\{ var c = taskCat\(t\); return c \? c\.label : ""; \}/.test(js),
+        "holding the NAME - '2' is not an answer to 'how much of last month was work'");
+
+  /* ---- and the rail explains the split ---- */
+  const tBox = [...d.querySelectorAll(".rail .rbox")]
+    .find(b => b.querySelector("h3") && /Task colours/.test(b.querySelector("h3").textContent));
+  check(tBox !== undefined, "the rail has its own Task colours panel");
+  check(/rename/i.test(tBox.querySelector(".rhint").textContent),
+        "with the same rename-in-place the day colours have");
+  check(d.querySelectorAll("#tcats .cat").length === 3 &&
+        d.querySelector("#tcats .catadd .btn").textContent === "+ add a colour",
+        "three to start, and room for more up to the same eight the day colours cap at");
+}
+
 let docFail = 0;
+
 const TOTAL = pass + fail;
 [["README.md", /\b(\d{2,4})\s+(?:passed|checks)\b/g],
  ["HANDOVER.md", /\b(\d{2,4})\s+tests passing\b/g]].forEach(([file, re_]) => {

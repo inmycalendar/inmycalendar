@@ -17,6 +17,17 @@ var ST = [
 var DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 var MON3 = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 var CATS = ["#dc2626","#d97706","#059669","#2563eb"];
+/* A SECOND PALETTE, AND IT DELIBERATELY SHARES NO HUE WITH THE FIRST.
+
+   The first draft handed task colours the same four constants, and the shot of
+   it showed why that is wrong: Personal came out the exact amber of Travel and
+   Errand a shade off Leave. The two sets never land on the same ELEMENT - one
+   paints calendar cells, the other paints cards - but they are on the same
+   SCREEN, and one amber that means two things is one amber too many.
+
+   So the day colours keep red, orange, green and blue, and these take four
+   families the day set does not use at all. */
+var TCATS = ["#7c3aed","#db2777","#0891b2","#65a30d"];
 /* ISO code + name for every country the holiday data covers. The per-country
    holiday files live in assets/holidays/<CODE>.js and are loaded on demand -
    4 MB in total, but only ~16 KB ever reaches the browser. They are .js rather
@@ -34,6 +45,30 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
                config, so a default of true would hand the migration below a flag
                saying it had already run, on exactly the users it exists for. */
             phoneCol:"todo", calDense:false, glanceOpenPhone:true, theme:"light",
+
+            /* TASK COLOURS, AND WHY THEY ARE NOT THE DAY COLOURS.
+
+               The day palette was the obvious thing to reuse - it already has
+               add, rename, delete and reorder - and it is the wrong one. A day
+               colour answers "what kind of day is this": Leave, Travel, WFH. A
+               task colour answers "what kind of task is this": Work, Personal.
+               One list of names cannot say both, and sharing it would have
+               renamed somebody's Leave into somebody's Personal.
+
+               So: a separate list, the same shape. Three to start, because the
+               whole point is telling work from the rest of life, and a fourth
+               slot invites inventing a category rather than using one.
+
+               Deliberately ONE axis. "Urgent" was in an early draft and came
+               out: work-or-personal asks which part of your life, urgent asks
+               how soon, and a single colour forced to answer both can answer
+               neither. How soon is already what a column's order says. */
+            taskCats:[{label:"Work",     color:"#7c3aed"},
+                      {label:"Personal", color:"#db2777"},
+                      {label:"Errand",   color:"#0891b2"}],
+            /* Which colour a newly typed task gets. null is none, and none is
+               the default: nothing changes until you ask for it. */
+            addCat:null,
             catLabels:["Milestone","Travel","Leave","WFH"],
             catColors:CATS.slice(),
             /* Display order only. The colour stored on a day is an INDEX into
@@ -507,6 +542,16 @@ function cleanTaskText(s){
 function addTask(ds,text,status){
   var t = { id:uid(), date:ds, text:text, status:status,
             order:lane(ds,status).length, ts:{todo:null,doing:null,done:null} };
+  /* The add field's swatch, if one is set. Typing five work tasks in a row
+     should not mean colouring five cards afterwards - you say "work" once and
+     everything you type lands that way until you say otherwise.
+
+     The field is written ONLY when a colour is actually chosen, so a task with
+     no colour carries no key at all. That keeps every task written before this
+     existed identical to one written after it, which is what stops the sync
+     and the backup from filling with nulls. */
+  if (typeof cfg.addCat === "number" && cfg.addCat >= 0 && cfg.addCat < cfg.taskCats.length)
+    t.cat = cfg.addCat;
   t.ts[status] = stamp();
   tasks.push(t); commit("tasks");
   /* THE ONE NUMBER WORTH MORE THAN PAGE VIEWS: somebody actually used the
@@ -522,6 +567,59 @@ function addTask(ds,text,status){
   return t;
 }
 function byId(id){ for (var i=0;i<tasks.length;i++) if (tasks[i].id === id) return tasks[i]; return null; }
+
+/* ---------- a colour on a task ----------------------------------------------
+
+   The problem, in his words: ten tasks in To do and no way to tell at a glance
+   which are work and which are the rest of life. A second board was the first
+   idea and the wrong one - two boards means deciding which board to open before
+   you can look at anything, and the reason a day board works is that there is
+   only ever one place to look. A filter tab was the second, and he rejected it
+   for the same reason: another control to press before you can read your day.
+
+   So: one board, and a 4px edge on the card. Nothing to press, nothing to
+   choose, nothing hidden. You either see the stripe or you do not.
+
+   A stripe rather than a fill, because the card's fill is already saying
+   something - which column it is in - and two things cannot own one surface.
+
+   OPTIONAL, AND OFF. A task has no colour unless somebody gives it one, and a
+   board where nobody ever opens this looks exactly as it did before. */
+function taskCat(task){
+  var i = task && task.cat;
+  if (typeof i !== "number" || i < 0 || !cfg.taskCats || i >= cfg.taskCats.length) return null;
+  return cfg.taskCats[i];
+}
+/* Passing null clears it, and clearing DELETES the field rather than storing a
+   null. A task that never had a colour and a task that had one removed should
+   be the same task afterwards, byte for byte, in the export and in the sync. */
+function setTaskCat(id, cat){
+  var t = byId(id); if (!t) return;
+  if (typeof cat === "number" && cat >= 0 && cat < cfg.taskCats.length) t.cat = cat;
+  else delete t.cat;
+  commit("tasks"); refresh();
+}
+/* The stripe colours, computed once on :root, exactly as the day tints are.
+
+   Computed rather than written straight onto each card for one reason: the
+   theme. A hue picked to read on white can disappear on #0f1115, and the board
+   is not re-rendered when the theme changes - applyTheme() only re-runs this.
+   Put the value on the card and a switch to dark would leave every stripe at
+   its light-mode colour until the next repaint. */
+function applyTaskCatColours(){
+  var root = document.documentElement;
+  if (!root || !root.style || !cfg || !Array.isArray(cfg.taskCats)) return;
+  var dark = isDark();
+  for (var i=0;i<MAXCATS;i++){
+    if (i >= cfg.taskCats.length){ root.style.removeProperty("--tc" + i); continue; }
+    var c = cfg.taskCats[i].color;
+    /* A 4px edge is a small thing to see, so it is lifted off whichever ground
+       it sits on rather than left at the raw hex. Light enough on a dark page,
+       solid enough on a light one, and the hue - the only part that carries
+       meaning - is never moved. */
+    root.style.setProperty("--tc" + i, dark ? blend(c, 0.30) : blend(c, -0.08));
+  }
+}
 /* one primitive: status change and reordering are the same operation */
 function placeTask(id,status,index){
   var t = byId(id); if (!t) return;
@@ -742,7 +840,30 @@ function renderKanban(host, ds){
       addGo.title = "Add to " + st.label;
       addGo.setAttribute("aria-label","Add to " + st.label);
       addGo.addEventListener("click", submitAdd);
-      addRow.appendChild(inp); addRow.appendChild(addGo);
+
+      /* WHAT COLOUR DOES A NEW TASK GET? Asked here, before you type, and not
+         after you have typed six.
+
+         Colouring one card at a time is fine for the one you got wrong; it is
+         the wrong shape entirely for the commonest case, which is sitting down
+         and typing everything work wants from you today. Set it once and the
+         next six land already marked. It is also the only always-visible
+         reminder that any of this exists.
+
+         One setting shared by all three columns, because it is a property of
+         what you are typing, not of where it lands. Repainted in place rather
+         than through refresh(), so choosing a colour never discards a task you
+         had half-typed in another column. */
+      var ahue = mk("button","addhue hue");
+      ahue.type = "button";
+      ahue.addEventListener("click", function(e){
+        e.stopPropagation();
+        toggleHue(ahue, cfg.addCat, function(v){
+          cfg.addCat = (typeof v === "number") ? v : null;
+          commit("cfg"); paintAddHue();
+        });
+      });
+      addRow.appendChild(inp); addRow.appendChild(ahue); addRow.appendChild(addGo);
       col.appendChild(addRow);
 
       var wrap = mk("div","lane");
@@ -761,6 +882,20 @@ function renderKanban(host, ds){
       col.appendChild(wrap);
       host.appendChild(col);
     })(ST[s]);
+  }
+  paintAddHue();
+}
+/* Every add field's swatch, repainted from one setting. Kept out of the render
+   above so changing it costs no re-render at all: three attributes on three
+   buttons, and whatever is half-typed in the other two columns survives. */
+function paintAddHue(){
+  var set  = typeof cfg.addCat === "number" && cfg.addCat >= 0 && cfg.addCat < cfg.taskCats.length;
+  var name = set ? cfg.taskCats[cfg.addCat].label : "no colour";
+  var b = document.querySelectorAll(".addhue");
+  for (var i=0;i<b.length;i++){
+    b[i].className = "addhue hue" + (set ? " tcat tc" + cfg.addCat : "");
+    b[i].title = "New tasks get: " + name + ". Click to change.";
+    b[i].setAttribute("aria-label","Colour for new tasks: " + name);
   }
 }
 function dropIndex(wrap,y){
@@ -810,6 +945,12 @@ function markOverflowing(host){
 
 function taskRow(task, st, idx, total){
   var n = mk("div","t s-" + st.k);
+  /* THE STRIPE. A class naming which colour, never the colour itself: the
+     value behind it is theme-dependent and the board is not re-rendered when
+     the theme changes, so a hex written here would still be the light-mode one
+     after switching to dark. See applyTaskCatColours(). */
+  var cat = taskCat(task);
+  if (cat) n.className += " tcat tc" + task.cat;
   n.setAttribute("draggable","true");
   n.setAttribute("data-id", task.id);
   n.style.transform = "rotate(" + tilt(task.id) + "deg)";
@@ -865,7 +1006,8 @@ function taskRow(task, st, idx, total){
   var expandable = true;
 
   var txt = mk("span","txt", head);
-  txt.title = full + "\nTo do: " + (task.ts.todo || "-") +
+  txt.title = full + (cat ? "\n" + cat.label : "") +
+              "\nTo do: " + (task.ts.todo || "-") +
               "  |  In progress: " + (task.ts.doing || "-") + "  |  Done: " + (task.ts.done || "-");
   /* click the text to rename. The old behaviour was double-click only, which
      is undiscoverable, and on touch it did nothing at all. */
@@ -958,6 +1100,24 @@ function taskRow(task, st, idx, total){
     if (inp.showPicker){ try { inp.showPicker(); return; } catch (e){} }
     inp.click();
   }));
+  /* THE COLOUR DOT, and why it is here rather than in the row of colours the
+     rail already has. A colour on a task is decided while you are looking at
+     the task, in the second you realise this one is not work. Anything that
+     means opening a panel first is a decision made somewhere else, about a
+     card you can no longer see.
+
+     Filled when the task has a colour, hollow when it does not, so the row of
+     controls also reports the state without being opened. On a phone this is
+     hidden with the rest and the action sheet carries the same swatches - see
+     openActs(). */
+  var hue = opBtn("\u25c9", cat ? ("Colour: " + cat.label) : "Colour", false, function(e){
+    if (e && e.stopPropagation) e.stopPropagation();
+    toggleHue(hue, cat ? task.cat : null, function(v){ setTaskCat(task.id, v); });
+  });
+  hue.className = "op hue" + (cat ? " tcat tc" + task.cat : "");
+  hue.setAttribute("aria-haspopup","true");
+  ops.appendChild(hue);
+
   var x = opBtn("\u00d7","Delete", false, function(){ delTask(task.id); refresh(); });
   x.className = "op x";
   ops.appendChild(x);
@@ -1039,12 +1199,34 @@ function openActs(card){
   title.textContent = txt ? txt.textContent : "";
 
   list.innerHTML = "";
+
+  /* THE COLOUR ROW, and the one place this sheet does NOT mirror a button.
+
+     Every other row here is a verb: press it, something happens, the sheet
+     closes. Colour is not a verb, it is a state - it has a current value, and
+     the value is the answer. Rendered as a row it would read "Colour" and tell
+     you nothing about what the colour currently is; rendered as swatches with
+     one of them ringed, it answers before it is touched.
+
+     So the dot on the card is skipped in the mirror below and this stands in
+     its place, at the top, where a state belongs. */
+  var tId = card.getAttribute("data-id");
+  var tRec = tId ? byId(tId) : null;
+  if (tRec && cfg.taskCats.length){
+    var hr = hueRow(taskCat(tRec) ? tRec.cat : null, function(v){
+      closeActs(); setTaskCat(tRec.id, v);
+    });
+    hr.className = "huerow actcols";
+    list.appendChild(hr);
+  }
+
   var btns = card.querySelectorAll(".ops .op"), danger = null;
   for (var i=0;i<btns.length;i++){
     (function(btn){
       /* The menu button itself is what opened this; listing it would offer to
-         open the sheet from inside the sheet. */
-      if (btn.classList.contains("menu")) return;
+         open the sheet from inside the sheet. And the colour dot is already
+         above, as swatches. */
+      if (btn.classList.contains("menu") || btn.classList.contains("hue")) return;
       var row = mk("button","actrow");
       row.type = "button";
       row.disabled = btn.disabled;
@@ -1070,6 +1252,92 @@ function closeActs(){
   if (sheet) sheet.classList.add("hidden");
 }
 
+/* ONE ROW OF SWATCHES, built once and used from all three places a colour can
+   be set: the dot on a card, the phone action sheet, and the add field. They
+   cannot drift apart because there is only one of them - the same argument the
+   action sheet itself is built on.
+
+   "None" comes first and is a real choice, not the absence of one. Removing a
+   colour has to be as easy as adding it or people stop adding them. */
+function hueRow(current, onPick){
+  var row = mk("div","huerow");
+  var none = mk("button","huesw no");
+  none.type = "button";
+  none.title = "No colour";
+  none.setAttribute("aria-label","No colour");
+  if (current === null || current === undefined) none.className += " on";
+  none.addEventListener("click", function(){ onPick(null); });
+  row.appendChild(none);
+  for (var i=0;i<cfg.taskCats.length;i++){
+    (function(i){
+      var b = mk("button","huesw tcat tc" + i);
+      b.type = "button";
+      b.title = cfg.taskCats[i].label;
+      b.setAttribute("aria-label", cfg.taskCats[i].label);
+      if (current === i) b.className += " on";
+      b.addEventListener("click", function(){ onPick(i); });
+      row.appendChild(b);
+    })(i);
+  }
+  return row;
+}
+/* THE POPOVER LIVES ON THE BODY, AND THIS IS THE SECOND MEASURING EXCEPTION.
+
+   The first version put it inside the card, positioned by CSS, which needs no
+   getBoundingClientRect at all - and was wrong, in a way a screenshot of the
+   top of a lane cannot show. A lane is max-height:288px with overflow-y:auto,
+   which makes it a scroll box, and a scroll box CLIPS. Open the dot on the
+   last card in a full To do column and the swatches are cut in half by the
+   bottom of the lane; open it on a card halfway down and it is fine. A control
+   that works everywhere except at the bottom of a long list is a control that
+   fails exactly when the list is long enough to need it.
+
+   Nothing in CSS gets a child out of an ancestor's overflow. position:fixed on
+   the body does, and then the position has to come from somewhere: the anchor
+   button's own rectangle. That is a legitimate measurement - it asks where a
+   button IS on screen, which is not a thing CSS can be asked - and it is the
+   same exception dropIndex() and markOverflowing() already carry.
+
+   It flips above the anchor when there is no room below, and is clamped to the
+   viewport on both sides, so it can never open off-screen on a phone. */
+function toggleHue(anchor, current, onPick){
+  var open = document.querySelector(".huepop");
+  var mine = !!(open && open.hueAnchor === anchor);
+  closeHue();
+  if (mine) return;                    /* pressing the dot again closes it */
+
+  var pop = mk("div","huepop");
+  pop.hueAnchor = anchor;
+  pop.appendChild(hueRow(current, function(v){ closeHue(); onPick(v); }));
+  document.body.appendChild(pop);
+  anchor.classList.add("huing");
+  /* Keeps the card's controls on screen while its popover is open - they are
+     hidden until :hover, and the pointer is about to leave for the swatches. */
+  var card = anchor.closest ? anchor.closest(".t") : null;
+  if (card) card.classList.add("huing");
+
+  var b = anchor.getBoundingClientRect();
+  var vw = window.innerWidth  || 0, vh = window.innerHeight || 0;
+  var pb = pop.getBoundingClientRect();
+  var pw = pb.width || 130, ph = pb.height || 32;
+  var left = Math.max(6, Math.min(b.right - pw, vw - pw - 6));
+  var top  = b.bottom + 6;
+  if (top + ph > vh - 6) top = Math.max(6, b.top - ph - 6);
+  pop.style.left = Math.round(left) + "px";
+  pop.style.top  = Math.round(top)  + "px";
+}
+function closeHue(){
+  var p = document.querySelectorAll(".huepop");
+  for (var i=0;i<p.length;i++){
+    var a = p[i].hueAnchor;
+    if (a){
+      a.classList.remove("huing");
+      var c = a.closest ? a.closest(".t") : null;
+      if (c) c.classList.remove("huing");
+    }
+    if (p[i].parentNode) p[i].parentNode.removeChild(p[i]);
+  }
+}
 function opBtn(label,title,disabled,fn){
   var b = mk("button","op",label);
   b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
@@ -1756,6 +2024,7 @@ function renderRail(){
     addRow.appendChild(addBtn);
     el.cats.appendChild(addRow);
   }
+  renderTaskCats();
   renderTracked();
 }
 /* "Thu 12 Nov 2026" - the form a person reads, not the form a computer sorts.
@@ -2050,6 +2319,130 @@ function deleteCat(idx){
     applyCatColours(); renderRail(); renderCalendar(); renderGlance(); renderBoard();
   });
 }
+/* ---------- the task colour list in the rail --------------------------------
+
+   The same four controls as the day colours - swatch, name, count, remove -
+   and deliberately no drag reordering. The day list is reorderable because it
+   is also the row of buttons in the day popup, so its order is the order your
+   hand learns. This list has three entries and no such row; a drag handle on
+   three rows is ceremony, not a feature. */
+function renderTaskCats(){
+  if (!el.tcats) return;
+  el.tcats.innerHTML = "";
+  for (var i=0;i<cfg.taskCats.length;i++){
+    (function(idx){
+      var row = mk("div","cat");
+      var dot = document.createElement("input");
+      dot.type = "color"; dot.className = "catdot"; dot.value = cfg.taskCats[idx].color;
+      dot.title = "Change the colour for " + cfg.taskCats[idx].label;
+      dot.setAttribute("aria-label","Colour for " + cfg.taskCats[idx].label);
+      dot.addEventListener("input", function(){
+        cfg.taskCats[idx].color = dot.value;
+        applyTaskCatColours();          /* live, so you can see what you picked */
+      });
+      dot.addEventListener("change", function(){ commit("cfg"); });
+
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.value = cfg.taskCats[idx].label;
+      inp.setAttribute("aria-label","Rename task colour " + (idx+1) +
+                       " (currently " + cfg.taskCats[idx].label + ")");
+      inp.title = "Click to rename";
+      inp.addEventListener("change", function(){
+        cfg.taskCats[idx].label = inp.value.trim().slice(0,24) || ("Colour " + (idx+1));
+        commit("cfg"); refresh();
+      });
+
+      /* The count, the same question the day list answers: how much of my week
+         actually went on work. It is the reason to colour anything at all. */
+      var n = taskCatCount(idx);
+      var cnt = mk("span","catn", n ? String(n) : "");
+      cnt.title = n + " task" + (n === 1 ? "" : "s") + " marked with this";
+
+      var del = mk("button","catx","×");
+      del.type = "button";
+      del.disabled = cfg.taskCats.length <= 1;
+      del.title = del.disabled
+        ? "The last colour cannot be removed"
+        : "Remove " + cfg.taskCats[idx].label +
+          (n ? " (" + n + " task" + (n===1?"":"s") + " marked)" : "");
+      del.setAttribute("aria-label", del.title);
+      del.addEventListener("click", function(){ deleteTaskCat(idx); });
+
+      row.appendChild(dot); row.appendChild(inp);
+      row.appendChild(mk("span","pen","✎"));
+      row.appendChild(cnt); row.appendChild(del);
+      el.tcats.appendChild(row);
+    })(i);
+  }
+  if (cfg.taskCats.length < MAXCATS){
+    var ar = mk("div","catadd");
+    var ab = mk("button","btn","+ add a colour");
+    ab.type = "button";
+    ab.addEventListener("click", addTaskCat);
+    ar.appendChild(ab);
+    el.tcats.appendChild(ar);
+  }
+}
+function taskCatCount(idx){
+  var n = 0;
+  for (var i=0;i<tasks.length;i++) if (tasks[i].cat === idx) n++;
+  return n;
+}
+function addTaskCat(){
+  if (cfg.taskCats.length >= MAXCATS) return;
+  var i = cfg.taskCats.length;
+  cfg.taskCats.push({ label:"Colour " + (i + 1), color:TCATS[i % TCATS.length] });
+  commit("cfg"); applyTaskCatColours(); refresh();
+}
+/* Removing one, and the part that is easy to get wrong - the same trap the day
+   colours carry. A task stores an INDEX, so deleting entry 1 must walk every
+   task and move 2 down to 1, 3 down to 2, and so on, or every Personal task
+   silently becomes an Errand. Tasks marked with the one being removed lose the
+   colour and keep everything else. One undoable action, because it rewrites
+   data across the whole board and a mis-click must not be permanent. */
+function deleteTaskCat(idx){
+  if (cfg.taskCats.length <= 1) return;
+  var name = cfg.taskCats[idx].label;
+  var hit  = taskCatCount(idx);
+
+  var msg = "Remove the task colour \"" + name + "\"?";
+  if (hit) msg += "\n\n" + hit + " task" + (hit === 1 ? "" : "s") +
+                  " marked with it will lose the colour. Nothing else about them changes.";
+  msg += "\n\nThis can be undone.";
+  if (!confirm(msg)) return;
+
+  var before = {
+    cats: cfg.taskCats.map(function(c){ return { label:c.label, color:c.color }; }),
+    add:  cfg.addCat,
+    on:   (function(){ var m = {};
+                       for (var i=0;i<tasks.length;i++)
+                         if (typeof tasks[i].cat === "number") m[tasks[i].id] = tasks[i].cat;
+                       return m; })()
+  };
+
+  for (var i=0;i<tasks.length;i++){
+    var c = tasks[i].cat;
+    if (typeof c !== "number") continue;
+    if (c === idx) delete tasks[i].cat;             /* the colour goes, the task stays */
+    else if (c > idx) tasks[i].cat = c - 1;         /* everything above shifts down */
+  }
+  cfg.taskCats.splice(idx, 1);
+  if (cfg.addCat === idx) cfg.addCat = null;
+  else if (typeof cfg.addCat === "number" && cfg.addCat > idx) cfg.addCat -= 1;
+
+  commit("cfg"); commit("tasks");
+  applyTaskCatColours(); refresh();
+
+  pushUndo("Removed the task colour '" + name + "'", function(){
+    cfg.taskCats = before.cats; cfg.addCat = before.add;
+    for (var j=0;j<tasks.length;j++){
+      if (has(before.on, tasks[j].id)) tasks[j].cat = before.on[tasks[j].id];
+      else delete tasks[j].cat;
+    }
+    commit("cfg"); commit("tasks");
+    applyTaskCatColours(); refresh();
+  });
+}
 function applyCatColours(){
   var root = document.documentElement;
   if (!root || !root.style) return;
@@ -2162,6 +2555,7 @@ function applyTheme(){
   /* The day-category tints are computed rather than declared, so they are the
      one thing a token cannot re-answer on its own. */
   if (typeof applyCatColours === "function" && cfg && cfg.catColors) applyCatColours();
+  if (typeof applyTaskCatColours === "function" && cfg && cfg.taskCats) applyTaskCatColours();
 }
 
 /* ---------- selecting several days at once ----------------------------------
@@ -2423,8 +2817,8 @@ function download(name,text,mime){
 }
 function cell(v){ return '"' + String(v === null || v === undefined ? "" : v).replace(/"/g,'""') + '"'; }
 function exportCsv(){
-  var rows = [["date","status","priority","task","entered_todo","entered_in_progress",
-               "entered_done","day_colour","day_note"]];
+  var rows = [["date","status","priority","task","task_colour","entered_todo",
+               "entered_in_progress","entered_done","day_colour","day_note"]];
   var s = tasks.slice().sort(function(a,b){
     return a.date < b.date ? -1 : a.date > b.date ? 1 :
            stIndex(a.status)-stIndex(b.status) || a.order-b.order; });
@@ -2434,17 +2828,21 @@ function exportCsv(){
     var r = notes[ds];
     return (r && r.color !== null && r.color !== undefined) ? cfg.catLabels[r.color] : "";
   }
+  /* The NAME, not the index. A spreadsheet is read by a person, and "2" is not
+     an answer to "how much of last month was work". */
+  function taskColourOf(t){ var c = taskCat(t); return c ? c.label : ""; }
   for (var i=0;i<s.length;i++){
     seen[s[i].date] = 1;
-    rows.push([s[i].date, s[i].status, s[i].order+1, s[i].text, s[i].ts.todo, s[i].ts.doing,
-               s[i].ts.done, colourOf(s[i].date), noteOf(s[i].date)]);
+    rows.push([s[i].date, s[i].status, s[i].order+1, s[i].text, taskColourOf(s[i]),
+               s[i].ts.todo, s[i].ts.doing, s[i].ts.done,
+               colourOf(s[i].date), noteOf(s[i].date)]);
   }
   /* a day can carry a note or a colour with no tasks at all - still export it */
   var extra = Object.keys(notes).filter(function(ds){
     return !seen[ds] && (noteOf(ds) || colourOf(ds));
   }).sort();
   for (var e=0;e<extra.length;e++)
-    rows.push([extra[e],"","","","","","", colourOf(extra[e]), noteOf(extra[e])]);
+    rows.push([extra[e],"","","","","","","", colourOf(extra[e]), noteOf(extra[e])]);
   download("inmycalendar-tasks-" + iso(today()) + ".csv",
            rows.map(function(r){ return r.map(cell).join(","); }).join("\r\n"), "text/csv");
 }
@@ -2558,7 +2956,7 @@ function cacheEls(){
     "boardView","calView","carryHost","scopeHost","gyPrev","gyLabel","gyNext","glance",
     "cyPrev","cyLabel","cyNext","rail","cats","tkList","glanceBox","glFold","bnote","bnoteWrap","bnoteDone","bnoteClear","bnoteCancel","bnoteX","tLabel","tDate","tUnit","tPick","tNative","tAdd","tErr",
     "ov","mDate","mWk","mClose","mDone","mCancel","mClear","sov","sInput","sOut","sClose","searchBtn","mClear","mSw","mNote","mKb","adRail","adFoot","adAnchor",
-    "selBar","selCount","selSw","selClear","selStart","calDense","catsHide",
+    "selBar","selCount","selSw","selClear","selStart","calDense","catsHide","tcats",
     "undoBar","undoText","undoGo","undoX"];
   for (var i=0;i<ids.length;i++) el[ids[i]] = $(ids[i]);
 }
@@ -2843,8 +3241,24 @@ function wire(){
     if (mq.addEventListener) mq.addEventListener("change", onScheme);
     else if (mq.addListener) mq.addListener(onScheme);   /* older Safari */
   }
+  /* THE COLOUR POPOVER CLOSES ON ANY CLICK THAT IS NOT ITS OWN.
+     Registered on the document rather than on a backdrop element: a popover
+     this small does not deserve a full-screen overlay, and a backdrop over the
+     board would swallow the click that opened the next card's dot, which is
+     exactly the gesture somebody colouring three tasks in a row makes. */
+  document.addEventListener("click", function(e){
+    var t = e.target;
+    if (t && t.closest && (t.closest(".huepop") || t.closest(".hue"))) return;
+    closeHue();
+  });
+  /* Fixed to the viewport, so anything that moves the anchor leaves it
+     stranded beside nothing. Capture, or a lane scrolling inside the page
+     never reaches this. */
+  window.addEventListener("scroll", closeHue, true);
+  window.addEventListener("resize", closeHue);
   document.addEventListener("keydown", function(e){
     var acts = document.getElementById("actSheet");
+    if (e.key === "Escape" && document.querySelector(".huepop")){ closeHue(); return; }
     if (e.key === "Escape" && acts && !acts.classList.contains("hidden")){ closeActs(); return; }
     if (e.key === "Escape" && document.body.classList.contains("sheet")){ closeSheet(); return; }
     if (e.key === "Escape" && !el.sov.classList.contains("hidden")){ closeSearch(); return; }
@@ -2904,6 +3318,24 @@ function init(){
       wantOrder.some(function(i){ return cfg.catOrder.indexOf(i) < 0; }))
     cfg.catOrder = wantOrder;
   if (typeof cfg.hideCats !== "boolean") cfg.hideCats = false;
+  /* TASK COLOURS. A separate list from the day colours, repaired the same way.
+
+     Repaired rather than discarded, and that is the whole point: a task stores
+     its colour as an INDEX, so an index that resolves to nothing would leave a
+     card with a stripe of no colour and a name of no name. Every entry is made
+     valid, so every index a task can hold resolves to something. */
+  if (!Array.isArray(cfg.taskCats) || !cfg.taskCats.length || cfg.taskCats.length > MAXCATS)
+    cfg.taskCats = DEF.taskCats.map(function(c){ return { label:c.label, color:c.color }; });
+  for (var tci=0; tci<cfg.taskCats.length; tci++){
+    var tcr = cfg.taskCats[tci];
+    if (!tcr || typeof tcr !== "object") tcr = cfg.taskCats[tci] = {};
+    tcr.label = String(tcr.label == null ? "" : tcr.label).trim().slice(0,24) || ("Colour " + (tci+1));
+    if (!/^#[0-9a-fA-F]{6}$/.test(tcr.color || "")) tcr.color = TCATS[tci % TCATS.length];
+  }
+  /* null is "new tasks get no colour", and anything that does not name a real
+     entry becomes null rather than silently colouring everything you type. */
+  if (typeof cfg.addCat !== "number" || cfg.addCat < 0 || cfg.addCat >= cfg.taskCats.length)
+    cfg.addCat = null;
   // one-time migration: replace the OLD placeholder defaults with the new ones,
   // but never touch labels the user actually customised.
   var OLD_SETS = [["Category 1","Category 2","Category 3","Category 4"],
@@ -2944,6 +3376,7 @@ function init(){
   track = load(LS.track, []); if (!Array.isArray(track)) track = [];
   migrate();
   applyCatColours();     /* before the first paint, or marked days flash the defaults */
+  applyTaskCatColours(); /* same reason, for the stripe on a card */
   sel = parseISO(cfg.lastDate) ? cfg.lastDate : iso(today());
   glanceYear = today().getFullYear();
 

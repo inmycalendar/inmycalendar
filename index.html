@@ -16,17 +16,17 @@
 <meta name="twitter:title" content="inmycalendar - your Kanban board and your whole year, on one screen">
 <meta name="twitter:description" content="A daily Kanban board joined to a week-by-week calendar of the years around it. Plan today, see the year, mark leave, travel and WFH, with your country's public holidays built in. Free, no sign-up needed.">
 <meta name="twitter:image" content="https://inmycalendar.com/assets/icon-512-v2.png">
-<link rel="icon" href="assets/favicon.ico?v=78" sizes="any">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=78">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=78">
-<link rel="manifest" href="manifest.webmanifest?v=78">
+<link rel="icon" href="assets/favicon.ico?v=79" sizes="any">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=79">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon-v2.png?v=79">
+<link rel="manifest" href="manifest.webmanifest?v=79">
 <script>/* theme before first paint - see the dark block in site.css */
 try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light")}catch(e){}</script>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f1115">
 <link rel="canonical" href="https://inmycalendar.com/">
-<link rel="stylesheet" href="assets/site.css?v=78">
-<link rel="stylesheet" href="assets/app.css?v=78">
+<link rel="stylesheet" href="assets/site.css?v=79">
+<link rel="stylesheet" href="assets/app.css?v=79">
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
@@ -232,6 +232,23 @@ try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentEle
       <div class="rbody" id="cats"></div>
     </div>
 
+    <!-- TASK COLOURS, and why they are a second list rather than the one above.
+
+         Reusing the day colours was the obvious move and the wrong one. A day
+         colour answers "what kind of day is this" - Leave, Travel, WFH. A task
+         colour answers "what kind of task is this" - Work, Personal. One list
+         of names cannot say both, and sharing it would have renamed somebody's
+         Leave into somebody's Personal.
+
+         Nothing here is on by default. A board where this panel is never
+         opened looks exactly as it did before it existed. -->
+    <div class="rbox">
+      <h3>Task colours</h3>
+      <div class="rhint">Tell work from the rest at a glance. Set one on a card, or on the add
+        field so everything you type next is marked. Click a name to rename it.</div>
+      <div class="rbody" id="tcats"></div>
+    </div>
+
     <div class="ad ad-rail hidden" id="adRail">ad slot<br>160&times;600</div>
     <div class="rbox">
       <h3>Appearance</h3>
@@ -378,11 +395,11 @@ try{var t=localStorage.getItem("imc.theme");if(t!=="system")document.documentEle
   </div>
 </div>
 
-<script src="assets/errors.js?v=78"></script>
-<script src="assets/vendor/supabase.js?v=78"></script>
-<script src="assets/app.js?v=78"></script>
-<script src="assets/auth.js?v=78"></script>
-<script src="assets/sync.js?v=78"></script>
-<script src="assets/stats.js?v=78"></script>
+<script src="assets/errors.js?v=79"></script>
+<script src="assets/vendor/supabase.js?v=79"></script>
+<script src="assets/app.js?v=79"></script>
+<script src="assets/auth.js?v=79"></script>
+<script src="assets/sync.js?v=79"></script>
+<script src="assets/stats.js?v=79"></script>
 </body>
 </html>
