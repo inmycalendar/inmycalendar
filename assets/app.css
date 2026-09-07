@@ -1369,9 +1369,13 @@ main{padding:16px 0 0}
    without hiding anything or costing a tap.
    ========================================================================== */
 @media (max-width:640px){
-  #glanceBox .wg.c .dc{min-height:23px;font-size:10px}
+  /* Row height only. The date itself is sized by the shared rule further down,
+     which caps at 10.5px and tapers below 360px - and the month is NOT hidden
+     here any more. It was, on the belief that these grids are a third of the
+     width; on a phone they stack full width with 45px cells, the same as the
+     calendar page. Measured. */
+  #glanceBox .wg.c .dc{min-height:23px}
   #glanceBox .wg.c .wk{min-height:23px;font-size:9px}
-  #glanceBox .wg.c .dc .cm{display:none}
   #glanceBox .wg.c .dc .task{width:3px;height:3px;top:2px;right:2px}
 }
 
@@ -1439,21 +1443,36 @@ main{padding:16px 0 0}
    ========================================================================== */
 @media (max-width:640px){
   .wg .dc .cm{display:inline}
-  /* The 90 was 82 plus a guess. Sized properly: the grid is the viewport less
-     about 82px of page gutter and card padding, seven cells share what is left
-     of it after a 32px week column, and five characters of JetBrains Mono are
-     three times the font size. Leaving 4px of air between one date and the
-     next - at 320px the first attempt left 1.7px and the dates ran together -
-     the largest that fits is (100vw - 82) / 21 - 1.33.
+  /* THE CAP IS 10.5px, AND IT COMES FROM THE DESKTOP.
 
-       320px -> 10.0px    360px -> 11.9px    393px and up -> 13px  */
-  .wg .dc{font-size:min(13px, calc((100vw - 82px) / 21 - 1.33px))}
-  .wg.c .dc{font-size:min(11px, calc((100vw - 82px) / 21 - 1.33px))}
-  #calView.dense .wg .dc{font-size:min(10.5px, calc((100vw - 82px) / 21 - 1.33px))}
+     Fitting is not the same as reading well, and the first version confused
+     the two: 13px fitted at 393px with 6px of air, and 6px between one
+     five-character date and the next is a wall of digits.
 
-  /* The year grid on the BOARD keeps the day alone. It is three months side by
-     side in a third of the width, so its cells are a third of the size, and
-     there is no arithmetic that fits five characters into them. Its own month
-     markers carry the month there. */
-  #glanceBox .wg.c .dc .cm{display:none}
+     The desktop is the benchmark, because it is the one nobody complains
+     about. Measured there: cell 43.4px, font 10px, date 30px wide, 13.4px of
+     air - 31% of the cell is space. The phone cell is 45px, slightly WIDER
+     than the desktop's, so the same density is 10.5px, and it lands on 13.5px
+     of air. Practically the desktop's own size, which is the point: he asked
+     for the calendar to look like the web version.
+
+       320px -> 10.0px (4.7px air)   360px -> 10.5px (8.8px)
+       393px and up -> 10.5px (13.5px air, 30% - desktop is 31%)
+
+     The formula still tapers below 360px, because a 34.6px cell cannot hold
+     five characters at desktop density however the arithmetic is arranged. */
+  .wg .dc{font-size:min(10.5px, calc((100vw - 82px) / 21 - 1.33px))}
+  .wg.c .dc{font-size:min(10.5px, calc((100vw - 82px) / 21 - 1.33px))}
+  #calView.dense .wg .dc{font-size:min(10px, calc((100vw - 82px) / 21 - 1.33px))}
+
+  /* THE BOARD'S YEAR GRID SHOWS THE MONTH TOO.
+
+     It was excluded on the grounds that it is three months side by side in a
+     third of the width. That is true on a DESKTOP and false on a phone, which
+     is the only place this block applies: there the three grids stack, each
+     one 343px wide with 45px cells - the same width as the calendar page's.
+     Measured, not assumed, and the assumption was wrong.
+
+     So the same date, the same size, on both. Only the row height differs,
+     23px against 34px, and that is vertical space rather than horizontal. */
 }

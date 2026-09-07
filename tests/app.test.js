@@ -4764,18 +4764,30 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
 
   check(/\.wg \.dc \.cm\{display:inline\}/.test(appPh),
         "a phone calendar cell shows the month again, as the desktop always has");
-  check(/\.wg \.dc\{font-size:min\(13px, calc\(\(100vw - 82px\) \/ 21 - 1\.33px\)\)\}/.test(appPh),
-        "at a size that follows the screen, capped at the 13px there is no reason to exceed");
-  /* The cap matters as much as the floor: without min() a wide phone would get
-     absurd type, and without the calc a narrow one would clip. */
-  check(/min\(13px,/.test(appPh) && /100vw - 82px/.test(appPh),
-        "both halves present - the cap and the fit");
-  check(/#calView\.dense \.wg \.dc\{font-size:min\(10\.5px/.test(appPh),
+  /* THE CAP COMES FROM THE DESKTOP, which is the version nobody complains
+     about. Measured there: cell 43.4px, font 10px, date 30px wide, 13.4px of
+     air - 31% of the cell is space. The phone cell is 45px, slightly wider, so
+     the same density is 10.5px and lands on 13.5px of air.
+
+     13px fitted and still read as a wall: 6px between one five-character date
+     and the next is 13% air against the desktop's 31%. Fitting and reading
+     well are not the same test, and the first version only ran the first. */
+  check(/\.wg \.dc\{font-size:min\(10\.5px, calc\(\(100vw - 82px\) \/ 21 - 1\.33px\)\)\}/.test(appPh),
+        "at a size that follows the screen, capped at the desktop's own density");
+  check(/min\(10\.5px,/.test(appPh) && /100vw - 82px/.test(appPh),
+        "both halves present - the cap and the taper");
+  check(/#calView\.dense \.wg \.dc\{font-size:min\(10px/.test(appPh),
         "and Fit year is sized by the same arithmetic, so it cannot clip either");
 
-  /* The board's year grid is a third of the width and keeps the day alone. */
-  check(/#glanceBox \.wg\.c \.dc \.cm\{display:none\}/.test(appPh),
-        "the year grid on the board still shows the day alone - its cells are a third the size");
+  /* THE BOARD'S YEAR GRID SHOWS THE SAME DATE. It was excluded on the grounds
+     that it is three months side by side in a third of the width - true on a
+     desktop, false on a phone, which is the only place these rules apply. On a
+     phone the three grids stack, each 343px wide with 45px cells, the same as
+     the calendar page's. Measured, and the assumption was wrong. */
+  check(!/#glanceBox \.wg\.c \.dc \.cm\{display:none\}/.test(appPh),
+        "the board's year grid shows the month too - its cells are the same 45px");
+  check(/#glanceBox \.wg\.c \.dc\{min-height:23px\}/.test(appPh),
+        "differing from the calendar only in row height, which is vertical space");
   check(/b\.setAttribute\("data-mo", MON3\[/.test(js),
         "with the month markers down the week column kept in both");
 }
