@@ -50,7 +50,7 @@ anything.
 
 ```
 index.html          the app
-about.html          what it is and why - the page search engines and AI summaries quote
+about.html          what it is and why - the page search engines and answer engines quote
 holidays/           1,719 generated pages: one hub per country plus one page per country
                     per year, and an index. Built by tools/build-holiday-pages.js;
                     never hand-edit, re-run the generator
@@ -576,10 +576,10 @@ itself and the app carries on.
 This repo is public, so it is a portfolio piece as much as a codebase. It contains
 no personal information beyond the GitHub username.
 
-`HANDOVER.md` holds personal context (employer, goals, working preferences) used to
-brief an AI assistant at the start of a new session. **It is gitignored on purpose
-and must never be committed.** Keep it locally, or anywhere private. Test section
-C15 fails if any personal term appears in a published file.
+`HANDOVER.md` and `BRIEF.md` hold personal context - employer, goals, working
+preferences - for picking the project back up after a break. **They are gitignored
+on purpose and must never be committed.** Keep them locally, or anywhere private.
+Test section C15 fails if any personal term appears in a published file.
 
 ## Licence
 

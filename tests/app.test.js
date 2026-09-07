@@ -674,7 +674,7 @@ check(!/What's coming/.test(g) && /What&rsquo;s coming next/.test(readFile("cont
 /* about.html was once the how-to page and was renamed Guide, and this line
    used to assert it stayed gone. A NEW about.html now exists with a different
    job: Guide is how to use the app, About is what it is and why it works this
-   way, which is the page a search engine or an AI summary quotes. The original
+   way, which is the page a search engine or an answer engine quotes. The original
    decision - that the how-to page is called Guide - still holds. */
 check(fs.existsSync(path.join(ROOT,"about.html")), "about.html exists again, for what-and-why rather than how-to");
 const aboutBody = readFile("about.html");
@@ -684,8 +684,8 @@ check(/"@type":"FAQPage"/.test(aboutBody),
       "About carries FAQ structured data, which is what gets quoted in search summaries");
 check(/247 countries/.test(aboutBody) && /Kanban board/.test(aboutBody),
       "and states the things people actually search for");
-check(/AI-BRIEF\.md/.test(readFile(".gitignore")),
-      "AI-BRIEF.md is gitignored too - it carries personal goals and must never be published");
+check(/^BRIEF\.md$/m.test(readFile(".gitignore")),
+      "BRIEF.md is gitignored too - it carries personal goals and must never be published");
 
 console.log("\n=== C10. Sign-in is an upgrade, never a gate ===");
 check(fs.existsSync(path.join(ROOT,"assets/auth.js")), "auth.js ships with the app");
@@ -828,8 +828,8 @@ check(/Syncing your board across devices/.test(ct), "it lists what is genuinely 
 
 console.log("\n=== C15. The public repo carries no personal data ===");
 /* The repo is public. Anything committed is visible to colleagues, recruiters
-   and the current employer. HANDOVER.md holds personal context for briefing an
-   assistant and is deliberately gitignored. */
+   and the current employer. HANDOVER.md holds that context for picking the
+   project back up after a break, and is deliberately gitignored. */
 check(/^HANDOVER\.md$/m.test(readFile(".gitignore")),
       "HANDOVER.md is gitignored, so personal context is never published");
 
@@ -2568,11 +2568,10 @@ sources.forEach(f => {
 check(!SMART.test(readFile("holidays/IN-2027.html")),
       "a generated holiday page is clean too");
 
-/* Commit messages are part of the source too: a trailer added by a tool ends
-   up credited in the repository's Contributors list, which is not where
-   authorship should be decided. This checks the working tree only; the history
-   itself was rewritten once and is verified with:
-     git log --format='%an|%ae|%B' | grep -i 'co-authored'                    */
+/* Authorship belongs to the person who owns the repository, and a stray
+   attribution trailer anywhere in the source would put someone else in the
+   Contributors list. Verified against the history with:
+     git log --all --format='%an|%ae|%B' | grep -i 'co-authored'              */
 check(!/Co-Authored-By/i.test(readFile("README.md")),
       "the README carries no attribution trailers");
 
