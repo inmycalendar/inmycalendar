@@ -49,7 +49,41 @@
       row.text   = local ? String(local.text || "").slice(0,500) : "";
       row.status = local && /^(todo|doing|done)$/.test(local.status) ? local.status : "todo";
       row.pos    = local && typeof local.order === "number" ? Math.max(0, Math.min(100000, local.order|0)) : 0;
-      row.ts     = local && local.ts ? local.ts : {};
+      /* THE COLOUR RIDES IN ts, AND THIS IS WHY.
+
+         Reported: "the color code appears, and then disappears". It did, and
+         the two screenshots showed exactly where - the stripe was there while
+         the header said Syncing and gone once it said Synced.
+
+         This function and fromRemote() are the only crossing between local and
+         remote, and they map a FIXED list of fields. A task gained a colour and
+         these did not, so every push dropped it and every pull rebuilt the task
+         without it. Local was right, the server was authoritative, and the
+         server had never been told.
+
+         The obvious repair is a "cat" column. It is also the one that cannot
+         ship on its own: PostgREST rejects the whole row for a column that does
+         not exist, so the client cannot start sending it until the migration
+         has run, and until then every edit fails instead of just the colour. A
+         fix that needs a database change first is a fix that leaves the bug
+         live in the meantime.
+
+         ts is jsonb with a default of {}, it already travels whole, and an
+         older client reads todo/doing/done out of it and ignores anything else.
+         So the colour goes in there: nothing to run, nothing to deploy in
+         order, and no version of this app that can be confused by it.
+
+         Written only when there IS one, so a task with no colour crosses the
+         wire byte for byte as it always did. */
+      var ts = {};
+      if (local && local.ts){
+        ts.todo  = local.ts.todo  || null;
+        ts.doing = local.ts.doing || null;
+        ts.done  = local.ts.done  || null;
+      }
+      if (local && typeof local.cat === "number" && local.cat >= 0 && local.cat < 64)
+        ts.cat = local.cat | 0;
+      row.ts = ts;
     } else if (kind === "notes"){
       row.date  = id;
       row.color = local && typeof local.color === "number" ? local.color : null;
@@ -69,8 +103,14 @@
 
   function fromRemote(kind, row){
     if (kind === "tasks"){
-      return { id:row.id, date:row.date, text:row.text, status:row.status,
-               order:row.pos, ts:row.ts || { todo:null, doing:null, done:null } };
+      var rts = row.ts || {};
+      var t = { id:row.id, date:row.date, text:row.text, status:row.status,
+                order:row.pos,
+                /* Rebuilt rather than passed through, so the colour that
+                   travels inside ts is never left sitting in the timestamps. */
+                ts:{ todo:rts.todo || null, doing:rts.doing || null, done:rts.done || null } };
+      if (typeof rts.cat === "number" && rts.cat >= 0) t.cat = rts.cat | 0;
+      return t;
     }
     if (kind === "notes") return { color:(row.color === null ? null : row.color), note:row.note || "" };
     if (kind === "track") return { id:row.id, label:row.label, date:row.date, unit:row.unit, repeat:!!row.repeat };
@@ -272,5 +312,21 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
   else start();
 
-  window.imcSync = { now: function(){ return syncNow("manual"); } };
+  /* A SEAM OVER THE TWO ROW MAPPERS, the way imcStore exposes one over the
+     journal, and it exists because of a bug that a seam would have caught.
+
+     A task gained a colour; these two functions map a fixed list of fields and
+     did not gain it; every push dropped it and every pull put the task back
+     without it. Nothing in the suite could see that, because the only way in
+     was to run a real sync against a real database. The round trip is now
+     testable on its own: hand it a task, get a task back, compare.
+
+     Read-only in effect - both functions are pure, neither touches the network
+     or storage, and nothing in the app calls through here. */
+  window.imcSync = {
+    now: function(){ return syncNow("manual"); },
+    roundTrip: function(kind, local){
+      return fromRemote(kind, toRemote(kind, local && local.id, local, Date.now()));
+    }
+  };
 })();

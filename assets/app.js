@@ -62,10 +62,16 @@ var DEF = { holRegional:false, weekRule:"thursday", weekStart:0, back:1, fwd:1, 
                Deliberately ONE axis. "Urgent" was in an early draft and came
                out: work-or-personal asks which part of your life, urgent asks
                how soon, and a single colour forced to answer both can answer
-               neither. How soon is already what a column's order says. */
+               neither. How soon is already what a column's order says.
+
+               TWO, NOT THREE. The first release shipped Work, Personal and
+               Errand, and the third was mine rather than anybody's: the whole
+               job here is telling work from the rest of life, which takes two,
+               and a third slot that arrives already filled is an invitation to
+               find something to put in it. Anyone who wants Errand can add it
+               in one press, and then it is a category they chose. */
             taskCats:[{label:"Work",     color:"#7c3aed"},
-                      {label:"Personal", color:"#db2777"},
-                      {label:"Errand",   color:"#0891b2"}],
+                      {label:"Personal", color:"#db2777"}],
             /* Which colour a newly typed task gets. null is none, and none is
                the default: nothing changes until you ask for it. */
             addCat:null,
@@ -1279,7 +1285,42 @@ function hueRow(current, onPick){
       row.appendChild(b);
     })(i);
   }
+  /* THE WAY TO THE PANEL THAT EDITS THESE.
+
+     Asked, after the first release: "why didn't you give option to change or
+     edit the name of tasks color including chaning its color?" The panel was
+     there from the start, at the bottom of a rail you have to scroll, behind a
+     Settings tab on a phone. Built and unfindable is the same as not built.
+
+     So the row that shows the colours also reaches the place that changes
+     them. This is where somebody is already thinking about the question, which
+     is the only moment they will ever go looking. */
+  var ed = mk("button","hueedit","Edit");
+  ed.type = "button";
+  ed.title = "Rename these, change their colours, add or remove one";
+  ed.setAttribute("aria-label","Edit task colours");
+  ed.addEventListener("click", function(e){
+    if (e && e.stopPropagation) e.stopPropagation();
+    openTaskCats();
+  });
+  row.appendChild(ed);
   return row;
+}
+/* Opens the panel and puts it in front of the reader, wherever it happens to
+   live: a sheet on a phone, a scroll down the rail on a desktop. */
+function openTaskCats(){
+  closeHue(); closeActs();
+  if (phone()) openSheet();
+  var go = function(){
+    var box = document.getElementById("tcats");
+    if (box && box.scrollIntoView) box.scrollIntoView({ block:"center" });
+    var first = document.querySelector("#tcats .cat input[type=text]");
+    if (first && first.focus) first.focus();
+  };
+  /* After the sheet has been laid out, or it scrolls a box that is still off
+     the side of the screen. */
+  if (window.requestAnimationFrame) requestAnimationFrame(function(){ setTimeout(go, 60); });
+  else setTimeout(go, 60);
 }
 /* THE POPOVER LIVES ON THE BODY, AND THIS IS THE SECOND MEASURING EXCEPTION.
 
@@ -3331,6 +3372,34 @@ function init(){
     if (!tcr || typeof tcr !== "object") tcr = cfg.taskCats[tci] = {};
     tcr.label = String(tcr.label == null ? "" : tcr.label).trim().slice(0,24) || ("Colour " + (tci+1));
     if (!/^#[0-9a-fA-F]{6}$/.test(tcr.color || "")) tcr.color = TCATS[tci % TCATS.length];
+  }
+  /* ONE-TIME: THE THIRD COLOUR GOES, IF IT WAS NEVER USED.
+
+     The previous release shipped Work, Personal and Errand and then SAVED that
+     list, so changing the default alone would only ever reach somebody who had
+     never opened the app. Anyone who used it during that release is carrying a
+     third category they did not ask for.
+
+     Two guards, and the second is the one that matters. The labels must still
+     be exactly the three that shipped, so a renamed list is somebody's own and
+     is never touched. And NO TASK may be using the third, because the colour is
+     stored as an index and removing an entry that something points at is how a
+     Personal task silently becomes something else. If either guard fails the
+     list is left exactly as it is - a category too many is a much smaller
+     problem than a colour that changes behind your back. */
+  if (cfg.taskCats.length === 3 &&
+      cfg.taskCats[0].label === "Work" &&
+      cfg.taskCats[1].label === "Personal" &&
+      cfg.taskCats[2].label === "Errand" &&
+      /* load() rather than the tasks array, which this runs BEFORE - the
+         config is repaired at the top of init and the collections are read
+         further down. Reading the store here is a few milliseconds once, and
+         the alternative is a migration that runs against an empty array and
+         therefore always thinks nothing is using the third colour. */
+      !load(LS.tasks, []).some(function(t){ return t && t.cat === 2; })){
+    cfg.taskCats.length = 2;
+    if (cfg.addCat === 2) cfg.addCat = null;
+    commit("cfg");
   }
   /* null is "new tasks get no colour", and anything that does not name a real
      entry becomes null rather than silently colouring everything you type. */

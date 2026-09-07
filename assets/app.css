@@ -306,6 +306,14 @@ main{padding:16px 0 0}
    with a stroke through it rather than an empty circle, which reads as a
    swatch that failed to load. */
 .huesw.no{position:relative;background:var(--card2)}
+/* THE WAY OUT OF THE ROW, to the panel that renames and recolours these.
+   Set apart by a rule rather than made another circle: it is not a colour, and
+   anything round in this row reads as one. */
+.hueedit{flex:none;margin-left:2px;padding:0 2px 0 7px;border:0;border-left:1px solid var(--rule);
+  background:transparent;color:var(--soft);font-family:inherit;font-size:10.5px;
+  line-height:1.6;cursor:pointer}
+.hueedit:hover{color:var(--ink)}
+.hueedit:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
 .huesw.no::after{content:"";position:absolute;left:2px;right:2px;top:50%;
   height:1px;background:var(--soft);transform:rotate(-45deg)}
 
@@ -1330,6 +1338,8 @@ main{padding:16px 0 0}
   .actcols{gap:12px;padding:4px 4px 14px;margin-bottom:6px;
     border-bottom:1px solid var(--rule)}
   .actcols .huesw{width:32px;height:32px}
+  .actcols .hueedit{margin-left:auto;padding:10px 4px 10px 14px;font-size:13px}
+  .hueedit{font-size:12px;padding:6px 2px 6px 10px}
   /* 48px, above the 44 Apple asks for, because these are the rows that were
      34x32 glyphs and this is the whole point of the change. */
   .actrow{display:flex;align-items:center;gap:14px;width:100%;min-height:48px;

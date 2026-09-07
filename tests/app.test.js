@@ -4863,8 +4863,10 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
   const pop = pd.querySelector(".huepop");
   check(pop !== null && pop.parentNode === pd.body,
         "pressing it opens the swatch row, parented to the body so nothing can clip it");
-  check(pop.querySelectorAll(".huesw").length === 4,
+  check(pop.querySelectorAll(".huesw").length === 3,
         "with one swatch per colour plus 'none', which is a choice and not the lack of one");
+  check(pop.querySelector(".hueedit") !== null,
+        "and a way through to the panel that renames and recolours them");
   check(pop.querySelector(".huesw.no.on") !== null,
         "and 'none' ringed, because that is what it is currently set to");
   pclick(pop.querySelectorAll(".huesw")[1]);
@@ -4921,8 +4923,9 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
   pclick(pd.querySelector('#scopeHost .col[data-s="todo"] .t .op.menu'));
   const acts = pd.querySelector("#actList .actcols");
   check(acts !== null, "the phone action sheet opens with a colour row at the top");
-  check(acts.children.length === 4,
-        "the same swatches, built by the same function - the two cannot drift apart");
+  check(acts.querySelectorAll(".huesw").length === 3 &&
+        acts.querySelectorAll(".hueedit").length === 1,
+        "the same swatches and the same Edit, built by the same function - they cannot drift apart");
   check([...pd.querySelectorAll("#actList .actrow .al")]
           .every(l => !/^Colour/.test(l.textContent)),
         "and the dot is NOT mirrored as a row: a state does not belong in a list of verbs");
@@ -4968,7 +4971,7 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
     beforeParse(win){
       win.localStorage.setItem("imc.cfg", JSON.stringify({ taskCats:"not an array", addCat:9 }));
     }});
-  check(bad.window.document.querySelectorAll("#tcats .cat").length === 3,
+  check(bad.window.document.querySelectorAll("#tcats .cat").length === 2,
         "a broken task-colour list is rebuilt from the defaults rather than throwing");
   check(bad.window.document.querySelector(".addhue").className.indexOf("tcat") < 0,
         "and an addCat pointing at nothing becomes 'no colour', not a colour on everything");
@@ -5019,9 +5022,128 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
   check(tBox !== undefined, "the rail has its own Task colours panel");
   check(/rename/i.test(tBox.querySelector(".rhint").textContent),
         "with the same rename-in-place the day colours have");
-  check(d.querySelectorAll("#tcats .cat").length === 3 &&
+  check(d.querySelectorAll("#tcats .cat").length === 2 &&
         d.querySelector("#tcats .catadd .btn").textContent === "+ add a colour",
-        "three to start, and room for more up to the same eight the day colours cap at");
+        "two to start, and room for more up to the same eight the day colours cap at");
+  /* TWO, because the job is telling work from the rest of life and that takes
+     two. The first release shipped a third, Errand, which was mine rather than
+     anybody's - a slot arriving already filled is an invitation to find
+     something to put in it. */
+  check(/taskCats:\[\{label:"Work",\s*color:"#7c3aed"\},\s*\{label:"Personal",\s*color:"#db2777"\}\]/
+          .test(js.replace(/\s+/g, " ").replace(/ /g, " ")) ||
+        /\{label:"Work", *color:"#7c3aed"\}[\s\S]{0,80}\{label:"Personal", *color:"#db2777"\}\]/.test(js),
+        "and Errand is not one of them - anyone who wants it adds it, and then it is theirs");
+  check(!/label:"Errand"/.test(js), "nothing ships a third category nobody asked for");
+}
+
+/* ==========================================================================
+   C79. THE COLOUR HAS TO SURVIVE A SYNC
+
+   Reported the day after it shipped: "the color code appears, and then
+   disappears". Two screenshots, one saying Syncing with a pink stripe on the
+   card and one saying Synced without it.
+
+   The cause was not in the board at all. sync.js maps a task between local and
+   remote through two functions with a FIXED list of fields, and a task had
+   gained a field that they had not. Every push dropped the colour, and every
+   pull rebuilt the task from what the server held - which was a task with no
+   colour - and overwrote the right answer with the wrong one.
+
+   Nothing in this suite could have seen it: the only way through those two
+   functions was a real sync against a real database. So they now carry a seam,
+   the way imcStore does, and the round trip is checked here on its own.
+   ========================================================================== */
+{
+  const sync = readFile("assets/sync.js");
+
+  check(/roundTrip: function\(kind, local\)/.test(sync),
+        "the two row mappers are reachable from a test, which is why this bug got out");
+
+  /* THE ROUND TRIP, run for real. local -> remote row -> local. */
+  const rt = liveDom.window.imcSync && liveDom.window.imcSync.roundTrip;
+  if (typeof rt !== "function"){
+    check(false, "imcSync.roundTrip is callable in the live DOM");
+  } else {
+    const withCat = rt("tasks", { id:"x1", date:TODAY, text:"work thing", status:"todo",
+                                  order:3, cat:1, ts:{todo:"2026-09-07 09:00",doing:null,done:null} });
+    check(withCat.cat === 1, "a task with a colour comes back with the same colour");
+    check(withCat.text === "work thing" && withCat.status === "todo" && withCat.order === 3,
+          "and everything else it always carried is unchanged");
+    check(withCat.ts.todo === "2026-09-07 09:00" && withCat.ts.doing === null,
+          "including the three timestamps, which is what ts was there for");
+
+    const noCat = rt("tasks", { id:"x2", date:TODAY, text:"plain", status:"todo",
+                                order:0, ts:{todo:null,doing:null,done:null} });
+    check(!("cat" in noCat),
+          "a task with no colour crosses the wire byte for byte as it always did");
+    check(Object.keys(noCat.ts).length === 3,
+          "and nothing extra is left sitting in its timestamps");
+
+    /* The colour is an index, so a value that names nothing must not survive
+       as one - the board would draw a stripe of no colour. */
+    const junk = rt("tasks", { id:"x3", date:TODAY, text:"junk", status:"todo", order:0,
+                               cat:"not a number", ts:{todo:null,doing:null,done:null} });
+    check(!("cat" in junk), "a colour that is not a number never reaches the server");
+  }
+
+  /* WHY ts AND NOT A COLUMN. A "cat" column is the tidier answer and cannot
+     ship on its own: PostgREST rejects the whole row for a column that does not
+     exist, so the client cannot start sending it until the migration has run,
+     and until then every edit fails rather than just the colour. */
+  check(/ts is jsonb/.test(sync) && /PostgREST rejects the whole row/.test(sync),
+        "and the file says why it travels in ts rather than in a column of its own");
+
+  /* ---- the one-time drop from three colours to two ---- */
+  const mig = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                pretendToBeVisual:true,
+    beforeParse(win){
+      win.localStorage.setItem("imc.cfg", JSON.stringify({ taskCats:[
+        { label:"Work", color:"#7c3aed" },
+        { label:"Personal", color:"#db2777" },
+        { label:"Errand", color:"#0891b2" }] }));
+    }});
+  check(mig.window.document.querySelectorAll("#tcats .cat").length === 2,
+        "somebody carrying the shipped three drops to two on the next load");
+
+  /* ...but ONLY if nothing is using the third. The colour is stored as an
+     index, and removing an entry something points at is exactly how Personal
+     silently becomes something else. */
+  const keep = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                 pretendToBeVisual:true,
+    beforeParse(win){
+      win.localStorage.setItem("imc.cfg", JSON.stringify({ taskCats:[
+        { label:"Work", color:"#7c3aed" },
+        { label:"Personal", color:"#db2777" },
+        { label:"Errand", color:"#0891b2" }] }));
+      win.localStorage.setItem("imc.tasks", JSON.stringify([
+        { id:"e1", date:TODAY, text:"post the parcel", status:"todo", order:0, cat:2,
+          ts:{todo:null,doing:null,done:null} }]));
+    }});
+  check(keep.window.document.querySelectorAll("#tcats .cat").length === 3,
+        "and it is left alone the moment a task is actually using the third");
+  check(keep.window.document.querySelector('.t[data-id="e1"]').classList.contains("tc2"),
+        "so that task keeps the colour it had, rather than quietly becoming another one");
+
+  /* A renamed list is somebody's own and is never touched. */
+  const mine = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                                 pretendToBeVisual:true,
+    beforeParse(win){
+      win.localStorage.setItem("imc.cfg", JSON.stringify({ taskCats:[
+        { label:"Work", color:"#7c3aed" },
+        { label:"Home", color:"#db2777" },
+        { label:"Errand", color:"#0891b2" }] }));
+    }});
+  check(mine.window.document.querySelectorAll("#tcats .cat").length === 3,
+        "a list somebody has renamed is theirs, and the migration does not touch it");
+
+  /* ---- the Edit route, which is the answer to "why is there no option to
+     rename these" - there was, at the bottom of a rail nobody scrolls ---- */
+  check(/function openTaskCats\(\)/.test(js),
+        "the swatch row reaches the panel that edits it");
+  check(/if \(phone\(\)\) openSheet\(\)/.test(js),
+        "opening the sheet first on a phone, where the panel is behind a tab");
+  check(/\.hueedit\{/.test(readFile("assets/app.css")),
+        "and it is set apart by a rule, not made another circle - it is not a colour");
 }
 
 let docFail = 0;
