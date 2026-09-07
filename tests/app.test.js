@@ -1866,6 +1866,60 @@ check(!/#REF!/.test(allSheetXml),
 check(!/<v>#(VALUE|NAME|DIV\/0|NUM)!<\/v>/.test(allSheetXml),
       "nor any cached formula error");
 
+/* THE WORKBOOK AND THE EXPORT MUST AGREE ON THEIR COLUMNS.
+
+   Reported: "anlytics template is useless, it doesn't even match with the
+   export tasks". It did not. A column was added to the middle of the export
+   and the workbook was never rebuilt, so every formula in it carried on
+   reading the column that used to be there: cycle times computed from a day
+   colour, day types counted from a timestamp.
+
+   The failure mode is the dangerous one. Nothing errors. The file opens, the
+   formulas calculate, the numbers look plausible and are wrong. Existence and
+   file size - all this section checked before - pass just as happily.
+
+   So the two lists are compared directly. The app names its columns in one
+   array and the generator copies it; if they ever separate again, this fails
+   here rather than in somebody's spreadsheet. */
+const csvCols = (() => {
+  const m = /var CSV_COLUMNS = \[([\s\S]*?)\];/.exec(js);
+  return m ? m[1].split(",").map(x => x.trim().replace(/^"|"$/g, "")).filter(Boolean) : null;
+})();
+check(csvCols !== null && csvCols.length > 5,
+      "the export names its columns in one place: " + (csvCols || []).length + " of them");
+check(csvCols[0] === "date" && csvCols.indexOf("task") > 0 && csvCols.indexOf("task_colour") > 0,
+      "including the task and its colour");
+
+const genSrc = readFile("tools/build-analytics-workbook.js");
+const genCols = (() => {
+  const m = /const HEADERS = \[([\s\S]*?)\];/.exec(genSrc);
+  return m ? m[1].split(",").map(x => x.trim().replace(/^"|"$/g, "")).filter(Boolean) : null;
+})();
+check(genCols !== null, "the workbook generator names the columns it expects");
+check(JSON.stringify(genCols) === JSON.stringify(csvCols),
+      "AND THE TWO LISTS ARE IDENTICAL, in the same order" +
+      (JSON.stringify(genCols) === JSON.stringify(csvCols) ? "" :
+       "\n          export:   " + JSON.stringify(csvCols) +
+       "\n          workbook: " + JSON.stringify(genCols)));
+
+/* The shipped file, not just the generator. The generator used to write to
+   tools/ while the site served downloads/, so the two could differ by however
+   long ago somebody last copied one over the other. */
+const shared = parts["xl/sharedStrings.xml"] || "";
+const strings = [...shared.matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map(m => m[1]);
+csvCols.forEach(h => {
+  check(strings.indexOf(h) >= 0,
+        "the shipped workbook actually contains the column \"" + h + "\"");
+});
+check(/downloads.*inmycalendar-analytics\.xlsx/.test(genSrc.replace(/\\/g, "/")) ||
+      /"\.\.", "downloads"/.test(genSrc),
+      "and the generator writes to downloads/, which is the copy the site serves");
+
+/* The tab that gives the task colours a reason to exist. */
+check(strings.indexOf("By task colour") >= 0 || /By task colour/.test(allSheetXml) ||
+      /By task colour/.test(parts["xl/workbook.xml"] || ""),
+      "and there is a tab that reports Work against everything else");
+
 
 }
 
@@ -5396,6 +5450,114 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
   });
 
   deferred.push(ran);
+}
+
+/* ==========================================================================
+   C82. THE EXPORT, ACTUALLY EXPORTED
+
+   Asked: "make sure export tasks is fetching all of the details properly".
+
+   Everything about the export was previously checked by reading the source.
+   That is how it came to be missing three things a person would obviously want
+   and how it gained a column that broke the workbook without anyone noticing.
+   This runs the real button and reads the real file.
+   ========================================================================== */
+{
+  /* The declared column list, read again here so this section stands on its
+     own rather than borrowing a name from the workbook section above. */
+  const csvCols = (function(){
+    const m = /var CSV_COLUMNS = \[([\s\S]*?)\];/.exec(js);
+    return m ? m[1].split(",").map(x => x.trim().replace(/^"|"$/g, "")).filter(Boolean) : [];
+  })();
+
+  const ex = new JSDOM(html, { url:"https://inmycalendar.com/", runScripts:"dangerously",
+                               pretendToBeVisual:true,
+    beforeParse(win){
+      win.localStorage.setItem("imc.cfg", JSON.stringify({ country:"LU" }));
+      win.localStorage.setItem("imc.tasks", JSON.stringify([
+        { id:"a", date:"2026-07-07", text:"Supplier scorecard review", status:"done",
+          order:0, cat:0,
+          ts:{ todo:"2026-07-06 09:15", doing:"2026-07-06 11:40", done:"2026-07-07 16:05" } },
+        { id:"b", date:"2026-07-07", text:"Book the dentist", status:"todo",
+          order:1, cat:1, ts:{ todo:"2026-07-07 08:00", doing:null, done:null } },
+        /* A TASK WITH NO ts AT ALL. Every task this app makes has one, but a
+           task restored from an old backup can arrive without it, and reading
+           .todo off undefined threw - which took the whole export down rather
+           than leaving three cells empty. */
+        { id:"c", date:"2026-07-08", text:"From an old backup", status:"todo", order:0 }
+      ]));
+      win.localStorage.setItem("imc.notes", JSON.stringify({
+        "2026-07-07": { color:3, note:"Working from home" },
+        "2026-07-09": { color:2, note:"A day with no tasks on it" }
+      }));
+    }});
+  const xw = ex.window, xd = xw.document;
+  xw.confirm = () => true; xw.alert = () => {};
+
+  let blob = null;
+  xw.URL.createObjectURL = b => { blob = b; return "blob:captured"; };
+  xw.URL.revokeObjectURL = () => {};
+
+  const expBtn = xd.getElementById("expCsv");
+  check(expBtn !== null, "there is an Export tasks button");
+  expBtn.dispatchEvent(new xw.MouseEvent("click", { bubbles:true }));
+  check(blob !== null, "pressing it produces a file rather than throwing");
+
+  const done = (blob ? blob.text() : Promise.resolve("")).then(text => {
+    const rows = text.split("\r\n").filter(x => x.length);
+    const cells = r => r.split('","').map(c => c.replace(/^"|"$/g, ""));
+    const head = cells(rows[0]);
+
+    check(JSON.stringify(head) === JSON.stringify(csvCols),
+          "and its header row is exactly the columns the app declares");
+    check(rows.length === 5,
+          "three tasks plus the day that has only a note, plus the header (" + rows.length + " rows)");
+
+    const byTask = t => cells(rows.find(r => r.indexOf(t) >= 0) || "");
+    const scorecard = byTask("Supplier scorecard");
+    const at = n => scorecard[head.indexOf(n)];
+
+    check(at("date") === "2026-07-07", "the date is there");
+    check(at("weekday") === "Tue", "and the weekday, spelled out rather than left to a locale");
+    check(at("iso_week") === "2026-W28",
+          "and the week number this whole app is built around (" + at("iso_week") + ")");
+    check(at("status") === "done" && at("priority") === "1", "status and position in the lane");
+    check(at("task_colour") === "Work", "the task colour BY NAME, not as an index");
+    check(at("entered_todo") === "2026-07-06 09:15" &&
+          at("entered_in_progress") === "2026-07-06 11:40" &&
+          at("entered_done") === "2026-07-07 16:05",
+          "all three timestamps, which is what every cycle-time number is built from");
+    check(at("day_colour") === "WFH" && at("day_note") === "Working from home",
+          "the day's own colour and note");
+
+    const dentist = byTask("Book the dentist");
+    check(dentist[head.indexOf("task_colour")] === "Personal",
+          "a second task carries its own colour");
+    check(dentist[head.indexOf("entered_in_progress")] === "" &&
+          dentist[head.indexOf("entered_done")] === "",
+          "and a task that never moved has empty timestamps rather than invented ones");
+
+    /* The row that used to take the whole export down. */
+    const old = byTask("From an old backup");
+    check(old.length === csvCols.length,
+          "a task with no timestamps at all still exports, as a full row");
+    check(old[head.indexOf("entered_todo")] === "",
+          "with its stamps blank rather than the word undefined");
+
+    /* A day carrying only a note is a real row: it is why a week was quiet. */
+    const noteOnly = byTask("A day with no tasks");
+    check(noteOnly[head.indexOf("date")] === "2026-07-09" &&
+          noteOnly[head.indexOf("task")] === "",
+          "a day with a note but no tasks is exported too, with an empty task");
+    check(noteOnly[head.indexOf("weekday")] === "Thu" &&
+          noteOnly[head.indexOf("iso_week")] !== "",
+          "and it still carries its weekday and week, so it lines up with the rest");
+
+    /* Luxembourg, because that is where the owner works. */
+    check(head.indexOf("public_holiday") >= 0,
+          "there is a public holiday column, so a quiet week can be explained");
+  });
+  deferred.push(done);
 }
 
 function finish(){

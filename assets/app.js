@@ -2857,9 +2857,19 @@ function download(name,text,mime){
   } catch (e){ alert("This browser blocked the download."); }
 }
 function cell(v){ return '"' + String(v === null || v === undefined ? "" : v).replace(/"/g,'""') + '"'; }
+/* THE COLUMNS, IN ONE PLACE.
+
+   Named here rather than written inline, because the analytics workbook has to
+   line up with them column for column and previously did not: a column was
+   added in the middle of this list and every formula in that workbook silently
+   started reading its neighbour. The suite now compares the two against this
+   array, so they cannot drift again. */
+var CSV_COLUMNS = ["date","weekday","iso_week","status","priority","task","task_colour",
+                   "entered_todo","entered_in_progress","entered_done",
+                   "day_colour","day_note","public_holiday"];
+
 function exportCsv(){
-  var rows = [["date","status","priority","task","task_colour","entered_todo",
-               "entered_in_progress","entered_done","day_colour","day_note"]];
+  var rows = [CSV_COLUMNS.slice()];
   var s = tasks.slice().sort(function(a,b){
     return a.date < b.date ? -1 : a.date > b.date ? 1 :
            stIndex(a.status)-stIndex(b.status) || a.order-b.order; });
@@ -2872,18 +2882,40 @@ function exportCsv(){
   /* The NAME, not the index. A spreadsheet is read by a person, and "2" is not
      an answer to "how much of last month was work". */
   function taskColourOf(t){ var c = taskCat(t); return c ? c.label : ""; }
+  /* Mon, Tue, Wed. Spelled out here rather than left to a spreadsheet, because
+     the formula for it is different in every locale and gets it wrong in some. */
+  function dayOf(ds){ var d = parseISO(ds); return d ? DOW[d.getDay()] : ""; }
+  /* The week number this app is built around. Computed by the same function
+     the calendar draws with, so the export and the screen can never disagree
+     about which week a date is in - including the late-December dates that
+     belong to the next year's week 1. */
+  function weekOfDs(ds){ var w = weekOf(ds); return w ? w.year + "-W" + (w.num < 10 ? "0" : "") + w.num : ""; }
+  /* Blank unless a country is chosen. Worth a column: "why was throughput low
+     that week" is often just that three of the days were public holidays. */
+  function holOf(ds){ var h = holidayOn(ds); return h ? h[0] : ""; }
+  /* TIMESTAMPS THAT MAY NOT EXIST. Every task made by this app has all three
+     keys, but a task restored from an old backup, or written before stamps
+     were recorded, can arrive without ts at all - and reading .todo off
+     undefined throws, which would have taken the whole export down rather than
+     leaving three cells empty. */
+  function at(t, k){ return (t && t.ts && t.ts[k]) || ""; }
+
   for (var i=0;i<s.length;i++){
-    seen[s[i].date] = 1;
-    rows.push([s[i].date, s[i].status, s[i].order+1, s[i].text, taskColourOf(s[i]),
-               s[i].ts.todo, s[i].ts.doing, s[i].ts.done,
-               colourOf(s[i].date), noteOf(s[i].date)]);
+    var t = s[i];
+    seen[t.date] = 1;
+    rows.push([t.date, dayOf(t.date), weekOfDs(t.date), t.status, t.order+1, t.text,
+               taskColourOf(t), at(t,"todo"), at(t,"doing"), at(t,"done"),
+               colourOf(t.date), noteOf(t.date), holOf(t.date)]);
   }
   /* a day can carry a note or a colour with no tasks at all - still export it */
   var extra = Object.keys(notes).filter(function(ds){
     return !seen[ds] && (noteOf(ds) || colourOf(ds));
   }).sort();
-  for (var e=0;e<extra.length;e++)
-    rows.push([extra[e],"","","","","","","", colourOf(extra[e]), noteOf(extra[e])]);
+  for (var e=0;e<extra.length;e++){
+    var ds = extra[e];
+    rows.push([ds, dayOf(ds), weekOfDs(ds), "", "", "", "", "", "", "",
+               colourOf(ds), noteOf(ds), holOf(ds)]);
+  }
   download("inmycalendar-tasks-" + iso(today()) + ".csv",
            rows.map(function(r){ return r.map(cell).join(","); }).join("\r\n"), "text/csv");
 }
