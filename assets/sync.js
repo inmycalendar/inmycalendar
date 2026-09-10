@@ -174,7 +174,63 @@
     return row.cfg || {};
   }
 
-  function remoteKey(kind, row){ return kind === "notes" ? row.date : row.id; }
+  /* THE KEY A ROW IS FILED UNDER, and the bug that hid here for months.
+
+     Reported: "on this laptop it shows green color, while when i set it on
+     another laptop it was pink." Same task, same stored value, two colours.
+
+     A task keeps its colour as a POSITION in cfg.taskCats, which is fine only
+     while every device agrees what sits at that position. They did not, and
+     this line is why. The settings table is keyed by user_id and has no id
+     column at all, so for kind "cfg" this returned undefined; the pulled
+     config was filed under the key "undefined"; and writeLocal then read
+     map.cfg, which was still the LOCAL copy, and wrote it straight back over
+     itself. Settings went up and never came down. Not once, on any device.
+
+     Nothing errored, which is why it lasted. Every device kept its own
+     palette, its own day-colour names, its own country and week-start, while
+     the indexes stored on tasks and notes synced perfectly - so the numbers
+     agreed and the meanings did not. */
+  function remoteKey(kind, row){
+    if (kind === "notes") return row.date;
+    if (kind === "cfg")   return "cfg";    /* one row per person; rowMap agrees */
+    return row.id;
+  }
+
+  /* SETTINGS THAT DESCRIBE THE DEVICE, NOT THE ACCOUNT.
+
+     Turning the pull on means the whole config arrives, and some of it has no
+     business travelling. Dark mode chosen on a phone at night should not black
+     out a laptop in the morning. Which day the board is showing, which column
+     a phone has open, whether the year grid is folded: those describe the
+     screen in front of you.
+
+     Everything NOT on this list is account-level and follows you, which is
+     what the colours, the day-colour names, the country and the week rules
+     always should have done. */
+  function deviceKeys(){
+    var k = store() && store().deviceKeys;
+    /* The fallback matters: app.js is the owner of this list, and if a build
+       ever ships a sync.js newer than its app.js, keeping everything local is
+       the safe way to be wrong. */
+    return (k && k.length) ? k : ["theme","view","scope","shift","lastDate","phoneCol","calDense",
+                                  "glanceOpen","glanceOpenPhone","glancePhoneFix","addCat"];
+  }
+
+  function mergeCfg(local, remote){
+    var out = {}, k;
+    for (k in remote) if (Object.prototype.hasOwnProperty.call(remote, k)) out[k] = remote[k];
+    local = local || {};
+    var dk = deviceKeys();
+    for (var i = 0; i < dk.length; i++){
+      var d = dk[i];
+      /* Keep this device's answer, and where it has none, drop the other
+         device's rather than inheriting it. */
+      if (Object.prototype.hasOwnProperty.call(local, d)) out[d] = local[d];
+      else delete out[d];
+    }
+    return out;
+  }
 
   /* ---------- local collections keyed by id ------------------------------ */
   function localMap(kind){
@@ -201,7 +257,9 @@
     } else if (kind === "notes"){
       store().adopt(kind, map);
     } else {
-      store().adopt("cfg", map.cfg || {});
+      /* map.cfg is what the server sent, since remoteKey files it under "cfg".
+         The device-local half is taken from what is here right now. */
+      store().adopt("cfg", mergeCfg(store().read("cfg"), map.cfg || {}));
     }
   }
 

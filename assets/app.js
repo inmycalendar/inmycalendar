@@ -161,6 +161,36 @@ function stateOf(kind){
 
 /* A bucket flattened to row id -> serialised row, which is the unit sync
    merges. Settings are one row per user, so they collapse to a single key. */
+/* WHICH SETTINGS BELONG TO THE ACCOUNT AND WHICH TO THE MACHINE.
+
+   Everything in cfg syncs except these. Dark mode chosen on a phone at night
+   should not black out a laptop in the morning; which day the board is showing
+   and which column a phone has open describe the screen in your hand, not the
+   account. Everything else - the colours, their names, the country, the week
+   rules - is one answer per person and follows them about.
+
+   It is used for two different jobs and both matter. sync.js keeps this half
+   local when adopting another device's config, and rowMap below leaves it out
+   of the change signature entirely, so switching theme is not an edit worth
+   pushing. That second one is the important one: see baselineCfg(). */
+var CFG_DEVICE_KEYS = ["theme","themeDefaultFix","view","scope","shift","lastDate","phoneCol","calDense",
+                       "glanceOpen","glanceOpenPhone","glancePhoneFix","addCat"];
+
+/* The account half of a config, with its keys in a fixed order.
+
+   Sorted deliberately. Object.assign({}, DEF, stored) produces whatever key
+   order the stored object happened to have, which differs between devices and
+   between releases, and an unsorted JSON.stringify would then report two
+   identical configs as different and push one over the other for ever. */
+function cfgSignature(value){
+  var out = {}, keys = Object.keys(value || {}).sort(), i, k;
+  for (i = 0; i < keys.length; i++){
+    k = keys[i];
+    if (CFG_DEVICE_KEYS.indexOf(k) < 0) out[k] = value[k];
+  }
+  return JSON.stringify(out);
+}
+
 function rowMap(kind, value){
   var out = {}, i, r, k;
   if (kind === "tasks" || kind === "track"){
@@ -173,8 +203,28 @@ function rowMap(kind, value){
     for (k in value) if (has(value,k)) out[k] = JSON.stringify(value[k]);
     return out;
   }
-  out.cfg = JSON.stringify(value || {});
+  out.cfg = cfgSignature(value);
   return out;
+}
+
+/* MARK THE CURRENT CONFIG AS THE STARTING POINT, WITHOUT PUSHING IT.
+
+   init() normalises cfg before anything else happens: defaults filled in for
+   keys a stored config predates, a malformed entry repaired, a range clamped.
+   None of that is a person changing a setting, and treating it as one did real
+   damage. The journal recorded a pending config edit on EVERY load, so on the
+   next sync the device decided its own untouched defaults were newer than the
+   server, refused what the server sent, and pushed the defaults over it.
+
+   The result was that whichever machine had opened the app most recently owned
+   the account's settings, and the other one silently lost its palette. That is
+   why the same task showed pink on one laptop and green on the other: not the
+   task, the list of colours the task's stored position points into. */
+function baselineCfg(){
+  writeRaw(LS.cfg, cfg);
+  shadow.cfg = rowMap("cfg", cfg);
+  if (has(pending.rows, "cfg:cfg")){ delete pending.rows["cfg:cfg"]; pending.n -= 1; }
+  writeRaw(LS.pending, pending);
 }
 
 function markPending(kind, id, op){
@@ -232,7 +282,20 @@ function openStore(){
       if (kind === "tasks") tasks = value;
       else if (kind === "notes") notes = value;
       else if (kind === "track") track = value;
-      else cfg = value;
+      else {
+        /* A CONFIG FROM ANOTHER DEVICE HAS NOT BEEN THROUGH init().
+
+           Two things follow from that. It may be missing keys the sender was
+           too old to have, so it is merged under DEF rather than trusted
+           whole. And both colour sets are COMPUTED onto :root rather than
+           declared in CSS - see applyCatColours and applyTaskCatColours - so
+           arriving with a new palette and not recomputing them would leave
+           every card and every marked day painted in the previous device's
+           hues while claiming the new ones. applyTheme does both. */
+        cfg = Object.assign({}, DEF, value || {});
+        value = cfg;
+        try { applyTheme(); } catch (e){}
+      }
       writeRaw(LS[kind], value);
       shadow[kind] = rowMap(kind, value);
     },
@@ -245,6 +308,11 @@ function openStore(){
     },
 
     repaint: function(){ doRepaint(); },
+
+    /* The account/device split, published rather than duplicated. sync.js
+       needs the same list to decide what to keep local when it adopts another
+       device's config, and two copies of a list like this drift. */
+    deviceKeys: CFG_DEVICE_KEYS,
 
     /* Sign-out on a shared machine must leave nothing behind. Only the things
        that are actually personal go: settings like week-start and country are
@@ -3368,6 +3436,10 @@ function wire(){
 function init(){
   openStore();   /* baseline the change journal before anything can commit */
   cfg = Object.assign({}, DEF, load(LS.cfg, {}));
+  /* Set by the one-time migrations below. They are the only things in this
+     block that change a setting on the person's behalf rather than repairing
+     one, so they are the only things worth telling the other devices about. */
+  var cfgMigrated = false;
   if (!Array.isArray(cfg.catLabels) || !cfg.catLabels.length || cfg.catLabels.length > MAXCATS)
     cfg.catLabels = DEF.catLabels.slice();
   /* Everyone who used the app before the colours were choosable has no
@@ -3431,7 +3503,7 @@ function init(){
       !load(LS.tasks, []).some(function(t){ return t && t.cat === 2; })){
     cfg.taskCats.length = 2;
     if (cfg.addCat === 2) cfg.addCat = null;
-    commit("cfg");
+    cfgMigrated = true;
   }
   /* null is "new tasks get no colour", and anything that does not name a real
      entry becomes null rather than silently colouring everything you type. */
@@ -3444,7 +3516,7 @@ function init(){
                   ["Deadline","Travel","Leave","WFH"]];
   for (var oi=0; oi<OLD_SETS.length; oi++){
     if (cfg.catLabels.every(function(l,i){ return l === OLD_SETS[oi][i]; })){
-      cfg.catLabels = DEF.catLabels.slice(); commit("cfg"); break;
+      cfg.catLabels = DEF.catLabels.slice(); cfgMigrated = true; break;
     }
   }
   cfg.back  = Math.min(CAP, Math.max(0, cfg.back|0));
@@ -3471,6 +3543,24 @@ function init(){
   }
   if (typeof cfg.calDense !== "boolean") cfg.calDense = false;
   if (["day","week","month"].indexOf(cfg.scope) < 0) cfg.scope = "day";
+
+  /* EVERYTHING ABOVE THIS LINE WAS NORMALISATION, NOT A CHANGE.
+
+     Defaults filled in for keys an older stored config predates, a malformed
+     entry repaired, a range clamped, a one-time flag recorded. Nobody chose
+     any of it, so there is nothing here to tell the other devices about - and
+     saying otherwise did real harm. The journal recorded a pending config edit
+     on EVERY load, so the next sync decided this device's untouched defaults
+     were newer than the server's, refused what the server sent, and pushed the
+     defaults over it. Whichever machine opened the app last owned the account.
+
+     This has to sit AFTER the last repair above, not in the middle of them.
+     The first attempt put it half way up and the block below kept journalling.
+
+     The migrations are the exception and are pushed deliberately: they change
+     a setting on the person's behalf rather than repairing one. */
+  baselineCfg();
+  if (cfgMigrated) commit("cfg");
 
   tasks = load(LS.tasks, []); if (!Array.isArray(tasks)) tasks = [];
   notes = load(LS.notes, {}); if (!notes || typeof notes !== "object") notes = {};

@@ -5450,6 +5450,108 @@ check(js.indexOf("if (wantsSettings && phone()) openSheet();") > js.indexOf("set
   });
 
   deferred.push(ran);
+
+  /* ------------------------------------------------------------------------
+     THE SAME TASK, A DIFFERENT COLOUR ON EACH LAPTOP
+
+     Reported: "the task color doesn't sync with devices properly. for example
+     on this laptop it shows green color, while when i set it on another laptop
+     it was pink."
+
+     The live settings row explained it. It held Work #7c3aed and Personal
+     #aff8b8 - Personal is green there. One laptop had that palette and the
+     other still had the shipped pink, so the same task, carrying the same
+     stored value, painted a different colour on each.
+
+     A task stores its colour as a POSITION in cfg.taskCats. That is fine only
+     for as long as every device agrees what is at that position, and they did
+     not, because settings never arrived. remoteKey() read row.id for the
+     settings table, and a settings row is keyed by user_id and has no id at
+     all, so every pulled config landed under the key "undefined" and
+     writeLocal then wrote the LOCAL copy straight back over it.
+
+     Settings only ever went up. Never down. Not once, for any device. The day
+     colours are stored the same way, so their names and colours had never
+     travelled either.
+     --------------------------------------------------------------------- */
+  const cfgRan = (function(){
+    const srv = makeServer();
+    const one = makeDevice(srv);
+
+    /* Laptop one renames and recolours Personal, exactly as the rail does. */
+    one.w.eval('cfg.taskCats[1].label = "Home"; cfg.taskCats[1].color = "#aff8b8"; commit("cfg");');
+    return settle(one).then(() => {
+      const row = srv.rows.settings[Object.keys(srv.rows.settings)[0]];
+      check(row && row.cfg && row.cfg.taskCats[1].color === "#aff8b8",
+            "laptop one pushes its edited palette to the server");
+
+      /* Laptop two arrives fresh and pulls. */
+      const two = makeDevice(srv);
+      return settle(two).then(() => {
+        const cats = JSON.parse(two.w.localStorage.getItem("imc.cfg") || "{}").taskCats || [];
+        check(cats.length === 2 && cats[1].color === "#aff8b8",
+              "AND LAPTOP TWO RECEIVES IT - settings used to travel one way only");
+        check(cats[1].label === "Home",
+              "so a renamed colour is the same colour on both, not two different ones");
+
+        /* THE DAY COLOURS RODE IN THE SAME CONFIG and had exactly the same
+           problem, so their names had never travelled between his machines
+           either. Renamed on the second device and read back on a third.
+
+           A third device rather than sending it back to the first, and that is
+           a statement about the harness, not the app. Driving a long-lived
+           device through a SECOND sync tests the debounce: a commit schedules
+           a sync of its own, syncNow answers false while one is running, and a
+           polling helper either races it or quietly gives up. A device that
+           has just started has none of that history, and it has to read the
+           same row out of the same table to get its config at all. */
+        two.w.eval('cfg.catLabels[2] = "Annual leave"; commit("cfg");');
+        return settle(two).then(() => {
+          const srvCfg = srv.rows.settings[Object.keys(srv.rows.settings)[0]].cfg;
+          check(srvCfg.catLabels[2] === "Annual leave",
+                "the second device pushes a renamed day colour");
+          const three = makeDevice(srv);
+          return settle(three).then(() => {
+            const c3 = JSON.parse(three.w.localStorage.getItem("imc.cfg") || "{}");
+            check(c3.catLabels && c3.catLabels[2] === "Annual leave",
+                  "and a third device picks it up, so day-colour names travel now too");
+            check(c3.taskCats && c3.taskCats[1].color === "#aff8b8",
+                  "along with everything else in the config, from whichever device changed it");
+          });
+        });
+      });
+    });
+  })();
+  deferred.push(cfgRan);
+
+  /* ------------------------------------------------------------------------
+     WHAT MUST NOT FOLLOW YOU BETWEEN DEVICES
+
+     Turning the settings pull on means everything in cfg would arrive, and
+     some of it has no business travelling. Dark mode chosen on a phone at
+     night should not black out a laptop the next morning; which day the board
+     is showing, which column a phone has open, whether the year grid is folded
+     - these describe the device in your hand, not the account.
+     --------------------------------------------------------------------- */
+  const localRan = (function(){
+    const srv = makeServer();
+    const one = makeDevice(srv);
+    one.w.eval('cfg.theme = "dark"; cfg.view = "calendar"; cfg.country = "LU"; commit("cfg");');
+    return settle(one).then(() => {
+      const two = makeDevice(srv);
+      two.w.eval('cfg.theme = "light"; cfg.view = "board"; commit("cfg");');
+      return settle(two).then(() => {
+        const c = JSON.parse(two.w.localStorage.getItem("imc.cfg") || "{}");
+        check(c.country === "LU",
+              "the country follows the account, because holidays are not a property of a laptop");
+        check(c.theme === "light",
+              "but the theme stays with the device - dark on a phone does not black out a laptop");
+        check(c.view === "board",
+              "and so does which view that device is looking at");
+      });
+    });
+  })();
+  deferred.push(localRan);
 }
 
 /* ==========================================================================
