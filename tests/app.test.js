@@ -2193,8 +2193,27 @@ check(fs.existsSync(path.join(ROOT,".htaccess")), "there is an .htaccess for the
 const ht = readFile(".htaccess");
 check(/AddType\s+application\/manifest\+json\s+\.webmanifest/.test(ht),
       "which gives the manifest its proper content type instead of text/plain");
-check(/ExpiresByType\s+text\/html\s+"access plus 0 seconds"/.test(ht),
-      "and stops the HTML being cached hard, so a deploy is visible immediately");
+/* PAGES ARE CACHED AT THE EDGE, BRIEFLY, AND KEPT WHEN THE ORIGIN IS DOWN.
+
+   This used to assert the opposite: text/html "access plus 0 seconds", so that
+   a deploy showed at once. Measured on the live CDN, the cost of that was every
+   page reporting x-hcdn-cache-status: DYNAMIC - never cached, every view from
+   every country going back to one shared-hosting origin - and when the origin
+   stalled, four times in three days for about 35 minutes each, every edge on
+   earth stalled with it. Five minutes of staleness is a fair price for a site
+   that stays up while its origin does not. */
+check(!/ExpiresByType\s+text\/html/.test(ht),
+      "pages are no longer forbidden from the CDN cache");
+const pageCache = /<FilesMatch "\\\.html\$">\s*Header set Cache-Control "([^"]+)"/.exec(ht);
+check(pageCache !== null, "pages carry an explicit Cache-Control instead");
+const cc = pageCache ? pageCache[1] : "";
+check(/\bpublic\b/.test(cc) && /max-age=(\d+)/.test(cc) && +(/max-age=(\d+)/.exec(cc)[1]) >= 60
+      && +(/max-age=(\d+)/.exec(cc)[1]) <= 600,
+      "fresh for between one and ten minutes, so a deploy still shows soon: " + cc);
+check(/stale-while-revalidate=\d+/.test(cc),
+      "served from the edge while it refreshes, so nobody waits on the origin for a page the edge holds");
+check(/stale-if-error=(\d+)/.test(cc) && +(/stale-if-error=(\d+)/.exec(cc)[1]) >= 3600,
+      "and kept for at least an hour when the origin does not answer - the line that turns an outage into nothing");
 
 /* THE STALE-IMAGE BUG. The server was serving icons that did not match the
    repo: the deploy updated text files but never replaced existing images, and

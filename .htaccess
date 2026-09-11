@@ -22,15 +22,48 @@
   ExpiresByType image/svg+xml        "access plus 1 week"
   ExpiresByType image/x-icon         "access plus 1 week"
 
-  # The manifest and the pages must NOT be cached hard. The manifest names the
-  # icon files, so a stale one keeps pointing at artwork that has been replaced.
+  # The manifest must NOT be cached hard. It names the icon files, so a stale
+  # one keeps pointing at artwork that has been replaced.
   ExpiresByType application/manifest+json "access plus 1 hour"
-  ExpiresByType text/html            "access plus 0 seconds"
+  # Pages are handled by mod_headers below, not here. mod_expires can only say
+  # how long; the page rule needs to say what happens AFTER that, and when the
+  # origin is not answering at all.
 </IfModule>
 
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # PAGES ARE CACHED AT THE EDGE NOW, BRIEFLY, AND KEPT WHEN THE ORIGIN IS DOWN.
+  #
+  # This site sits behind Hostinger's CDN, which serves each visitor from a
+  # nearby edge and caches whatever the origin permits. For a long time pages
+  # permitted nothing: text/html was "access plus 0 seconds", chosen so a deploy
+  # would show at once. The cost was invisible until it was not. Every page view
+  # from every country went back to one shared-hosting origin, the CDN reported
+  # DYNAMIC on every page and protected the site from exactly nothing, and when
+  # that origin stalled - four times in three days, roughly 35 minutes each, as
+  # seen by a monitor in the United States - every edge on earth stalled with
+  # it. A visitor in the US could not open the site; a visitor in Luxembourg was
+  # asleep.
+  #
+  #   max-age=300             fresh for five minutes. A deploy shows within five.
+  #   stale-while-revalidate  after that the edge serves the copy it has and
+  #                           refreshes behind the scenes; nobody waits on the
+  #                           origin for a page the edge already holds
+  #   stale-if-error          if the origin does not answer, the edge keeps
+  #                           serving its last good copy for a day rather than a
+  #                           timeout. This is the line that turns a 35-minute
+  #                           outage into nothing, for every page an edge has
+  #                           seen. It cannot help a page no edge has ever been
+  #                           asked for, and that limit is real.
+  #
+  # Safe for the app because its scripts and styles carry a version tag in
+  # their URLs: a five-minute-old index.html points at files that still exist,
+  # and a browser that has the new one gets the new files by name.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400"
+  </FilesMatch>
 </IfModule>
 
 # COUNTRY CODE ALIASES
