@@ -73,23 +73,37 @@ jobs:
               # 000000. Harmless against a "= 200" test and NOT harmless in the
               # API step below, where a status is compared against 401.
               # Normalised to three digits in both places.
-              code=$(curl -sS -L --max-time 25 --retry 2 --retry-delay 2 --retry-all-errors \
-                       -o body.tmp -w "%{http_code}" "$url" 2>/dev/null || true)
-              code=$(printf "%s" "$code" | tr -dc "0-9" | tail -c 3)
+              # WHICH SERVER, not just whether. The site is served from a CDN
+              # that hands every visitor a different edge by region - forty
+              # probes from forty countries reached forty different IPs. So
+              # "the site timed out" says nothing; "edge 88.223.87.252 timed
+              # out" says which one, and is what a support ticket needs. The
+              # IP is written alongside the code and split off below.
+              out=$(curl -sS -L --max-time 25 --retry 2 --retry-delay 2 --retry-all-errors \
+                       -o body.tmp -w "%{http_code} %{remote_ip}" "$url" 2>/dev/null || true)
+              code=$(printf "%s" "$out" | awk '{print $1}' | tr -dc "0-9" | tail -c 3)
+              edge=$(printf "%s" "$out" | awk '{print $2}')
               [ -z "$code" ] && code="000"
+              [ -z "$edge" ] && edge="no connection"
               if [ "$code" = "200" ] && grep -qF "$expect" body.tmp; then
-                [ "$attempt" -gt 1 ] && echo "ok    $what (on attempt $attempt)" \
-                                     || echo "ok    $what"
+                [ "$attempt" -gt 1 ] && echo "ok    $what via $edge (on attempt $attempt)" \
+                                     || echo "ok    $what via $edge"
                 rm -f body.tmp
                 return 0
               fi
               attempt=$(( attempt + 1 ))
               [ "$attempt" -le 3 ] && sleep 5
             done
+            # ::error:: puts the line in the run's Annotations panel, which is
+            # readable without signing in. The logs are not, and the day this
+            # was needed the only public word on a 38-minute failure was
+            # "Process completed with exit code 1".
             if [ "$code" != "200" ]; then
-              echo "DOWN  $what -> HTTP $code after 3 attempts  ($url)"
+              echo "DOWN  $what -> HTTP $code after 3 attempts, last edge $edge  ($url)"
+              echo "::error title=DOWN $what::HTTP $code after 3 attempts from this runner. Last edge tried: $edge. $url"
             else
-              echo "WRONG $what -> HTTP 200 three times, but the page never contained: $expect"
+              echo "WRONG $what -> HTTP 200 three times from $edge, but the page never contained: $expect"
+              echo "::error title=WRONG $what::HTTP 200 from $edge but the page never contained: $expect. $url"
             fi
             rm -f body.tmp
             fail=1
